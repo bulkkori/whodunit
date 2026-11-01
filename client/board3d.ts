@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as G from '../shared/game.ts';
 import { faceValues } from './dice.ts';
-import { WEAPON_ICON, ROOM_TINTS } from './art.ts';
+import { WEAPON_ICON, ROOM_TINTS, floorTex, TEX_CELLS } from './art.ts';
 import { land } from './sound.ts';
 
 interface Palette { bg: number; base: number; hall: number; door: number; room: number; wall: number; center: number; label: string }
@@ -15,6 +15,28 @@ const PAL: Record<G.ThemeKey, Palette> = {
 const CAN = 0xd9b24a, BONUS = 0x9a7428;
 const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
 const noPick = (o: THREE.Object3D) => { o.raycast = () => {}; };
+// 바닥 텍스처: 주소별로 한 번만 불러옴. 반복(타일) 설정
+const texLoader = new THREE.TextureLoader(), texCache = new Map<string, THREE.Texture>();
+function loadTex(url: string) {
+  let t = texCache.get(url);
+  if (!t) { t = texLoader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache.set(url, t); }
+  return t;
+}
+/** 복도 칸(InstancedMesh)용: 칸마다 UV 대신 월드 좌표로 텍스처를 깔아 3×3칸에 한 장이 끊김 없이 이어지게 */
+function worldUV(m: THREE.MeshStandardMaterial) {
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+#ifdef USE_MAP
+  vMapUv = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xz / ${TEX_CELLS.toFixed(1)};
+#endif`);
+    // 칸 색이 4배로 들어오면(강조 칸) 어두운 텍스처에 곱하지 않고 그 색을 주로 칠한다 — 경로·보너스·문이 잘 보이게
+    sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
+  if (max(vColor.r, max(vColor.g, vColor.b)) > 1.5) diffuseColor.rgb = mix(diffuseColor.rgb, vColor.rgb / 4.0, 0.72);
+  else diffuseColor.rgb *= vColor.rgb;
+#endif`);
+  };
+  return m;
+}
 
 interface RoomData { p: G.Pos; cx: number; cz: number; w: number; h: number }
 type RoomMesh = THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> & { userData: RoomData };
@@ -36,6 +58,8 @@ function label(text: string, color: string, w: number) {
 
 export interface Board3D {
   update(g: G.View, moves: Set<G.Pos>): void; start(): void; stop(): void; resetView(): void;
+  /** 다음 update 때 보드를 새로 만든다(텍스처 목록이 바뀌었을 때) */
+  rebuild(): void;
   /** 이동 경로 미리보기: cells를 칠한다(ok면 노랑, 아니면 빨강). 빈 배열이면 지움 */
   preview(cells: G.Pos[], ok: boolean): void;
   /** 주사위 두 개를 판 위로 떨어뜨린다. 멈추는 순간 resolve. power 0~1 */
@@ -91,7 +115,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
 
   let board: THREE.Group | null = null, key: string | null = null, n = 0;
   let map: G.GameMap | null = null, P: Palette = PAL.mansion;
-  let hallMesh: THREE.InstancedMesh | null = null, hallIdx: number[] = [], roomMeshes: RoomMesh[] = [];
+  let hallTint = 0xffffff, hallMesh: THREE.InstancedMesh | null = null, hallIdx: number[] = [], roomMeshes: RoomMesh[] = [];
   let pawns: THREE.Group[] = [], npcPawns: (THREE.Group | null)[] = [], env: THREE.Group | null = null, weaponSprites: THREE.Sprite[] = [];
   const wx = (x: number) => x - n / 2 + 0.5; // 칸 좌표 → 월드 좌표
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
@@ -105,7 +129,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       board.traverse(o => {
         if (!(o instanceof THREE.Mesh)) return;
         o.geometry.dispose();
-        for (const m of [o.material].flat()) { (m as THREE.MeshBasicMaterial).map?.dispose(); m.dispose(); }
+        for (const m of [o.material].flat()) { const mp = (m as THREE.MeshBasicMaterial).map; if (mp && ![...texCache.values()].includes(mp)) mp.dispose(); m.dispose(); } // 바닥 텍스처는 캐시에 두고 재사용
       });
     }
     const B = (board = new THREE.Group()); scene.add(B);
@@ -116,8 +140,11 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     base.position.y = -0.25; base.receiveShadow = true; noPick(base); B.add(base);
 
     hallIdx = M.cells.flatMap((c, i) => (c === -1 ? [i] : []));
-    const hm = (hallMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.94, 0.08, 0.94), mat(0xffffff), hallIdx.length));
-    hallIdx.forEach((i, k) => { m4.makeTranslation(wx(i % n), 0, wx(Math.floor(i / n))); hm.setMatrixAt(k, m4); hm.setColorAt(k, col.set(P.hall)); });
+    const hallUrl = floorTex(g.theme, 'hall');
+    hallTint = hallUrl ? 0xc8c8c8 : P.hall;
+    const hmat = mat(0xffffff); if (hallUrl) { hmat.map = loadTex(hallUrl); worldUV(hmat); }
+    const hm = (hallMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.94, 0.08, 0.94), hmat, hallIdx.length));
+    hallIdx.forEach((i, k) => { m4.makeTranslation(wx(i % n), 0, wx(Math.floor(i / n))); hm.setMatrixAt(k, m4); hm.setColorAt(k, col.set(hallTint)); });
     hm.receiveShadow = true; B.add(hm);
 
     roomMeshes = [];
@@ -125,7 +152,10 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       const w = q.x1 - q.x0 + 1, h = q.y1 - q.y0 + 1, cx = (wx(q.x0) + wx(q.x1)) / 2, cz = (wx(q.y0) + wx(q.y1)) / 2;
       const isC = i === M.roomCount;
       const tone = isC ? new THREE.Color(P.center) : new THREE.Color(P.room).lerp(new THREE.Color(ROOM_TINTS[i % ROOM_TINTS.length]), 0.3);
-      const f = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, 0.12, h - 0.06), mat(tone.getHex())) as RoomMesh;
+      const fu = floorTex(g.theme, isC ? 'center' : i), fm = mat(fu ? 0xbdbdbd : tone.getHex());
+      const fg = new THREE.BoxGeometry(w - 0.06, 0.12, h - 0.06);
+      if (fu) { fm.map = loadTex(fu); const uv = fg.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) * w / TEX_CELLS, uv.getY(k) * h / TEX_CELLS); } // 텍스처 한 장 = 3×3칸
+      const f = new THREE.Mesh(fg, fm) as RoomMesh;
       f.position.set(cx, 0.02, cz); f.receiveShadow = true; f.userData = { p: G.roomPos(i), cx, cz, w, h };
       B.add(f); roomMeshes.push(f);
       const lb = label(isC ? '사건 파일' : T.r[i], P.label, Math.min(w - 0.15, 3.2));
@@ -236,7 +266,11 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   let can = new Set<G.Pos>(), turn = -1, pathSet = new Set<G.Pos>(), pathOk = true;
   function paintHalls() {
     const M = map!, hm = hallMesh!;
-    hallIdx.forEach((i, k) => hm.setColorAt(k, col.set(pathSet.has(i) ? (pathOk ? CAN : 0xb5483f) : M.bonus.includes(i) ? BONUS : M.doors.some(d => d.cell === i) ? P.door : P.hall)));
+    const boost = hallTint === P.hall ? 1 : 4; // 텍스처 복도: 4배 = 강조 표시(셰이더가 텍스처 대신 이 색을 칠함)
+    hallIdx.forEach((i, k) => {
+      const c = pathSet.has(i) ? (pathOk ? CAN : 0xb5483f) : M.bonus.includes(i) ? BONUS : M.doors.some(d => d.cell === i) ? P.door : null;
+      hm.setColorAt(k, c == null ? col.set(hallTint) : col.set(c).multiplyScalar(boost));
+    });
     if (hm.instanceColor) hm.instanceColor.needsUpdate = true;
   }
   function preview(cells: G.Pos[], ok: boolean) {
@@ -387,6 +421,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     start() { if (!running) { running = true; clock.getDelta(); frame(); } },
     stop() { running = false; for (const t of throws) { scene.remove(t.mesh); t.done(); } throws = []; },
     resetView: fit,
+    rebuild() { key = null; },
     throwDice,
     preview,
   };

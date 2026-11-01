@@ -524,3 +524,7 @@ button.sk *{visibility:hidden}
   background-size:300% 100%;animation:skShine 1.4s linear infinite}
 #board3d.sk3d::after{content:"🧊 3D 보드 불러오는 중…";position:absolute;inset:0;display:grid;place-items:center;color:var(--sub);font-size:14px}
 @media (prefers-reduced-motion:reduce){.screen.enter,.sk,#board3d.sk3d{animation:none}}
+
+/* 2D 바닥 텍스처: 복도 칸은 3×3칸에 한 장(칸마다 위치 --tp), 강조 칸(경로·보너스·지나간 길)은 단색이 덮음 */
+#board.tex .cell:not(.path):not(.trail):not(.bonus){background:linear-gradient(#0002,#0002),var(--hallTex) var(--tp) / 300% 300%}
+#board.tex .rname{text-shadow:0 1px 3px #000,0 0 6px #000}

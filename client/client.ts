@@ -15,7 +15,7 @@ const store = {
   get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? d; } catch { return d; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경(시크릿 등)은 무시 */ } },
 };
-import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl } from './art.ts';
+import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl, floorTex, TEX_CELLS, loadTexManifest } from './art.ts';
 import { drawMapPreview, mapSummary } from './preview.ts';
 
 let token = store.get<string | null>('wd_token', null);
@@ -392,17 +392,22 @@ function renderBoard(g: G.View) {
   const b = $('#board'), m = g.map, T = G.THEMES[g.theme];
   if (boardKey !== g.seed + g.theme) {
     boardKey = g.seed + g.theme; b.innerHTML = ''; b.style.setProperty('--n', String(m.n));
+    const hallTex = floorTex(g.theme, 'hall');
+    b.classList.toggle('tex', !!hallTex); b.style.setProperty('--hallTex', hallTex ? `url(${hallTex})` : 'none');
     lastPos2D = g.players.map(p => p.pos);
     m.cells.forEach((c, i) => {
       if (c !== -1) return;
       const d = el('div', 'cell'); d.dataset.p = String(i); d.style.gridArea = `${Math.floor(i / m.n) + 1}/${(i % m.n) + 1}`;
+      if (hallTex) d.style.setProperty('--tp', `${(i % m.n) % TEX_CELLS * 50}% ${Math.floor(i / m.n) % TEX_CELLS * 50}%`);
       if (m.doors.some(x => x.cell === i)) { d.classList.add('door'); d.title = '문'; }
       if (m.bonus.includes(i)) { d.classList.add('bonus'); d.title = '❗ 보너스칸 — 여기서 멈추면 특수 능력'; }
       b.append(d);
     });
     m.rects.forEach((q, i) => {
       const d = el('div', 'room'); d.dataset.p = String(G.roomPos(i)); d.style.gridArea = `${q.y0 + 1}/${q.x0 + 1}/${q.y1 + 2}/${q.x1 + 2}`;
-      d.style.background = `color-mix(in srgb, var(--room) 72%, ${ROOM_TINTS[i % ROOM_TINTS.length]})`;
+      const ft = floorTex(g.theme, i), w = q.x1 - q.x0 + 1, h = q.y1 - q.y0 + 1;
+      d.style.background = ft ? `linear-gradient(#0003,#0003), url(${ft}) 0 0 / ${100 * TEX_CELLS / w}% ${100 * TEX_CELLS / h}% repeat`
+        : `color-mix(in srgb, var(--room) 72%, ${ROOM_TINTS[i % ROOM_TINTS.length]})`;
       d.append(el('span', 'rname', T.r[i]));
       if (m.passages[i] !== undefined) { const p = el('span', 'pass', '🕳️'); p.title = '비밀 통로 → ' + T.r[m.passages[i]]; d.append(p); }
       d.append(el('span', 'toks')); b.append(d);
@@ -410,6 +415,8 @@ function renderBoard(g: G.View) {
     const q = m.center, d = el('div', 'room center'); d.dataset.p = String(G.centerPos(m));
     d.style.gridArea = `${q.y0 + 1}/${q.x0 + 1}/${q.y1 + 2}/${q.x1 + 2}`;
     d.title = '사건 파일실 — 출발점, 최종 고발은 여기서만';
+    const ct = floorTex(g.theme, 'center');
+    if (ct) d.style.background = `linear-gradient(#0003,#0003), url(${ct}) 0 0 / ${100 * TEX_CELLS / (q.x1 - q.x0 + 1)}% ${100 * TEX_CELLS / (q.y1 - q.y0 + 1)}% repeat`;
     d.append(el('span', 'rname', '🗂️ 사건 파일'), el('span', 'env', '✉️'), el('span', 'toks')); b.append(d);
   }
   const gen = ++gen2D; // 다시 그려지면 이전 이동 애니메이션 타이머는 무시
@@ -871,3 +878,5 @@ paintMusic();
 $btn('#create').disabled = $btn('#join').disabled = $btn('#practice').disabled = true;
 render();
 connect();
+// 텍스처 목록이 오면 보드를 다시 그림(목록 전에 그려졌으면 단색이었으므로)
+loadTexManifest().then(() => { boardKey = ''; b3?.rebuild(); if (S?.game) render(); });

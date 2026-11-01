@@ -37,14 +37,20 @@ function connect() {
   const sock = (ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host));
   sock.onopen = () => {
     everConnected = true; for (const id of ['#create', '#join', '#practice']) { $btn(id).disabled = false; $(id).classList.remove('sk'); } $('#wake').hidden = true;
-    if (code && $in('#name').value) join(code);
+    if (code && $in('#name').value) { rejoining = !!S; join(code); } // 방에 있던 중 다시 붙는 경우
   };
   sock.onmessage = e => {
     const m = JSON.parse(e.data) as ServerMsg;
     stopLoading(); linkJoining = false; const wasCode = codeJoining; codeJoining = false;
     if (m.t === 'kicked') { S = null; code = null; history.replaceState(null, '', location.pathname); render(); return toast('방장이 이 방에서 내보냈어요'); }
-    if (m.t === 'error') { if (!S) { code = null; history.replaceState(null, '', location.pathname); render(); } return wasCode ? codeErr(m.msg) : toast(m.msg); }
-    S = m; code = m.code; creating = false;
+    if (m.t === 'error') {
+      // 방이 사라짐(서버 재시작·정리): 게임 화면이 멈춘 채 남지 않게 첫 화면으로
+      if (m.gone && S) { const why = rejoining ? '서버가 다시 시작되어 진행 중이던 판이 사라졌어요. 새 방을 만들어 주세요' : m.msg; rejoining = false; S = null; code = null; history.replaceState(null, '', location.pathname); render(); return toast(why); }
+      rejoining = false;
+      if (!S) { code = null; history.replaceState(null, '', location.pathname); render(); }
+      return wasCode ? codeErr(m.msg) : toast(m.msg);
+    }
+    S = m; code = m.code; creating = false; rejoining = false;
     if (location.search !== '?room=' + m.code) history.replaceState(null, '', '?room=' + m.code);
     deadline = m.left == null ? 0 : Date.now() + m.left;
     total = m.game?.phase === 'refute' ? G.REFUTE_MS : G.TURN_MS;
@@ -59,7 +65,7 @@ function connect() {
   sock.addEventListener('open', () => netBar(false));
   sock.addEventListener('message', () => { clearTimeout(probeT); netBar(false); });
 }
-let retryT: ReturnType<typeof setTimeout> | undefined, probeT: ReturnType<typeof setTimeout> | undefined, fastRetry = false;
+let rejoining = false, retryT: ReturnType<typeof setTimeout> | undefined, probeT: ReturnType<typeof setTimeout> | undefined, fastRetry = false;
 const netBar = (on: boolean) => { $('#netbar').hidden = !on; };
 /** 아이폰은 사파리를 내렸다 오면 연결이 조용히 끊겨 있곤 함 → 돌아오는 순간 확인. 방에 있으면 재입장 요청을 보내 2.5초 안에 답이 없으면 새로 연결 */
 function checkConn() {
@@ -73,7 +79,7 @@ function checkConn() {
 document.addEventListener('visibilitychange', checkConn);
 addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) checkConn(); });
 addEventListener('online', checkConn);
-const send = (m: ClientMsg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
+const send = (m: ClientMsg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); else { toast('서버와 연결이 끊겼어요 — 다시 연결하는 중'); checkConn(); } };
 const act = (a: G.Action) => send({ t: 'act', action: a });
 const myName = () => { const n = $in('#name').value.trim(); store.set('wd_name', n); return n; };
 // 닉네임 없이 방 만들기·입장을 누르면 칸 아래 인라인 오류 + 흔들림, 입력하면 사라짐
@@ -413,7 +419,8 @@ function watchRoll(g: G.View) {
   const power = last.p === g.me && myPower != null ? myPower : 0.5;
   myPower = null; diceBusy = true;
   const run = view === '3d' ? (b3 ? b3.throwDice(last.d, power) : Promise.resolve()) : throwDice2D($('#board'), last.d, power);
-  run.finally(() => { diceBusy = false; if (S?.game) { renderView(S.game); renderPanel(S.game); autoFocus(S.game); } });
+  Promise.race([run, new Promise<void>(r => setTimeout(r, 5000))]) // 연출이 어떤 이유로든 안 끝나도 5초 뒤엔 이동할 수 있게
+    .finally(() => { diceBusy = false; if (S?.game) { renderView(S.game); renderPanel(S.game); autoFocus(S.game); } });
 }
 const myMoves = (g: G.View) => (diceBusy ? new Set<G.Pos>() : G.moves(g, g.me));
 
@@ -1015,7 +1022,7 @@ rollBtn.onpointerup = () => {
   charging = null; rollBtn.classList.remove('charging'); rollBtn.style.removeProperty('--p'); stopRattle();
   act({ t: 'roll' });
 };
-rollBtn.onpointercancel = () => { stopRattle(); charging = null; rollBtn.classList.remove('charging'); rollBtn.style.removeProperty('--p'); };
+rollBtn.onpointercancel = () => { if (charging != null && performance.now() - charging > 120) return rollBtn.onpointerup!(new PointerEvent('pointerup')); stopRattle(); charging = null; rollBtn.classList.remove('charging'); rollBtn.style.removeProperty('--p'); };
 rollBtn.oncontextmenu = e => e.preventDefault(); // 모바일 길게 누르기 메뉴 방지
 rollBtn.onclick = e => { if (e.detail === 0) { myPower = 0.5; act({ t: 'roll' }); } };
 

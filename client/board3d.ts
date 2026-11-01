@@ -449,8 +449,13 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       return true;
     });
   }
+  let frameErrs = 0;
   function frame() {
     if (!running) return;
+    try { frameBody(); } catch (e) { if (++frameErrs > 30) { running = false; console.error('3D stopped', (e as Error)?.name); return; } } // 한 프레임 오류로 보드 전체가 멈추지 않게
+    requestAnimationFrame(frame);
+  }
+  function frameBody() {
     const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
     if (env) { env.rotation.y = t * 0.8; env.position.y = 0.55 + Math.sin(t * 2) * 0.05; }
     stepDice(t);
@@ -484,7 +489,6 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     controls.update();
     updateWalls(dt);
     renderer.render(scene, camera);
-    requestAnimationFrame(frame);
   }
   new ResizeObserver(() => {
     const w = container.clientWidth, h = container.clientHeight; if (!w || !h) return;

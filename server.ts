@@ -150,7 +150,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (m.t === 'join') {
     if (!validToken(m.token)) return;
     const room = rooms.get(String(m.code ?? '').toUpperCase().trim());
-    if (!room) return send(ws, { t: 'error', msg: '없는 방 코드예요' });
+    if (!room) return send(ws, { t: 'error', msg: '없는 방 코드예요', gone: true });
     if (room.banned?.has(m.token)) return send(ws, { t: 'error', msg: '방장이 내보낸 방에는 다시 들어갈 수 없어요' });
     let i = room.seats.findIndex(s => s.token === m.token && !s.bot);
     if (i < 0) {
@@ -167,7 +167,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     return update(room);
   }
   const { room, seat } = conn;
-  if (!room || !seat) return;
+  if (!room || !seat) return send(ws, { t: 'error', msg: '방이 닫혔어요 — 처음 화면으로 돌아갑니다', gone: true });
   room.last = Date.now();
   const i = room.seats.indexOf(seat), isHost = room.host === seat.token;
   if (m.t === 'act' && room.game) {
@@ -269,11 +269,15 @@ setInterval(() => {
     const idle = Date.now() - room.last, empty = !room.seats.some(s => s.ws);
     if ((empty && idle > 10 * 60000) || idle > ROOM_IDLE_MS) { // 비면 10분, 누가 있어도 2시간 아무 행동 없으면 정리
       clearTimeout(room.timer); clearTimeout(room.botTimer); rooms.delete(code);
-      for (const s of room.seats) { if (s.ws) { send(s.ws, { t: 'error', msg: '오래 멈춘 방이라 닫혔어요' }); const c = conns.get(s.ws); if (c) c.room = c.seat = undefined; } }
+      for (const s of room.seats) { if (s.ws) { send(s.ws, { t: 'error', msg: '오래 멈춘 방이라 닫혔어요', gone: true }); const c = conns.get(s.ws); if (c) c.room = c.seat = undefined; } }
     }
   }
 }, 30000);
 
+process.on('SIGTERM', () => { // Render가 새 버전으로 바꿀 때 보내는 종료 신호
+  for (const room of rooms.values()) for (const s of room.seats) send(s.ws, { t: 'error', msg: '서버가 업데이트되어 진행 중이던 판이 끝났어요. 새 방을 만들어 주세요', gone: true });
+  setTimeout(() => process.exit(0), 300);
+});
 process.on('uncaughtException', e => console.error('uncaught', e?.name ?? e)); // 마지막 방어선: 한 요청의 오류로 모두의 판이 끊기지 않게
 process.on('unhandledRejection', e => console.error('unhandled', (e as Error)?.name ?? e));
 server.listen(PORT, () => console.log(`whodunit http://localhost:${PORT}`));

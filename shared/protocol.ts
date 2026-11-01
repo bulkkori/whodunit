@@ -27,4 +27,5 @@ export interface StateMsg {
   /** 게임 시작 연출이 끝나기까지 남은 시간(ms). 이 동안 타이머·봇이 멈춘다 */
   intro: number;
 }
-export type ServerMsg = StateMsg | { t: 'error'; msg: string } | { t: 'kicked' };
+/** gone = 방이 더 이상 없음(서버 재시작·정리). 브라우저는 첫 화면으로 돌아가야 함 */
+export type ServerMsg = StateMsg | { t: 'error'; msg: string; gone?: boolean } | { t: 'kicked' };

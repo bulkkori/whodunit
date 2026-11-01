@@ -1113,6 +1113,8 @@ const saveMemo = () => store.set(memoKey, memo);
 function renderMemo(g: G.View) {
   const k = `wd_memo_${S?.code}_${g.seed}`;
   if (memoKey !== k) {
+    // 지난 판 노트는 이 기기에만 남는데, 쌓이지 않게 최근 3판만 남기고 지움
+    try { const old = Object.keys(localStorage).filter(x => x.startsWith('wd_memo_') && x !== k); if (old.length > 2) old.slice(0, old.length - 2).forEach(x => localStorage.removeItem(x)); } catch { /* 저장소 없음 */ }
     memoKey = k; memo = store.get<Memo>(k, { cells: {}, strike: {}, note: '', auto: store.get<AutoMode>('wd_automode', 'hint'), applied: {} });
     if (typeof memo.auto === 'boolean') memo.auto = memo.auto ? 'sure' : 'off'; // 예전 저장 형식
     $<HTMLSelectElement>('#automode').value = memo.auto;

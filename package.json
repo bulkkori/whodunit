@@ -7,15 +7,20 @@
   },
   "scripts": {
     "build": "esbuild client/client.ts --bundle --splitting --format=esm --target=es2022 --minify --sourcemap --outdir=public/build",
-    "prestart": "npm run build",
+    "prestart": "npm run fonts && npm run build",
     "start": "node server.ts",
     "typecheck": "tsc",
     "test": "node --test test/*.test.ts",
     "check": "npm run typecheck && npm test",
-    "tex": "node tools/textures.ts"
+    "tex": "node tools/textures.ts",
+    "fonts": "node tools/fonts.ts"
   },
   "dependencies": {
-    "ws": "^8.22.1"
+    "ws": "^8.22.1",
+    "pretendard": "^1.3.9",
+    "@fontsource/nanum-myeongjo": "^5.3.0",
+    "@fontsource/nanum-pen-script": "^5.3.0",
+    "@fontsource/nanum-gothic-coding": "^5.3.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

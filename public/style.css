@@ -1301,3 +1301,4 @@ body{font-family:"Pretendard Variable","Pretendard",system-ui,"Apple SD Gothic N
 #board .tok.wtok.wimg{background:radial-gradient(circle at 40% 35%,#f6eedb,#d6c39c)!important;width:calc(100cqw / var(--n) * .8);box-shadow:0 0 0 1.5px #b8924a,0 1px 3px #0009;overflow:hidden;padding:0;font-size:0}
 #board .tok.wtok.wimg img{display:block;width:90%;height:90%;object-fit:contain;filter:drop-shadow(0 1px 1px #0006)}
 .field .hint{font-size:12.5px}
+#lobby .privacy{margin:6px 0 0;font-size:12px;line-height:1.5;color:#6a5646;word-break:keep-all;border-top:1px dashed #2a1d1733;padding-top:10px}

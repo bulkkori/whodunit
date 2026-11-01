@@ -10,10 +10,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>후더닛</title>
 <link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&family=Nanum+Pen+Script&family=Nanum+Gothic+Coding:wght@700&display=swap">
-<!-- 본문 글꼴: Pretendard(작은 글자도 또렷한 한글 고딕, 쓰는 글자만 받는 동적 서브셋) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- 글꼴은 우리 서버에서(외부 글꼴 서비스로 플레이어 IP가 가지 않게): npm run fonts -->
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -40,6 +38,7 @@
     <div class="or">또는 참여 코드로 입장</div>
     <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off" aria-describedby="code_err"><button id="join" class="loadbtn sk"><span>입장</span></button></div>
     <small id="code_err" class="ferr" role="alert" hidden></small>
+    <p class="privacy">서명(닉네임)은 같은 방 사람에게만 보여요. 실명·연락처는 쓰지 마세요. 이 데모는 회원 정보·IP·대화를 저장하지 않으며, 방은 모두 나가면 사라집니다.</p>
   </section>
 
   <!-- 초대 링크로 들어올 때 서버 응답 전까지 보여 주는 대기실 모양 스켈레톤 -->

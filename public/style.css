@@ -363,3 +363,4 @@ button.ghost.loading::after{border-color:var(--ink);border-right-color:transpare
 #c_max_list li[aria-selected=true]{background:color-mix(in srgb,var(--accent) 30%,transparent);font-weight:700}
 .combo input:focus{outline:none}
 .combo:focus-within{border-color:var(--accent)}
+.combo input[readonly]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

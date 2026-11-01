@@ -68,7 +68,7 @@ function stopLoading() { clearTimeout(loadingT); if (loadingBtn) { loadingBtn.cl
 // ---------- 방 만들기 화면 ----------
 let creating = false;
 // 최대 인원: 한 칸에 셀렉트·텍스트 필드·스테퍼를 합침
-//  한 번 누르면 목록(셀렉트처럼) · 빠르게 두 번 누르면 직접 입력 · ▲▼ 또는 화살표 키로 한 명씩
+//  한 번 누르면 목록(셀렉트처럼) · 빠르게 두 번 또는 꾹 누르면 직접 입력 · ▲▼ 또는 화살표 키로 한 명씩
 const maxTxt = $in('#c_max_txt'), maxList = $('#c_max_list');
 let maxPlayers = 6;
 function setMax(n: number) {
@@ -89,7 +89,18 @@ const editMode = (on: boolean) => {
 };
 setMax(6);
 let tapT: ReturnType<typeof setTimeout> | undefined, lastTap = 0;
+// 꾹 누르기(0.5초) → 직접 입력. 누르는 동안 손가락이 움직이면 취소
+let holdT: ReturnType<typeof setTimeout> | undefined, held = false, holdAt: [number, number] = [0, 0];
+maxTxt.addEventListener('pointerdown', e => {
+  if (!maxTxt.readOnly) return;
+  held = false; holdAt = [e.clientX, e.clientY]; clearTimeout(holdT);
+  holdT = setTimeout(() => { held = true; clearTimeout(tapT); lastTap = 0; editMode(true); }, 500);
+});
+maxTxt.addEventListener('pointermove', e => { if (Math.hypot(e.clientX - holdAt[0], e.clientY - holdAt[1]) > 8) clearTimeout(holdT); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) maxTxt.addEventListener(ev, () => clearTimeout(holdT));
+maxTxt.addEventListener('contextmenu', e => { if (maxTxt.readOnly || held) e.preventDefault(); }); // 길게 누를 때 메뉴 막기
 maxTxt.addEventListener('click', () => {
+  if (held) { held = false; return; }  // 꾹 누르기 뒤에 따라오는 click은 무시
   if (!maxTxt.readOnly) return; // 입력 중엔 커서 이동만
   const now = Date.now();
   if (now - lastTap < 320) { clearTimeout(tapT); lastTap = 0; editMode(true); return; } // 두 번 → 직접 입력

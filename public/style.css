@@ -486,3 +486,5 @@ header #music.off{opacity:.5}
 input.invalid{outline:2px solid var(--danger);animation:shake .35s}
 @keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 @media (prefers-reduced-motion:reduce){input.invalid{animation:none}}
+
+.combo .spin button[aria-disabled="true"]{opacity:.35}

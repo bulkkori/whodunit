@@ -82,12 +82,12 @@ function setMax(n: number) {
   maxPlayers = Math.min(G.MAX_PLAYERS, Math.max(3, Math.round(n) || maxPlayers));
   queueMicrotask(refreshCreatePreview);
   maxTxt.value = String(maxPlayers);
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.disabled = maxPlayers + +b.dataset.d! < 3 || maxPlayers + +b.dataset.d! > G.MAX_PLAYERS;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.setAttribute('aria-disabled', String(maxPlayers + +b.dataset.d! < 3 || maxPlayers + +b.dataset.d! > G.MAX_PLAYERS));
   for (const li of maxList.children) li.setAttribute('aria-selected', String((li as HTMLElement).dataset.v === String(maxPlayers)));
 }
 for (let n = 3; n <= G.MAX_PLAYERS; n++) {
   const li = el('li', '', `${n}명`); li.dataset.v = String(n); li.setAttribute('role', 'option');
-  li.onclick = () => { setMax(n); listOpen(false); };
+  li.onclick = () => { showMaxError(''); setMax(n); listOpen(false); };
   maxList.append(li);
 }
 const listOpen = (on: boolean) => { maxList.hidden = !on; maxTxt.setAttribute('aria-expanded', String(on)); };
@@ -99,6 +99,18 @@ const showMaxError = (msg: string) => {
   $('#c_max').classList.toggle('invalid', !!msg); maxTxt.setAttribute('aria-invalid', String(!!msg));
 };
 maxTxt.addEventListener('input', () => showMaxError(maxError(maxTxt.value.trim())));
+// ▲▼·화살표 키: 범위 끝에서 더 누르면 인라인 오류(2.5초 뒤 사라짐)
+let stepErrT: ReturnType<typeof setTimeout> | undefined;
+const stepMax = (d: number) => {
+  const n = maxPlayers + d;
+  clearTimeout(stepErrT);
+  if (n < 3 || n > G.MAX_PLAYERS) {
+    showMaxError(n < 3 ? '최소 3명부터 가능해요.' : `최대 ${G.MAX_PLAYERS}명까지 가능해요.`);
+    stepErrT = setTimeout(() => { if (maxTxt.readOnly) showMaxError(''); }, 2500);
+    return;
+  }
+  showMaxError(''); setMax(n);
+};
 const editMode = (on: boolean) => {
   if (!on && maxError(maxTxt.value.trim())) maxTxt.value = String(maxPlayers); // 잘못된 값으로 나가면 이전 값으로
   maxTxt.readOnly = !on; $('#c_max').classList.toggle('editing', on);
@@ -128,9 +140,9 @@ maxTxt.addEventListener('blur', () => { if (!maxTxt.readOnly) editMode(false); }
 maxTxt.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); if (!maxTxt.readOnly) { if (!maxError(maxTxt.value.trim())) editMode(false); } else listOpen(maxList.hidden === true); }
   else if (e.key === 'Escape') { listOpen(false); if (!maxTxt.readOnly) { maxTxt.value = String(maxPlayers); editMode(false); } }
-  else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); setMax(maxPlayers + (e.key === 'ArrowUp' ? 1 : -1)); }
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepMax(e.key === 'ArrowUp' ? 1 : -1); }
 });
-for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.onclick = () => { setMax(maxPlayers + +b.dataset.d!); listOpen(false); };
+for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.onclick = () => { stepMax(+b.dataset.d!); listOpen(false); };
 addEventListener('pointerdown', e => { if (!(e.target as HTMLElement).closest('#c_max')) listOpen(false); });
 
 function refreshCreatePreview() {

@@ -36,6 +36,7 @@
     <button id="create" class="sk">방 만들기</button>
     <button id="practice" class="ghost sk">봇 2명과 바로 연습 →</button>
     <a class="guide" href="guide.html">처음이세요? 설명서 보기</a>
+    <a class="guide feedback" href="#" target="_blank" rel="noopener" hidden>피드백 남기기</a>
     <div class="or">또는 참여 코드로 입장</div>
     <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off" aria-describedby="code_err"><button id="join" class="loadbtn sk"><span>입장</span></button></div>
     <small id="code_err" class="ferr" role="alert" hidden></small>
@@ -75,6 +76,7 @@
           <small class="hint">남는 자리는 게임을 시작할 때 봇이 채워요</small>
         </div>
         <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
+        <label class="field">봇 템포 <select id="c_tempo" aria-label="봇 템포"><option value="fast">빠르게</option><option value="normal" selected>보통</option><option value="slow">천천히</option></select><small class="hint">천천히: 봇 차례 사이에 추리 노트를 적을 시간을 넉넉히 둬요</small></label>
         <div class="row cta"><button id="c_cancel" class="ghost">취소</button><button id="c_make" class="loadbtn"><span>방 만들기</span></button></div>
       </div>
     </div>
@@ -107,6 +109,7 @@
               <div class="stepper" id="wmax"><button type="button" data-d="-1" aria-label="한 명 줄이기">−</button><output>6</output><span>명</span><button type="button" data-d="1" aria-label="한 명 늘리기">＋</button></div>
             </div>
             <label class="switch"><span>🎭 블러핑 허용</span><input type="checkbox" id="optbluff"><i></i></label>
+            <label class="field">봇 템포 <select id="opttempo" aria-label="봇 템포"><option value="fast">빠르게</option><option value="normal" selected>보통</option><option value="slow">천천히</option></select></label>
           </div>
         </div>
       </div>

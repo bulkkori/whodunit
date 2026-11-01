@@ -23,6 +23,9 @@ import { drawMapPreview, mapSummary, onTexReady } from './preview.ts';
 let token = store.get<string | null>('wd_token', null);
 if (!token) { token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); store.set('wd_token', token); }
 const TOKEN = token;
+/** 피드백 받는 곳(구글 폼 등). 비어 있으면 링크를 숨김 */
+export const FEEDBACK_URL = '';
+for (const a of document.querySelectorAll<HTMLAnchorElement>('a.feedback')) { a.hidden = !FEEDBACK_URL; a.href = FEEDBACK_URL; }
 
 let S: StateMsg | null = null, ws: WebSocket | null = null, deadline = 0, total = G.TURN_MS, everConnected = false;
 let code = new URLSearchParams(location.search).get('room');
@@ -218,7 +221,7 @@ for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
 // 창 크기가 바뀌면 미리보기 다시 그림
 new ResizeObserver(() => { if (!$('#createbox').hidden) refreshCreatePreview(); }).observe($('#c_prev'));
 new ResizeObserver(() => { const c = $('#w_prev'); if (!$('#wait').hidden) { c.dataset.k = ''; if (S) renderWait(S); } }).observe($('#w_prev'));
-const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked });
+const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked, tempo: $<HTMLSelectElement>('#c_tempo').value as G.Tempo });
 // 방 제목: 방 만들기 창을 열 때마다 다음 추리물 제목이 기본값으로 보이고, 비워 두면 그 제목으로 방을 만든다. 누르면 빈 칸에서 바로 입력.
 const TITLES = ['자정의 마지막 손님', '사라진 유언장', '잠긴 서재의 비밀', '폭풍우 치는 밤', '누가 불을 껐는가', '거짓말쟁이의 만찬',
   '열세 번째 초대장', '멈춰 버린 괘종시계', '깨진 찻잔의 증언', '안개 속 발자국', '독이 든 와인 한 잔', '마지막 기차의 승객'];
@@ -257,6 +260,7 @@ $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast('초대 링크를 복사했어요'); } catch { toast(location.href); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
+$('#opttempo').onchange = e => send({ t: 'opt', tempo: (e.target as HTMLSelectElement).value as G.Tempo });
 $('#start').onclick = () => send({ t: 'start' });
 for (const b of document.querySelectorAll<HTMLButtonElement>('#wmax button')) b.onclick = () => { if (S) send({ t: 'maxp', n: S.maxPlayers + +b.dataset.d! }); };
 $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
@@ -536,7 +540,7 @@ function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
   $('#bigcode').textContent = s.code;
   const chips = $('#wopts'); chips.innerHTML = '';
-  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지'])
+  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', ...(s.opts.tempo && s.opts.tempo !== 'normal' ? [`🤖 봇 ${G.TEMPOS[s.opts.tempo].name}`] : [])])
     chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
@@ -560,6 +564,7 @@ function renderWait(s: StateMsg) {
   $('#start').hidden = !s.host;
   $<HTMLSelectElement>('#theme2').value = s.theme;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
+  const ot = $<HTMLSelectElement>('#opttempo'); ot.value = s.opts.tempo ?? 'normal'; ot.disabled = !s.host;
   const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
   const rb = $btn('#readybtn'); rb.hidden = s.host;
   rb.textContent = me?.ready ? '✅ 준비 완료 (누르면 취소)' : '✋ 준비 완료';
@@ -1093,6 +1098,7 @@ function renderDialogs(g: G.View) {
         f.append(el('p', 'ofact', `인물은 ${G.cardName(g.theme, env.s)}, 도구는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
         const row = el('div', 'row');
         if (S?.host) { const again = el('button', '', '대기실로'); again.onclick = e => { e.preventDefault(); send({ t: 'again' }); dlg.close(); }; row.append(again); }
+        if (FEEDBACK_URL) { const fb = el('a', 'ofb', '이 판은 어땠나요? 피드백 남기기 →'); fb.href = FEEDBACK_URL; fb.target = '_blank'; fb.rel = 'noopener'; f.append(fb); }
         row.append(el('button', 'ghost', '보드 보기')); f.append(row);
       });
     }

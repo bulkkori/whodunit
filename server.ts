@@ -7,7 +7,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import * as G from './shared/game.ts';
 import type { ClientMsg, ServerMsg } from './shared/protocol.ts';
 
-const PORT = Number(process.env.PORT) || 3000, BOT_MS = Number(process.env.BOT_MS) || 700, INTRO_MS = Number(process.env.INTRO_MS ?? 9000);
+const PORT = Number(process.env.PORT) || 3000, BOT_MS = Number(process.env.BOT_MS) || 1800, INTRO_MS = Number(process.env.INTRO_MS ?? 9000);
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -89,6 +89,19 @@ function finishPick(room: Room) {
   update(room);
 }
 
+/** 봇이 다음 행동까지 기다리는 시간. 사람이 수사 일지를 읽고 노트를 적을 수 있게 단계마다 다르고, 추리·반박 결과가 막 나왔으면 한 박자 더 쉰다 */
+const READ_AFTER = new Set(['shown', 'pass', 'norefute', 'silentnone', 'accuse', 'intel', 'silent']);
+function botDelay(g: G.Game): number {
+  const mul = G.TEMPOS[g.opts.tempo ?? 'normal'].mul;
+  const base = g.phase === 'move' ? Math.max(1700, BOT_MS * 1.4 * mul) // 주사위 연출(약 1.5초)은 템포와 상관없이 끝나야 함
+    : g.phase === 'refute' ? BOT_MS * 1.3 * mul
+    : g.phase === 'roll' ? BOT_MS * 0.8 * mul
+    : BOT_MS * mul;
+  const last = g.log[g.log.length - 1];
+  const read = g.phase === 'roll' && last && READ_AFTER.has(last.t) ? BOT_MS * 2.2 * mul : 0; // 방금 추리·반박이 끝났으면 읽을 시간
+  return Math.round(base + read);
+}
+
 function update(room: Room) {
   clearTimeout(room.timer); clearTimeout(room.botTimer);
   if (room.stage === 'pick') { room.deadline = null; room.timer = setTimeout(() => finishPick(room), Math.max(0, (room.pickUntil ?? 0) - Date.now())); broadcast(room); return; }
@@ -104,7 +117,7 @@ function update(room: Room) {
     const err = G.act(g, a, G.botAction(g));
     if (err) { console.error('bot error', err); G.timeout(g); } // 턴 종료가 막힌 단계에서도 넘어가도록 시간 초과 처리
     update(room);
-  }, g.phase === 'move' ? BOT_MS * 2.3 : BOT_MS); // 굴린 직후엔 주사위 연출(약 1.5초)이 끝날 때까지 기다림
+  }, botDelay(g));
   broadcast(room);
 }
 
@@ -129,7 +142,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     const room: Room = {
       code: newCode(), title: clean(m.title, 20, `${clean(m.name)}의 사건`), maxPlayers: clampPlayers(m.maxPlayers),
       theme: m.theme, host: m.token, seats: [], stage: 'lobby', game: null, last: Date.now(),
-      opts: { roles: true, bluff: m.opts?.bluff !== false }, // 특수 능력은 기본 규칙 — 끌 수 없음
+      opts: { roles: true, bluff: m.opts?.bluff !== false, tempo: G.isTempo(m.opts?.tempo) ? m.opts.tempo : 'normal' }, // 특수 능력은 기본 규칙 — 끌 수 없음
     };
     rooms.set(room.code, room);
     m = { t: 'join', code: room.code, name: m.name, token: m.token };
@@ -182,7 +195,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   }
   if (room.stage !== 'lobby') return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
-  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
+  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff, tempo: G.isTempo(m.tempo) ? m.tempo : room.opts.tempo };
   if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n)); // 이미 들어온 사람보다 적게는 못 줄임
   if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
   if ((m.t === 'kick' || m.t === 'host') && Number.isInteger(m.i)) {

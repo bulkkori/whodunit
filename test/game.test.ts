@@ -353,3 +353,9 @@ test('브라우저로 가는 view에는 패 배분 시드가 없다(공개 id만
   assert.equal(v.seed, 999);
   assert.notEqual(G.newGame('mansion', seats(3), v.seed).env.s + G.newGame('mansion', seats(3), v.seed).env.w, g.env.s + g.env.w);
 });
+
+test('봇 템포 옵션: 값 검증과 기본값', () => {
+  assert.ok(G.isTempo('slow') && G.isTempo('fast') && G.isTempo('normal'));
+  assert.ok(!G.isTempo('turbo') && !G.isTempo(1) && !G.isTempo(undefined));
+  assert.ok(G.TEMPOS.slow.mul > G.TEMPOS.normal.mul && G.TEMPOS.normal.mul > G.TEMPOS.fast.mul);
+});

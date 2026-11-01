@@ -1,12 +1,12 @@
 // 서버 ↔ 브라우저 WebSocket 메시지 형식
-import type { Action, GameOpts, ThemeKey, View } from './game.ts';
+import type { Action, GameOpts, Tempo, ThemeKey, View } from './game.ts';
 
 export type ClientMsg =
   | { t: 'create'; theme: ThemeKey; name: string; token: string; opts?: Partial<GameOpts>; title?: string; maxPlayers?: number }
   | { t: 'join'; code: string; name: string; token: string }
   | { t: 'act'; action: Action }
   | { t: 'theme'; theme: ThemeKey }
-  | { t: 'opt'; roles?: boolean; bluff?: boolean }
+  | { t: 'opt'; roles?: boolean; bluff?: boolean; tempo?: Tempo }
   /** 말 고르기 단계에서 내 인물 말 고르기 */
   | { t: 'pick'; suspect: number }
   /** 대기실: 준비 완료 / 방장: 최대 인원 변경 */

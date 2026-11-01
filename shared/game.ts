@@ -75,7 +75,11 @@ export type LogEntry =
   | { t: 'intel'; to: number; kind: 'interrogate' | 'tap' | 'archive' | 'search'; card?: Card; from?: number | null; a?: number; b?: number; cat?: Kind }
   | { t: 'silent'; p: number; to: number }
   | { t: 'silentnone' | 'rest' | 'bonus'; p: number };
-export interface GameOpts { roles: boolean; bluff: boolean }
+/** tempo = 봇 템포: 사람이 추리 노트를 적을 시간을 두고 봇이 움직이는 속도 */
+export type Tempo = 'fast' | 'normal' | 'slow';
+export const TEMPOS: Record<Tempo, { name: string; mul: number }> = { fast: { name: '빠르게', mul: 0.45 }, normal: { name: '보통', mul: 1 }, slow: { name: '천천히', mul: 1.8 } };
+export const isTempo = (t: unknown): t is Tempo => typeof t === 'string' && Object.hasOwn(TEMPOS, t);
+export interface GameOpts { roles: boolean; bluff: boolean; tempo?: Tempo }
 export interface Game {
   theme: ThemeKey; seed: number; map: GameMap; players: Player[]; env: Triple;
   /** 브라우저에 보내는 판 번호(서버가 따로 뽑음). 패 배분 시드(seed)는 절대 밖으로 내보내지 않는다 */

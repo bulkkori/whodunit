@@ -5,7 +5,7 @@ import * as G from '../shared/game.ts';
 const seats = (n: number) => Array.from({ length: n }, (_, i) => ({ name: 'P' + i, bot: true }));
 
 test('인원별 그리드·방 개수', () => {
-  for (const [c, n, rooms] of [[3, 15, 6], [4, 17, 7], [5, 18, 8], [6, 22, 9], [7, 23, 10], [8, 24, 11]]) {
+  for (const [c, n, rooms] of [[3, 22, 9], [4, 22, 9], [5, 22, 9], [6, 22, 9], [7, 23, 10], [8, 24, 11]]) {
     const m = G.genMap(c, 1);
     assert.equal(m.n, n); assert.equal(m.roomCount, rooms); assert.equal(m.rects.length, rooms);
   }
@@ -57,9 +57,8 @@ test('추론: 지목된 용의자 소환, 시계방향 첫 보유자가 반박',
   const target = g.players[2];
   g.players[0].pos = G.roomPos(0); g.players[0].canSuggest = true;
   // 1번은 패가 없고 2,3번이 지목 카드를 가지게 만든다
-  const s = g.players[3].hand.find(c => c[0] === 's') ?? g.env.s;
   g.players[1].hand = [];
-  g.players[2].hand.push(s);
+  g.players[2].hand.push('s' + target.suspect); // 2번이 지목될 인물 카드를 확실히 갖게
   assert.equal(G.act(g, 0, { t: 'suggest', s: 's' + target.suspect, w: g.env.w }), null);
   assert.equal(target.pos, G.roomPos(0));
   assert.equal(g.weapons[+g.env.w.slice(1)], 0); // 지목한 흉기 말이 이 방으로

@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17131a">
 <title>후더닛</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%95%B5%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -63,9 +64,11 @@
         <button data-a="accuse" class="danger" title="중앙 사건 파일실에서만">⚖️ 최종 고발 (중앙에서)</button>
       </div>
       <div id="rolebox" hidden></div>
-      <div id="openrow" hidden><h3>공개 카드 · 진실이 아님</h3><div class="cards"></div></div>
-      <h3>내 카드</h3>
-      <div id="hand"></div>
+      <div id="cardsbox">
+        <div id="openrow" hidden><h3>공개 카드 · 진실이 아님</h3><div class="cards"></div></div>
+        <h3>내 카드</h3>
+        <div id="hand"></div>
+      </div>
     </aside>
   </section>
 </main>

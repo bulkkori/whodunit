@@ -111,16 +111,6 @@ dialog .cards{display:flex;flex-direction:column;gap:6px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
 #toast.show{opacity:1}
 
-@media (max-width:760px){
-  header{gap:8px;padding:8px 12px}
-  .logo{display:none}
-  main{padding:12px 16px 80px}
-  #game{grid-template-columns:minmax(0,1fr)}
-  #board{width:100%}
-  #panel{max-height:none}
-  #drawer{top:auto;left:0;width:100%;height:70dvh;transform:translateY(100%)}
-  #handle{left:50%;top:-38px;width:auto;height:38px;padding:6px 18px;border-radius:10px 10px 0 0;writing-mode:horizontal-tb;transform:translateX(-50%)}
-  .sheet{border-left:0;border-top:1px solid var(--line)}
 }
 .room.center{background:color-mix(in srgb,var(--accent) 14%,var(--room));border:1px dashed var(--accent);align-items:center;justify-content:center;text-align:center}
 .room.center .rname{color:var(--accent);font-weight:700}
@@ -224,3 +214,90 @@ dialog .cards{display:flex;flex-direction:column;gap:6px}
 .room.path.bad{box-shadow:inset 0 0 0 3px #e05a4f}
 .path[data-step]::after{content:attr(data-step);position:absolute;inset:auto 2px 1px auto;font-size:calc(100cqw / var(--n) * .26);font-weight:800;color:#fff;text-shadow:0 1px 2px #000;z-index:3}
 .room.path[data-step]::after{font-size:13px;inset:auto 6px 4px auto}
+
+/* ===================== 반응형 레이아웃 =====================
+   기기 이름 대신 '화면 모양(가로세로 비율)'과 '크기'로 나눈다.
+   --bs = 보드 한 변. 가로형은 화면 높이에, 세로형은 화면 너비에 맞춘다. */
+:root{--hdr:52px;--pad:16px;--pw:clamp(300px,24vw,460px);--tool:40px;--dock:0px;
+  --sl:env(safe-area-inset-left);--sr:env(safe-area-inset-right);--sb:env(safe-area-inset-bottom);--st:env(safe-area-inset-top)}
+html{-webkit-text-size-adjust:100%}
+body{padding:var(--st) var(--sr) 0 var(--sl)}
+header{height:var(--hdr)}
+main{padding:var(--pad)}
+#game{max-width:none;grid-template-columns:auto var(--pw);justify-content:center;gap:var(--pad)}
+#board,#board3d{width:var(--bs)}
+#drawer{top:calc(var(--hdr) + var(--st))}
+
+/* 가로형: PC, 태블릿 가로, 폴더블 펼친 가로, 폰 가로 → 보드 왼쪽·패널 오른쪽, 한 화면에 */
+@media (min-aspect-ratio:23/20){
+  :root{--bs:min(calc(100vw - var(--pw) - var(--dock) - var(--pad) * 3 - var(--sl) - var(--sr)),
+                 calc(100dvh - var(--hdr) - var(--tool) - var(--pad) * 2 - var(--st) - var(--sb)))}
+  #panel{max-height:calc(100dvh - var(--hdr) - var(--pad) * 2 - var(--st) - var(--sb));overflow:auto}
+}
+/* 세로형·정사각형: 폰 세로, 태블릿 세로, 폴드 펼친 세로 → 보드 위·패널 아래, 행동 버튼은 화면 아래에 고정 */
+@media (max-aspect-ratio:23/20){
+  :root{--bs:min(calc(100vw - var(--pad) * 2 - var(--sl) - var(--sr)), calc(100dvh - var(--hdr) - var(--tool) - 230px))}
+  #game{grid-template-columns:minmax(0,1fr);justify-items:center}
+  #boardwrap,#panel{width:100%}
+  #panel{max-height:none;overflow:visible}
+  #actions{position:sticky;bottom:calc(46px + var(--sb));z-index:6;background:var(--panel);padding:6px 0;box-shadow:0 -8px 12px var(--panel)}
+  main{padding-bottom:calc(64px + var(--sb))}
+  #drawer{top:auto;left:0;width:100%;height:72dvh;transform:translateY(100%)}
+  #drawer.open{transform:none}
+  #handle{left:auto;right:16px;top:-40px;width:auto;height:40px;padding:6px 16px;border-radius:10px 10px 0 0;writing-mode:horizontal-tb;transform:none}
+  .sheet{border-left:0;border-top:1px solid var(--line);padding-bottom:calc(12px + var(--sb))}
+}
+/* 세로형인데 넓은 화면(태블릿 세로, 폴드 펼친 세로) → 패널을 두 칸으로 */
+@media (max-aspect-ratio:23/20) and (min-width:640px){
+  :root{--bs:min(calc(100vw - var(--pad) * 2 - var(--sl) - var(--sr)), calc(100dvh - var(--hdr) - var(--tool) - 310px))}
+  #panel{display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:row dense;align-items:start;column-gap:18px;max-width:var(--bs)}
+  #panel > #status,#panel > #last{grid-column:1 / -1}
+  #panel > #actions,#panel > #rolebox{grid-column:1}
+  #panel > #cardsbox{grid-column:2;grid-row:3 / span 2}
+  #actions{position:static;box-shadow:none}
+  main{padding-bottom:var(--pad)}
+}
+/* 좁은 폰(갤럭시 폴드 커버, 플립 등) */
+@media (max-width:520px){
+  :root{--pad:12px;--hdr:48px}
+  header{gap:8px;padding:6px 10px}
+  .logo{display:none}
+  #actions button{font-size:13px;padding:8px 4px}
+  .gcard{width:62px}.gcard .gi{font-size:22px;width:32px;height:32px}.gcard .gi.face{font-size:16px}.gcard .gn{font-size:10px}
+  .card{padding:18px;margin:3vh auto}
+}
+/* 폰 가로(높이가 낮음) → 헤더·도구줄을 얇게, 패널 폭 조정 */
+@media (max-height:520px) and (min-aspect-ratio:23/20){
+  :root{--hdr:40px;--tool:32px;--pad:8px;--pw:clamp(250px,40vw,380px)}
+  header{padding:4px 10px}
+  .logo{display:none}
+  #panel{padding:10px;gap:6px;font-size:13px}
+  #actions button{font-size:12px;padding:6px 4px}
+  .gcard{width:54px}.gcard .gi{font-size:18px;width:26px;height:26px}.gcard .gn{font-size:9px}
+  #last{display:none}
+}
+/* 큰 모니터(QHD~4K, 27~34인치) → 글자·카드·버튼 키우기 */
+@media (min-width:2200px){
+  :root{--hdr:64px;--pad:24px;--pw:clamp(440px,22vw,600px);--tool:48px}
+  body{font-size:18px}
+  #actions button{font-size:17px;padding:12px 8px}
+  .gcard{width:96px}.gcard .gi{font-size:36px;width:52px;height:52px}.gcard .gi.face{font-size:26px}.gcard .gn{font-size:14px}.gcard .gk{font-size:12px}
+  #panel h3,.sub,#last,#rolebox .sub{font-size:16px}
+  #memo{font-size:16px}#memo th,#memo td{height:34px}
+  dialog{width:min(520px,92vw);font-size:18px}
+  #viewtog button,#maxmove{font-size:16px}
+}
+@media (min-width:3000px){
+  :root{--hdr:76px;--pw:clamp(560px,20vw,720px)}
+  body{font-size:22px}
+  .gcard{width:120px}.gcard .gi{font-size:46px;width:66px;height:66px}.gcard .gn{font-size:17px}
+}
+/* 울트라와이드(21:9 이상, 34인치급) → 메모지를 오른쪽에 항상 펼쳐 둠 */
+@media (min-width:1800px) and (min-aspect-ratio:2/1){
+  :root{--dock:min(520px,24vw)}
+  #drawer{transform:none!important;width:var(--dock)}
+  #handle,#closememo{display:none}
+  body:has(#game:not([hidden])) main{margin-right:var(--dock)}
+}
+#cardsbox{display:flex;flex-direction:column;gap:8px}
+#cardsbox h3{margin:6px 0 0;font-size:13px;color:var(--sub)}

@@ -668,7 +668,11 @@ setInterval(() => {
 }, 200);
 
 // 소리: 첫 탭/클릭에서 오디오를 깨워 둬야 남이 던진 주사위 소리도 들린다
-addEventListener('pointerdown', Sound.unlock, { once: true, capture: true });
+// iOS는 touchend/click에서만 오디오를 열 수 있어서 여러 이벤트로, 열릴 때까지 계속 시도
+for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
+  const h = () => { Sound.unlock(); if (Sound.isRunning()) removeEventListener(ev, h, true); };
+  addEventListener(ev, h, { capture: true, passive: true });
+}
 const muteBtn = $btn('#mute');
 const paintMute = () => { muteBtn.textContent = Sound.isMuted() ? '🔇' : '🔊'; muteBtn.title = Sound.isMuted() ? '소리 켜기' : '소리 끄기'; };
 muteBtn.onclick = () => { Sound.setMuted(!Sound.isMuted()); Sound.unlock(); paintMute(); };

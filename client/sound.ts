@@ -11,8 +11,14 @@ export function setMuted(m: boolean) {
   if (master) master.gain.value = m ? 0 : 0.8;
 }
 
-/** 브라우저 자동재생 정책 때문에 사용자 입력(탭·클릭) 안에서 한 번 불러야 소리가 난다 */
+/**
+ * 브라우저 자동재생 정책 때문에 사용자 입력 안에서 불러야 소리가 난다.
+ * iOS 사파리는 '손을 뗄 때(touchend·click)'만 인정하고, 무음 스위치가 켜져 있으면 웹 오디오도 꺼진다.
+ * → audioSession을 playback으로(게임 소리는 🔇 버튼으로 끔), 깨운 직후 무음 소리를 한 번 재생해 확실히 연다.
+ */
 export function unlock() {
+  const nav = navigator as Navigator & { audioSession?: { type: string } };
+  if (nav.audioSession && nav.audioSession.type !== 'playback') { try { nav.audioSession.type = 'playback'; } catch { /* 미지원 */ } }
   if (!ctx) {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
@@ -22,8 +28,12 @@ export function unlock() {
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  if (ctx.state === 'suspended') void ctx.resume();
+  if (ctx.state !== 'running') {
+    void ctx.resume();
+    const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0); // iOS 잠금 해제용 무음
+  }
 }
+export const isRunning = () => ctx?.state === 'running';
 
 function click(at: number, vol: number, pitch: number) {
   if (!ctx || !master || !noise) return;
@@ -67,6 +77,7 @@ export function rattle(): () => void {
  * 주사위 두 개라 살짝 어긋나게 두 번씩 치고, 마지막엔 굴러가는 잔 딸깍임을 붙인다.
  */
 export function land(impacts: number[]) {
+  if (ctx && ctx.state !== 'running') void ctx.resume();
   if (!ctx || ctx.state !== 'running') return;
   const now = ctx.currentTime;
   impacts.forEach((s, k) => {

@@ -137,9 +137,10 @@ export const CORRIDOR = 3;
  */
 interface Plan { n: number; d: number; top: number[]; bottom: number[]; left: number[]; right: number[]; center: number }
 const PLANS: Record<number, Plan> = {
-  3: { n: 15, d: 3, top: [6, 6], bottom: [4, 8], left: [3], right: [3], center: 3 },
-  4: { n: 17, d: 4, top: [5, 9], bottom: [3, 5, 3], left: [3], right: [3], center: 3 },
-  5: { n: 18, d: 4, top: [5, 3, 4], bottom: [4, 5, 3], left: [4], right: [4], center: 4 },
+  // 3~6인은 방 9개 고정 — 같은 평면도
+  3: { n: 22, d: 4, top: [6, 4, 6], bottom: [3, 4, 3, 3], left: [8], right: [8], center: 5 },
+  4: { n: 22, d: 4, top: [6, 4, 6], bottom: [3, 4, 3, 3], left: [8], right: [8], center: 5 },
+  5: { n: 22, d: 4, top: [6, 4, 6], bottom: [3, 4, 3, 3], left: [8], right: [8], center: 5 },
   6: { n: 22, d: 4, top: [6, 4, 6], bottom: [3, 4, 3, 3], left: [8], right: [8], center: 5 },
   7: { n: 23, d: 4, top: [7, 4, 6], bottom: [5, 6, 6], left: [3, 3], right: [3, 3], center: 5 },
   8: { n: 24, d: 4, top: [5, 3, 4, 3], bottom: [6, 5, 7], left: [4, 3], right: [3, 4], center: 6 },
@@ -147,7 +148,8 @@ const PLANS: Record<number, Plan> = {
 export const SIZES: Record<number, { n: number; rooms: number }> = Object.fromEntries(Object.entries(PLANS).map(([c, pl]) =>
   [c, { n: pl.n, rooms: pl.top.length + pl.bottom.length + pl.left.length + pl.right.length }]));
 export const MAX_PLAYERS = 8;
-export const TURN_MS = 30000, REFUTE_MS = 15000;
+/** 턴 제한 2분, 반박 제한 15초 */
+export const TURN_MS = 120000, REFUTE_MS = 15000;
 const KINDS: Kind[] = ['s', 'w', 'r'];
 
 export function rng(seed: number): Rng { // mulberry32

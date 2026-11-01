@@ -653,3 +653,9 @@ button.sk *{visibility:hidden}
 }
 #lobby #code::placeholder{font:16px "Nanum Gothic Coding",monospace;letter-spacing:.05em}
 @media (max-width:600px){#lobby::after{right:150px}}
+/* 서명 칸 키우기: 손글씨체는 같은 크기에서 작아 보여서 더 크게 */
+#lobby .field.blank{font-size:17px;column-gap:14px}
+#lobby #name{font-size:38px;line-height:1.1;padding-bottom:2px}
+#lobby #name::placeholder{font-size:30px}
+@media (min-width:900px){#lobby{max-width:480px;padding:44px 38px 34px}}
+#lobby .sub{word-break:keep-all;font-size:15px}

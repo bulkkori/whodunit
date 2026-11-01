@@ -15,7 +15,7 @@ const store = {
   get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? d; } catch { return d; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경(시크릿 등)은 무시 */ } },
 };
-import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl, floorTex, TEX_CELLS, loadTexManifest } from './art.ts';
+import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl, floorTex, TEX_CELLS, loadTexManifest, asset } from './art.ts';
 import { drawMapPreview, mapSummary, onTexReady } from './preview.ts';
 
 let token = store.get<string | null>('wd_token', null);
@@ -925,6 +925,9 @@ const redrawPreviews = () => {
 };
 onTexReady(redrawPreviews);
 loadTexManifest().then(() => {
+  // 첫 화면 뒤에 용의자 8명이 실루엣으로 줄지어 선다(그림이 있을 때만)
+  const lu = $('#lineup');
+  G.THEMES.mansion.s.forEach((_, i) => { const u = asset('mansion', 's' + i); if (u) { const im = new Image(); im.src = u; im.alt = ''; lu.append(im); } });
   boardKey = ''; b3?.rebuild(); if (S?.game) render();
   for (const b of document.querySelectorAll<HTMLElement>('#c_themes .tcard')) { // 맵 카드 배경 = 그 맵의 복도 바닥
     const u = floorTex(b.dataset.k!, 'hall'); if (u) Object.assign(b.style, { backgroundImage: `linear-gradient(90deg,#000c,#0006), url(${u})`, backgroundSize: 'auto, 96px' });

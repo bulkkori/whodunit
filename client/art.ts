@@ -19,7 +19,7 @@ export const wallTex = (theme: string, k: number | 'center' | 'hall') => texUrl(
 function texUrl(theme: string, kind: 'floor' | 'wall', k: number | 'center' | 'hall') {
   return asset(theme, `${kind}-${typeof k === 'number' ? 'r' + k : k}`);
 }
-const asset = (theme: string, name: string) => (TEX[theme]?.includes(name) ? `/assets/${theme}/${name}.webp` : null);
+export const asset = (theme: string, name: string) => (TEX[theme]?.includes(name) ? `/assets/${theme}/${name}.webp` : null);
 export const TEX_CELLS = 3;
 export const ROOM_TINTS = ['#8a5a44', '#4f6b8a', '#6b7a4a', '#7a4f6b', '#8a7a44', '#4a7a73', '#80604a', '#5a5a8a', '#8a4f4f', '#4f7a55', '#76648a'];
 const KIND: Record<G.Kind, string> = { s: '인물', w: '흉기', r: '장소' };

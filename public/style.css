@@ -591,3 +591,7 @@ button.sk *{visibility:hidden}
 
 /* 인물 그림 = 전신 스탠딩(1:2, 투명 배경) → 카드에는 머리~허리만 크게. 뒤는 인물 색 배경 */
 .k-s .gc-art img{inset:auto;left:-32%;top:2%;width:164%;height:auto;object-fit:initial;filter:drop-shadow(0 1.5cqw 2cqw #0009)}
+
+/* 메모 단서(흐린 ?): 남끼리 보여 준 세 장 중 하나 — 확실한 표시가 아님 */
+#memo td.hintq{color:var(--sub);opacity:.45;font-weight:400;font-style:italic}
+#automode{font-size:12px;padding:3px 6px;max-width:190px}

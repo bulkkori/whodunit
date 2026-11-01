@@ -760,19 +760,22 @@ function renderDialogs(g: G.View) {
 
 // ---------- 메모지 ----------
 type Mark = '' | '✗' | '✓' | '?';
-interface Memo { cells: Record<string, Mark>; strike: Record<string, boolean>; note: string; auto: boolean; applied: Record<string, 1> }
+/** 자동 메모: hint = 확실한 것 + 흐린 ? 단서, sure = 확실한 것만, off = 전부 직접(실제 클루처럼) */
+type AutoMode = 'hint' | 'sure' | 'off';
+interface Memo { cells: Record<string, Mark>; strike: Record<string, boolean>; note: string; auto: boolean | AutoMode; applied: Record<string, 1>; hint?: Record<string, 1> }
 const MARKS: Mark[] = ['', '✗', '✓', '?'], FREE = ['x0', 'x1'];
 let memo: Memo | null = null, memoKey = '';
 const saveMemo = () => store.set(memoKey, memo);
 function renderMemo(g: G.View) {
   const k = `wd_memo_${S?.code}_${g.seed}`;
   if (memoKey !== k) {
-    memoKey = k; memo = store.get<Memo>(k, { cells: {}, strike: {}, note: '', auto: true, applied: {} });
-    $in('#note').value = memo.note; $in('#auto').checked = memo.auto;
+    memoKey = k; memo = store.get<Memo>(k, { cells: {}, strike: {}, note: '', auto: store.get<AutoMode>('wd_automode', 'hint'), applied: {} });
+    if (typeof memo.auto === 'boolean') memo.auto = memo.auto ? 'sure' : 'off'; // 예전 저장 형식
+    $<HTMLSelectElement>('#automode').value = memo.auto;
     buildMemo(g);
   }
   const M = memo!;
-  if (!M.auto) return;
+  if (M.auto === 'off') return;
   let ch = false;
   const mark = (card: G.Card, owner: number) => { g.players.forEach((_, j) => (M.cells[`${card}|${j}`] = j === owner ? '✓' : '✗')); ch = true; };
   for (const c of g.players[g.me].hand ?? []) if (!M.applied['h' + c]) { mark(c, g.me); M.strike[c] = true; M.applied['h' + c] = 1; }
@@ -785,6 +788,15 @@ function renderMemo(g: G.View) {
     for (const c of [e.s, e.w, e.r]) if (M.cells[`${c}|${e.p}`] !== '✓') M.cells[`${c}|${e.p}`] = '✗';
     M.applied[key] = 1; ch = true;
   });
+  // 단서: 남끼리 보여 줬을 때(카드는 모름) → 보여 준 사람 칸, 지목된 세 장에 흐린 ? (확실한 표시가 있으면 안 보임)
+  let sug: G.Triple | null = null;
+  for (const e of g.log) {
+    if (e.t === 'suggest') sug = { s: e.s, w: e.w, r: e.r };
+    if (e.t !== 'shown' || e.card || !sug) continue;
+    const key = `q${e.id}`; if (M.applied[key]) continue;
+    M.hint ??= {}; for (const c of [sug.s, sug.w, sug.r]) M.hint[`${c}|${e.p}`] = 1;
+    M.applied[key] = 1; ch = true;
+  }
   for (const e of g.log) {
     if (e.t !== 'intel' || !e.card || M.applied['s' + e.card]) continue;
     const owner = e.kind === 'tap' ? e.a : e.from;
@@ -813,7 +825,11 @@ function buildMemo(g: G.View) {
 }
 function paintMemo() {
   if (!memo) return;
-  for (const td of document.querySelectorAll<HTMLElement>('#memo td')) { const v = memo.cells[td.dataset.k!] || ''; td.textContent = v; td.dataset.m = v; }
+  const hints = memo.auto === 'hint' ? memo.hint ?? {} : {};
+  for (const td of document.querySelectorAll<HTMLElement>('#memo td')) {
+    const v = memo.cells[td.dataset.k!] || '', h = !v && !!hints[td.dataset.k!];
+    td.textContent = v || (h ? '?' : ''); td.dataset.m = v; td.classList.toggle('hintq', h);
+  }
   for (const tr of document.querySelectorAll<HTMLElement>('#memo tr[data-card]')) tr.classList.toggle('strike', !!memo.strike[tr.dataset.card!]);
 }
 $('#memo').onclick = e => {
@@ -825,7 +841,10 @@ $('#memo').onclick = e => {
   saveMemo(); paintMemo();
 };
 $('#note').oninput = e => { if (memo) { memo.note = (e.target as HTMLInputElement).value; saveMemo(); } };
-$('#auto').onchange = e => { if (memo) { memo.auto = (e.target as HTMLInputElement).checked; saveMemo(); if (S?.game) renderMemo(S.game); } };
+$('#automode').onchange = e => {
+  const v = (e.target as HTMLSelectElement).value as AutoMode; store.set('wd_automode', v); // 다음 판에도 같은 방식
+  if (memo) { memo.auto = v; saveMemo(); if (S?.game) renderMemo(S.game); paintMemo(); }
+};
 
 // ---------- 메모 드로어: 슬라이드 + 드래그 ----------
 const dr = $('#drawer'), hd = $('#handle');

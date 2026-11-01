@@ -141,8 +141,8 @@
 <div id="drawer" hidden>
   <button id="handle" aria-label="메모지 열기/닫기">📒 메모 <kbd>N</kbd></button>
   <div class="sheet">
-    <div class="sheethead"><b>수사 메모지</b><label><input type="checkbox" id="auto"> 자동 표시</label><button id="closememo" class="ghost" aria-label="메모지 닫기">✕</button></div>
-    <p class="hint">칸: 빈칸 → ✗ → ✓ → ? · 이름 누르면 줄 긋기</p>
+    <div class="sheethead"><b>수사 메모지</b><select id="automode" aria-label="자동 메모" title="자동 메모 방식"><option value="hint">자동: 확실한 것 + 단서(?)</option><option value="sure">자동: 확실한 것만</option><option value="off">직접 표시 (자동 없음)</option></select><button id="closememo" class="ghost" aria-label="메모지 닫기">✕</button></div>
+    <p class="hint">칸: 빈칸 → ✗ → ✓ → ? · 이름 누르면 줄 긋기 · 흐린 ?는 단서(남끼리 보여 준 세 장 중 하나)</p>
     <div class="memowrap"><table id="memo"></table></div>
     <input id="note" maxlength="200" placeholder="자유 메모">
     <details id="logbox"><summary>지난 추론 기록</summary><ol id="log"></ol></details>

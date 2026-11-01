@@ -854,7 +854,7 @@ function renderRole(g: G.View, my: boolean) {
   }
   box.classList.toggle('usable', usable);
   const known = g.players.map((p, j) => (j !== g.me && p.role ? `${G.ROLES[p.role].icon} ${p.name}(${G.ROLES[p.role].name})` : '')).filter(Boolean);
-  if (known.length) box.append(el('p', 'sub', '공개된 능력: ' + known.join(' · ')));
+  if (known.length) box.append(el('p', 'sub known', '공개된 능력: ' + known.join(' · ')));
 }
 
 // 폰: 보드 위 내 카드 부채꼴을 누르면 크게 펼쳐 보기(다시 누르면 접기)

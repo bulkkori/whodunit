@@ -11,6 +11,7 @@ const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public')
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.map': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg',
+  '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon',
 };
 
 const server = http.createServer(async (req, res) => {

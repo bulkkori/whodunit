@@ -28,9 +28,9 @@ export function drawMapPreview(cv: HTMLCanvasElement, theme: G.ThemeKey, count: 
   const hallPat = pat(floorTex(theme, 'hall'));
   for (let i = 0; i < m.n * m.n; i++) if (m.cells[i] === -1) {
     const x = (i % m.n) * c + 0.5, y = Math.floor(i / m.n) * c + 0.5;
-    g.fillStyle = m.bonus.includes(i) ? '#6b5326' : hallPat ?? col('--hall', '#2b2430');
+    g.fillStyle = hallPat ?? col('--hall', '#2b2430'); // 보너스칸은 매판 무작위라 미리보기에 그리지 않음
     g.fillRect(x, y, c - 1, c - 1);
-    if (hallPat && !m.bonus.includes(i)) { g.strokeStyle = 'rgba(255,236,205,.22)'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, c - 2, c - 2); } // 게임처럼 칸 테두리
+    if (hallPat) { g.strokeStyle = 'rgba(255,236,205,.22)'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, c - 2, c - 2); } // 게임처럼 칸 테두리
   }
   const room = col('--room', '#3d2b35');
   const rect = (q: G.Rect, fill: string | CanvasPattern, label: string, accent = false) => {
@@ -53,7 +53,7 @@ export function mapSummary(theme: G.ThemeKey, count: number, note = ''): HTMLEle
   const n = Math.min(G.MAX_PLAYERS, Math.max(3, count)), m = G.genMap(n), T = G.THEMES[theme];
   const total = 2 * m.people + m.roomCount - 3, per = Math.floor(total / n), open = total - per * n;
   const items = [`${T.icon} ${T.name}`, `${n}명 기준${note ? ' · ' + note : ''}`, `방 ${m.roomCount}개 + 사건 파일실`, `보드 ${m.n}×${m.n}`,
-    `1인당 카드 ${per}장` + (open ? ` · 공개 ${open}장` : ''), `보너스칸 ${m.bonus.length}개`];
+    `1인당 카드 ${per}장` + (open ? ` · 공개 ${open}장` : ''), `보너스칸 ${m.bonus.length}개 (매판 무작위)`];
   return items.map(t => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = t; return s; });
 }
 

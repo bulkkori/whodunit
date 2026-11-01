@@ -164,6 +164,16 @@ test('준비: 고른 인물 반영, 같은 장수 분배, 남는 카드는 공�
   }
 });
 
+test('보너스칸: 판(seed)마다 다른 위치, 개수는 같고 서로 떨어져 있음', () => {
+  for (const c of [3, 6, 8]) {
+    const sets = new Set([1, 2, 3, 4, 5].map(seed => G.genMap(c, seed).bonus.slice().sort().join()));
+    assert.ok(sets.size >= 4, c + '인: 판마다 배치가 달라야 함');
+    const m = G.genMap(c, 7), n = m.n;
+    assert.equal(m.bonus.length, c <= 4 ? 4 : c <= 6 ? 6 : 8);
+    for (const a of m.bonus) for (const b of m.bonus) if (a !== b) assert.ok(Math.abs(a % n - b % n) + Math.abs(Math.floor(a / n) - Math.floor(b / n)) >= 3);
+  }
+});
+
 test('복도에서 멈추면 턴 자동 종료, 보너스칸이면 능력 기회', () => {
   const { g, i } = withRole(4, 'scout');
   g.turn = i; g.phase = 'move'; g.roll = 12; const p = g.players[i]; p.fresh = false;

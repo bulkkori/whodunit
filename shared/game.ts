@@ -176,7 +176,8 @@ export function allCards(m: { roomCount: number; people: number }): Record<Kind,
 }
 
 // 인원별 평면도로 방을 배치. 문·보너스칸 위치도 인원별로 고정(같은 인원이면 늘 같은 보드). seed는 호환용으로만 받음.
-export function genMap(count: number, _seed = 0): GameMap {
+/** 평면도는 인원수별로 고정, 보너스칸 위치만 seed(판)마다 무작위 */
+export function genMap(count: number, seed = 0): GameMap {
   const pl = PLANS[count], { n, d } = pl, r = rng(7700 + count), C = CORRIDOR;
   const cells: number[] = new Array(n * n).fill(-1);
   const band = (sizes: number[], start: number, mk: (from: number, size: number) => Rect) => {
@@ -204,7 +205,7 @@ export function genMap(count: number, _seed = 0): GameMap {
     ok.slice(0, r() < 0.5 ? 2 : 1).forEach(s => { const [x, y] = s[Math.floor(s.length / 2)]; doors.push({ room: i, cell: y * n + x }); }); // 변 가운데에 문
   });
   const map: GameMap = { n, cells, rects, center, doors, passages: { 0: 3, 3: 0, 1: 2, 2: 1 }, roomCount: R, people: Math.max(6, count), bonus: [] };
-  map.bonus = placeBonus(map, count <= 4 ? 4 : count <= 6 ? 6 : 8, r);
+  map.bonus = placeBonus(map, count <= 4 ? 4 : count <= 6 ? 6 : 8, seed ? rng((seed * 7919 + count * 104729) >>> 0) : r);
   return map;
 }
 
@@ -216,10 +217,11 @@ function placeBonus(map: GameMap, count: number, r: Rng): Pos[] {
   const out: Pos[] = [];
   const md = (a: Pos, b: Pos) => Math.abs((a % n) - (b % n)) + Math.abs(Math.floor(a / n) - Math.floor(b / n));
   if (cand.length) out.push(pick(r, cand));
+  // 고르게 퍼지되 매번 다르게: 이미 고른 칸에서 가장 먼 거리의 70% 이상 떨어진 후보 중 무작위
   while (out.length < count && out.length < cand.length) {
-    let best = cand[0], bd = -1;
-    for (const c of cand) { const d = Math.min(...out.map(o => md(o, c))); if (d > bd) { bd = d; best = c; } }
-    out.push(best);
+    const dist = cand.map(c => (out.includes(c) ? -1 : Math.min(...out.map(o => md(o, c)))));
+    const far = Math.max(...dist);
+    out.push(pick(r, cand.filter((_, k) => dist[k] >= Math.max(1, far * 0.7))));
   }
   return out;
 }

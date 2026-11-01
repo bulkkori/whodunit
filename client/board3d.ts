@@ -54,6 +54,27 @@ vCellXZ = position.xz;`).replace('void main() {', 'varying vec2 vCellXZ;\nvoid m
   return m;
 }
 
+/** 새긴 "!" 텍스처: 테두리 홈 + 글자 홈(위·왼쪽은 그림자, 아래·오른쪽은 빛) + 금 상감 */
+let engraved: THREE.CanvasTexture | null = null;
+function engraveTex() {
+  if (engraved) return engraved;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d')!;
+  const carve = (draw: (dx: number, dy: number) => void) => {
+    x.fillStyle = x.strokeStyle = 'rgba(255,236,205,.35)'; draw(2, 2);   // 아래·오른쪽 가장자리 빛
+    x.fillStyle = x.strokeStyle = 'rgba(0,0,0,.8)'; draw(-2, -2);        // 위·왼쪽 가장자리 그림자
+  };
+  x.lineWidth = 5;
+  carve((dx, dy) => { x.beginPath(); x.roundRect(10 + dx, 10 + dy, 108, 108, 12); x.stroke(); });
+  x.font = 'bold 92px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  carve((dx, dy) => x.fillText('!', 64 + dx, 68 + dy));
+  const gold = x.createLinearGradient(0, 20, 0, 110); gold.addColorStop(0, '#8a6a2a'); gold.addColorStop(1, '#d9b25a');
+  x.lineWidth = 3; x.strokeStyle = gold; x.beginPath(); x.roundRect(10, 10, 108, 108, 12); x.stroke();
+  x.fillStyle = gold; x.fillText('!', 64, 68);
+  engraved = new THREE.CanvasTexture(c); engraved.colorSpace = THREE.SRGBColorSpace; engraved.anisotropy = 8;
+  return engraved;
+}
+
 interface RoomData { p: G.Pos; cx: number; cz: number; w: number; h: number }
 type RoomMesh = THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> & { userData: RoomData };
 
@@ -230,13 +251,12 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     };
     pawns = g.players.map(p => makePawn(p.suspect));
     npcPawns = g.npc.map((pos, v) => (pos == null ? null : makePawn(v, true)));
-    // 보너스칸 "!" 표시
+    // 보너스칸 "!": 바닥에 새긴 모양(음각 + 금 상감) — 칸 위에 붙인 얇은 판, 글자는 카메라 쪽으로 돎
+    const engr = engraveTex();
     for (const b of M.bonus) {
-      const c = document.createElement('canvas'); c.width = c.height = 64;
-      const x = c.getContext('2d')!; x.fillStyle = '#e8b04a'; x.font = 'bold 54px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('!', 32, 36);
-      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
-      sp.scale.set(0.45, 0.45, 0.45); sp.position.set(wx(b % n), 0.35, wx(Math.floor(b / n))); noPick(sp); B.add(sp);
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshStandardMaterial({ map: engr, transparent: true, depthWrite: false, roughness: 0.5, metalness: 0.3 }));
+      d.rotation.order = 'YXZ'; d.rotation.x = -Math.PI / 2; d.userData.label = true;
+      d.position.set(wx(b % n), 0.045, wx(Math.floor(b / n))); noPick(d); B.add(d);
     }
     // 흉기 말: 이모지 스프라이트(항상 카메라를 향함)
     weaponSprites = WEAPON_ICON[g.theme].map(icon => {
@@ -295,7 +315,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     const M = map!, hm = hallMesh!;
     const boost = hallTint === P.hall ? 1 : 4; // 텍스처 복도: 4배 = 강조 표시(셰이더가 텍스처 대신 이 색을 칠함)
     hallIdx.forEach((i, k) => {
-      const c = pathSet.has(i) ? (pathOk ? CAN : 0xb5483f) : M.bonus.includes(i) ? BONUS : M.doors.some(d => d.cell === i) ? P.door : null;
+      const c = pathSet.has(i) ? (pathOk ? CAN : 0xb5483f) : M.bonus.includes(i) && boost === 1 ? BONUS : M.doors.some(d => d.cell === i) ? P.door : null;
       hm.setColorAt(k, c == null ? col.set(hallTint) : col.set(c).multiplyScalar(boost));
     });
     if (hm.instanceColor) hm.instanceColor.needsUpdate = true;

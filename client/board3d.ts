@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as G from '../shared/game.ts';
+import * as Sound from './sound.ts';
 import { faceValues } from './dice.ts';
 import { WEAPON_ICON, ROOM_TINTS, floorTex, wallTex, TEX_CELLS } from './art.ts';
 import { land } from './sound.ts';
@@ -316,6 +317,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     return new THREE.Vector3(u.cx + (total > 1 ? Math.cos(a) * rx : 0), 0.08, u.cz + 0.2 + (total > 1 ? Math.sin(a) * rz : 0));
   }
 
+  let lastTurn = -1;
   let can = new Set<G.Pos>(), turn = -1, pathSet = new Set<G.Pos>(), pathOk = true;
   function paintHalls() {
     const M = map!, hm = hallMesh!;
@@ -364,14 +366,19 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       const list = groups.get(p.pos)!, t = posOf(p.pos, list.indexOf(j), list.length);
       const prev = pw.userData.pos as G.Pos | undefined;
       if (!pw.userData.target) pw.position.copy(t);
-      else if (prev != null && prev !== p.pos && j === g.turn) { // 자기 이동: 실제 경로(상하좌우)를 한 칸씩
+      else if (prev != null && prev !== p.pos && (j === g.turn || j === lastTurn)) { // 자기 이동(차례가 넘어간 경우 포함): 실제 경로(상하좌우)를 한 칸씩
         const blocked = new Set(g.players.filter((q, k) => k !== j && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-        const route = G.path(map!, prev, p.pos, blocked).slice(1, -1).filter(x => x >= 0);
-        pw.userData.queue = [...route.map(x => posOf(x, 0, 1)), t];
+        const full = G.path(map!, prev, p.pos, blocked), roll = g.log.findLast(e => e.t === 'roll' && e.p === j);
+        if (roll?.t === 'roll' && full.length - 1 <= roll.v) { // 굴려서 걸은 이동만(순간 이동은 미끄러지듯)
+          const route = full.slice(1, -1).filter(x => x >= 0);
+          pw.userData.queue = [...route.map(x => posOf(x, 0, 1)), t];
+          pw.userData.from = pw.position.clone();
+        }
       }
       pw.userData.pos = p.pos;
       pw.userData.target = t;
     });
+    lastTurn = g.turn;
   }
 
   // 탭(거의 안 움직인 클릭)만 이동 명령으로. 드래그는 카메라 회전.
@@ -440,10 +447,11 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     stepDice(t);
     for (const pw of [...pawns, ...npcPawns.filter((x): x is THREE.Group => !!x)]) {
       const queue = pw.userData.queue as THREE.Vector3[] | undefined;
-      if (queue?.length) { // 칸 단위로 콩콩: 한 칸에 약 0.12초
-        const nx = queue[0], dx = nx.x - pw.position.x, dz = nx.z - pw.position.z, d = Math.hypot(dx, dz), step = dt * 8.5;
-        if (d <= step) { pw.position.set(nx.x, nx.y, nx.z); queue.shift(); }
-        else { pw.position.x += (dx / d) * step; pw.position.z += (dz / d) * step; pw.position.y = 0.08 + Math.sin(Math.min(1, 1 - d) * Math.PI) * 0.18; }
+      if (queue?.length) { // 칸 단위로 통통: 한 칸에 약 0.23초, 칸 사이에서 포물선으로 튀고 닿을 때 톡
+        const nx = queue[0], from = pw.userData.from as THREE.Vector3;
+        const seg = Math.max(0.001, Math.hypot(nx.x - from.x, nx.z - from.z)), dx = nx.x - pw.position.x, dz = nx.z - pw.position.z, d = Math.hypot(dx, dz), step = dt * 4.3 * Math.max(1, seg);
+        if (d <= step) { pw.position.set(nx.x, nx.y, nx.z); queue.shift(); pw.userData.from = nx.clone(); Sound.step(!queue.length); }
+        else { pw.position.x += (dx / d) * step; pw.position.z += (dz / d) * step; const k = 1 - (d - step) / seg; pw.position.y = 0.08 + Math.sin(Math.min(1, Math.max(0, k)) * Math.PI) * 0.3; }
         continue;
       }
       const tg = pw.userData.target as THREE.Vector3 | null; if (!tg) continue;

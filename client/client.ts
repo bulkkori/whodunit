@@ -598,7 +598,12 @@ function renderPick(s: StateMsg) {
   });
 }
 
-let boardKey: string | null = null, lastPos2D: (G.Pos | null)[] = [], gen2D = 0;
+let boardKey: string | null = null, lastPos2D: (G.Pos | null)[] = [], gen2D = 0, lastTurn2D = -1;
+/** 걷는 중인 말: 다시 그려도(남의 차례로 넘어가도) 같은 애니메이션을 이어서 재생 */
+const walks = new Map<string, { frames: Keyframe[]; dur: number; start: number }>();
+const STEP_MS = 230;
+/** 굴려서 걸은 이동인지(비밀 통로·지름길 같은 순간 이동은 날아가게): 경로 길이가 그 사람의 마지막 주사위 눈 이하 */
+const walked = (g: G.View, j: number, len: number) => { const r = g.log.findLast(e => e.t === 'roll' && e.p === j); return !!r && r.t === 'roll' && len <= r.v; };
 function renderBoard(g: G.View) {
   const b = $('#board'), m = g.map, T = G.THEMES[g.theme];
   if (boardKey !== g.seed + g.theme) {
@@ -653,17 +658,38 @@ function renderBoard(g: G.View) {
     if (j === g.turn) t.classList.add('cur');
     if (j === g.me) t.classList.add('me');
     const place = (pos: G.Pos) => { const h = b.querySelector<HTMLElement>(`[data-p="${pos}"]`); if (h) (pos < 0 ? h.querySelector('.toks')! : h).append(t); };
-    place(p.pos);
-    const prev = lastPos2D[j];
-    if (prev != null && prev !== p.pos && j === g.turn) { // 자기 이동: 실제 경로를 따라 한 칸씩(대각선 없음)
+    place(p.pos); void gen;
+    const prev = lastPos2D[j], key = 'p' + j;
+    // 자기 이동(복도로 가서 차례가 넘어간 경우 포함): 실제 경로를 따라 한 칸씩 통통 튀며
+    if (prev != null && prev !== p.pos && (j === g.turn || j === lastTurn2D)) {
       const blocked = new Set(g.players.filter((q, k) => k !== j && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
       const route = G.path(m, prev, p.pos, blocked);
-      route.forEach((pos, k) => setTimeout(() => { if (gen === gen2D) place(pos); }, k * 110));
-      for (const pos of route) if (pos >= 0) { const c = b.querySelector(`[data-p="${pos}"]`); c?.classList.add('trail'); setTimeout(() => c?.classList.remove('trail'), route.length * 110 + 700); }
+      if (route.length > 1 && walked(g, j, route.length - 1)) {
+        const br = b.getBoundingClientRect(), sc = br.width / (b.offsetWidth || br.width) || 1;
+        const mid = (r: DOMRect): [number, number] => [(r.left + r.width / 2 - br.left) / sc, (r.top + r.height / 2 - br.top) / sc];
+        const cell = (pos: G.Pos) => mid(b.querySelector<HTMLElement>(`[data-p="${pos}"]`)!.getBoundingClientRect());
+        const end = mid(t.getBoundingClientRect()), old = before.get(key);
+        const pts = [old ? mid(old) : cell(prev), ...route.slice(1, -1).map(cell), end].map(([x, y]) => [x - end[0], y - end[1]]);
+        const n = pts.length - 1, hop = (b.offsetWidth / m.n) * 0.42, frames: Keyframe[] = [];
+        for (let i = 0; i < n; i++) {
+          const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+          frames.push({ offset: i / n, transform: `translate(${x0}px,${y0}px)`, zIndex: 9, easing: 'ease-out' });
+          frames.push({ offset: (i + 0.5) / n, transform: `translate(${(x0 + x1) / 2}px,${(y0 + y1) / 2 - hop}px) scale(1.18)`, zIndex: 9, easing: 'ease-in' });
+        }
+        frames.push({ offset: 1, transform: 'none', zIndex: 9 });
+        walks.set(key, { frames, dur: n * STEP_MS, start: performance.now() });
+        for (let i = 1; i <= n; i++) setTimeout(() => Sound.step(i === n), i * STEP_MS);
+        for (const pos of route) if (pos >= 0) { const c = b.querySelector(`[data-p="${pos}"]`); c?.classList.add('trail'); setTimeout(() => c?.classList.remove('trail'), n * STEP_MS + 700); }
+      }
+    }
+    const w = walks.get(key);
+    if (w) {
+      const el = performance.now() - w.start;
+      if (el < w.dur) { const a = t.animate(w.frames, { duration: w.dur }); a.currentTime = el; } else walks.delete(key);
     }
   });
-  const ownMove = new Set(g.players.flatMap((p, j) => (lastPos2D[j] != null && lastPos2D[j] !== p.pos && j === g.turn ? ['p' + j] : [])));
-  lastPos2D = g.players.map(p => p.pos);
+  const ownMove = new Set([...walks.keys()]);
+  lastPos2D = g.players.map(p => p.pos); lastTurn2D = g.turn;
   g.npc.forEach((pos, v) => { // 아무도 맡지 않은 인물 말
     if (pos == null) return;
     const t = el('span', 'tok npc', T.s[v].split(' ').pop()![0]); t.dataset.k = 'n' + v;

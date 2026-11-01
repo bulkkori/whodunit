@@ -144,3 +144,12 @@ export function chime(kind: 'turn' | 'refute') {
     o.start(t); o2.start(t); o.stop(t + 0.95); o2.stop(t + 0.95);
   }
 }
+
+/** 말 걸음: 나무 말이 판에 톡 닿는 소리. last = 도착(조금 더 묵직) */
+export function step(last = false) {
+  if (ctx && ctx.state !== 'running') void ctx.resume();
+  if (!ctx || ctx.state !== 'running') return;
+  const t = ctx.currentTime;
+  click(t, last ? 0.32 : 0.2, (last ? 900 : 1300) + Math.random() * 350);
+  thud(t, last ? 0.32 : 0.14);
+}

@@ -477,3 +477,8 @@ header #music.off{opacity:.5}
   background:transparent;border:0;border-radius:8px;font-size:18px;line-height:1;cursor:pointer;box-shadow:none}
 .tin button:hover{background:var(--hall)}
 .tin button:active{transform:translateY(-50%) rotate(90deg)}
+
+/* 인라인 오류 */
+.ferr{color:#ff8a80;font-size:12px;font-weight:600}
+.ferr::before{content:"⚠ "}
+.combo.invalid,.combo.invalid.editing{outline:2px solid var(--danger)}

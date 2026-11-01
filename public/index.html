@@ -45,11 +45,12 @@
         <label class="field mapsel">맵 <select id="theme"></select></label>
         <div class="field">최대 인원 <small class="hint">한 번 누르면 목록 · 두 번 또는 꾹 누르면 직접 입력 · ▲▼로 한 명씩</small>
           <div class="combo" id="c_max">
-            <input id="c_max_txt" inputmode="numeric" readonly role="combobox" aria-expanded="false" aria-controls="c_max_list" aria-label="최대 인원">
+            <input id="c_max_txt" inputmode="numeric" readonly role="combobox" aria-expanded="false" aria-controls="c_max_list" aria-label="최대 인원" aria-describedby="c_max_err">
             <span class="unit">명</span>
             <div class="spin"><button type="button" data-d="1" aria-label="한 명 늘리기">▲</button><button type="button" data-d="-1" aria-label="한 명 줄이기">▼</button></div>
             <ul id="c_max_list" role="listbox" hidden></ul>
           </div>
+          <small id="c_max_err" class="ferr" role="alert" hidden></small>
           <small class="hint">남는 자리는 게임을 시작할 때 봇이 채워요</small>
         </div>
         <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>

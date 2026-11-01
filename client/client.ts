@@ -85,9 +85,18 @@ for (let n = 3; n <= G.MAX_PLAYERS; n++) {
   maxList.append(li);
 }
 const listOpen = (on: boolean) => { maxList.hidden = !on; maxTxt.setAttribute('aria-expanded', String(on)); };
+// 직접 입력 검사: 숫자가 아니거나 3~8명을 벗어나면 칸 아래 인라인 오류
+const maxError = (v: string) => !v ? '' : !/^\d+$/.test(v) ? '숫자만 입력해주세요.'
+  : +v < 3 || +v > G.MAX_PLAYERS ? `3~${G.MAX_PLAYERS}명 사이로 입력해주세요.` : '';
+const showMaxError = (msg: string) => {
+  const e = $('#c_max_err'); e.textContent = msg; e.hidden = !msg;
+  $('#c_max').classList.toggle('invalid', !!msg); maxTxt.setAttribute('aria-invalid', String(!!msg));
+};
+maxTxt.addEventListener('input', () => showMaxError(maxError(maxTxt.value.trim())));
 const editMode = (on: boolean) => {
+  if (!on && maxError(maxTxt.value.trim())) maxTxt.value = String(maxPlayers); // 잘못된 값으로 나가면 이전 값으로
   maxTxt.readOnly = !on; $('#c_max').classList.toggle('editing', on);
-  if (on) { listOpen(false); maxTxt.focus(); maxTxt.select(); } else setMax(parseInt(maxTxt.value, 10));
+  if (on) { listOpen(false); maxTxt.focus(); maxTxt.select(); } else { showMaxError(''); setMax(parseInt(maxTxt.value, 10)); }
 };
 setMax(6);
 let tapT: ReturnType<typeof setTimeout> | undefined, lastTap = 0;
@@ -111,7 +120,7 @@ maxTxt.addEventListener('click', () => {
 });
 maxTxt.addEventListener('blur', () => { if (!maxTxt.readOnly) editMode(false); });
 maxTxt.addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); if (!maxTxt.readOnly) editMode(false); else listOpen(maxList.hidden === true); }
+  if (e.key === 'Enter') { e.preventDefault(); if (!maxTxt.readOnly) { if (!maxError(maxTxt.value.trim())) editMode(false); } else listOpen(maxList.hidden === true); }
   else if (e.key === 'Escape') { listOpen(false); if (!maxTxt.readOnly) { maxTxt.value = String(maxPlayers); editMode(false); } }
   else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); setMax(maxPlayers + (e.key === 'ArrowUp' ? 1 : -1)); }
 });
@@ -154,8 +163,10 @@ $('#create').onclick = () => {
 };
 $('#c_cancel').onclick = () => { creating = false; render(); };
 $('#c_make').onclick = () => {
+  if (maxError(maxTxt.value.trim())) return maxTxt.focus();
   startLoading($btn('#c_make'));
-  send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: titleIn.value.trim() || autoTitle(), maxPlayers });
+  const msg = { t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: titleIn.value.trim() || autoTitle(), maxPlayers } as const;
+  setTimeout(() => send(msg), 600); // 로딩 표시가 보이도록 최소 0.6초(응답이 빠르면 깜빡이고 끝나 버림)
 };
 $('#practice').onclick = () => {
   if (!myName()) $in('#name').value = '탐정';

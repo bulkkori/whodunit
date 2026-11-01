@@ -469,3 +469,11 @@ header #music{margin-left:auto;padding:4px 10px;white-space:nowrap}
 header #mute{margin-left:0}
 @media (max-width:520px){header #music{font-size:12px;padding:4px 6px}}
 header #music.off{opacity:.5}
+
+/* 방 제목 칸 안 오른쪽의 제목 추천 버튼 */
+.tin{position:relative;display:block}
+.tin input{width:100%;padding-right:46px}
+.tin button{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:38px;height:calc(100% - 8px);padding:0;
+  background:transparent;border:0;border-radius:8px;font-size:18px;line-height:1;cursor:pointer;box-shadow:none}
+.tin button:hover{background:var(--hall)}
+.tin button:active{transform:translateY(-50%) rotate(90deg)}

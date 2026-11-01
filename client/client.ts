@@ -144,6 +144,7 @@ const TITLES = ['자정의 마지막 손님', '사라진 유언장', '잠긴 서
 let titleIdx = Math.floor(Math.random() * TITLES.length);
 const titleIn = $in('#c_title');
 const autoTitle = () => TITLES[titleIdx % TITLES.length];
+$('#c_reroll').onclick = () => { titleIdx++; titleIn.value = ''; titleIn.placeholder = autoTitle(); };
 titleIn.addEventListener('focus', () => { titleIn.placeholder = ''; });
 titleIn.addEventListener('blur', () => { if (!titleIn.value) titleIn.placeholder = autoTitle(); });
 $('#create').onclick = () => {

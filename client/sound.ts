@@ -36,23 +36,42 @@ export function unlock() {
 }
 export const isRunning = () => ctx?.state === 'running';
 
-// ---------- 배경음악: The Last Move Made (켜기/끄기) ----------
+// ---------- 배경음악 ----------
+// Web Audio로 반복: mp3 + 반복 지점(bgm.json의 loopStart·loopEnd, 마디 단위)으로 도입부는 한 번, 그 뒤는 끊김 없이 반복.
+// (<audio loop>는 mp3 끝에 짧은 틈이 생겨서 쓰지 않음.) json이 없으면 곡 전체를 틈 없이 반복.
 export type MusicMode = 'on' | 'off';
-let music: HTMLAudioElement | null = null;
 let musicMode: MusicMode = (() => { try { return localStorage.getItem('wd_music') === 'off' ? 'off' : 'on'; } catch { return 'on'; } })();
+let musicBuf: AudioBuffer | null = null, musicMeta: { loopStart: number; loopEnd: number } | null = null;
+let musicSrc: AudioBufferSourceNode | null = null, musicGain: GainNode | null = null, musicLoading = false;
 export const getMusic = () => musicMode;
 export function setMusic(m: MusicMode) {
   musicMode = m;
   try { localStorage.setItem('wd_music', m); } catch { /* 저장 불가 무시 */ }
   playMusic();
 }
-/** 사용자 입력 안에서 불러야 재생된다(iOS 포함) — unlock()에서 함께 호출 */
+/** 사용자 입력 안에서(unlock 뒤) 불러야 소리가 난다 — unlock()에서 함께 호출 */
 export function playMusic() {
-  if (musicMode === 'off') { music?.pause(); return; }
-  const src = '/audio/bgm.mp3';
-  if (!music) { music = new Audio(); music.loop = true; music.volume = 0.32; music.preload = 'auto'; }
-  if (!music.src.endsWith(src)) music.src = src;
-  if (music.paused) void music.play().catch(() => { /* 아직 입력 전이면 다음 입력 때 다시 */ });
+  if (!ctx) return;
+  if (musicMode === 'off') { musicSrc?.stop(); musicSrc = null; return; }
+  if (musicSrc) return;
+  if (!musicBuf) {
+    if (musicLoading) return;
+    musicLoading = true;
+    const c = ctx;
+    Promise.all([
+      fetch('/audio/bgm.mp3').then(r => r.arrayBuffer()).then(b => c.decodeAudioData(b)),
+      fetch('/audio/bgm.json').then(r => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([buf, meta]) => { musicBuf = buf; musicMeta = meta; musicLoading = false; playMusic(); })
+      .catch(() => { musicLoading = false; });
+    return;
+  }
+  musicGain ??= (() => { const g = ctx.createGain(); g.gain.value = 0.32; g.connect(ctx.destination); return g; })();
+  const src = ctx.createBufferSource();
+  src.buffer = musicBuf; src.loop = true;
+  if (musicMeta && musicMeta.loopEnd > musicMeta.loopStart) { src.loopStart = musicMeta.loopStart; src.loopEnd = Math.min(musicMeta.loopEnd, musicBuf.duration); }
+  src.connect(musicGain); src.start();
+  musicSrc = src;
+  (window as unknown as { __music?: AudioBufferSourceNode }).__music = src; // 확인용
 }
 
 function click(at: number, vol: number, pitch: number) {

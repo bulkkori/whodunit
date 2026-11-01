@@ -1226,3 +1226,5 @@ button svg.ic{margin-right:.15em}
 }
 /* 반박할 카드 고르기: PC에서도 크게 */
 @media not ((max-aspect-ratio:23/20) and (max-width:639px)){#dlg .cardbtn .gcard{width:clamp(110px,14vw,150px)}}
+/* 주사위 힘 게이지: 마우스를 올린 채 누르고 있어도(hover 배경에 덮이지 않게) 금색이 차오름 */
+#actions [data-a=roll].charging,#actions [data-a=roll].charging:hover{background:linear-gradient(90deg,#c9a24a calc(var(--p,0) * 100%),#6b1f2b 0)!important;color:#f3e6cc}

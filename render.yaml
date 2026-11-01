@@ -1,7 +1,8 @@
 # Render 무료 플랜 배포 설정(Blueprint). Render 대시보드 → New → Blueprint → 이 저장소 선택하면 그대로 올라감
 services:
   - type: web
-    name: whodunit
+    name: whodunit-beta      # 얼리 액세스. 정식 출시 때 main 브랜치용 서비스(whodunit)를 하나 더 추가
+    branch: beta
     runtime: node
     plan: free
     region: singapore          # 한국에서 가장 가까운 지역

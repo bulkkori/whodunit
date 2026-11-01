@@ -468,3 +468,4 @@ button.ghost.loading::after{border-color:var(--ink);border-right-color:transpare
 header #music{margin-left:auto;padding:4px 10px;white-space:nowrap}
 header #mute{margin-left:0}
 @media (max-width:520px){header #music{font-size:12px;padding:4px 6px}}
+header #music.off{opacity:.5}

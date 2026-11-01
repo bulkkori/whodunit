@@ -919,3 +919,52 @@ dialog#dlg{border-radius:3px}
 #dlg .ocards{flex-wrap:nowrap!important;align-self:stretch}
 #dlg .ocards .gcard{width:calc((100% - 20px) / 3);max-width:140px}
 @media (max-width:600px){#dlg .ostamp{top:10px;right:10px;font-size:17px;padding:2px 9px}#dlg[data-kind=over] h2{font-size:22px;padding-top:14px}}
+
+/* ===================== 폰 세로 최적화 =====================
+   게임: 위 상태 → 보드 → 내 카드 줄(가로 스크롤) → 직업, 행동 버튼은 화면 아래 고정 독(오른쪽 칸 = 메모 탭)
+   대기실: 참여 코드 한 줄로 줄이고, 시작/준비 버튼은 아래에 붙어 따라옴 */
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  :root{--dockh:104px;--bs:min(calc(100vw - var(--pad) * 2 - var(--sl) - var(--sr)), calc(100dvh - var(--hdr) - var(--tool) - var(--dockh) - 200px))}
+  body:has(#game:not([hidden])) #hcode{display:none}
+  #turnbox #turnname{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+  body:has(#game:not([hidden])) main{padding-bottom:calc(var(--dockh) + var(--sb) + 12px)}
+  #panel{display:flex;flex-direction:column;gap:8px;padding:12px}
+  #status{order:1;font-size:15px}
+  #cardsbox{order:2}
+  #rolebox{order:3}
+  #last{order:4;font-size:12px;min-height:0}
+  #cardsbox h3{display:none}
+  #cardsbox::before{content:"내 카드";font:800 13px "Nanum Myeongjo",serif;color:var(--sub)}
+  #hand,#openrow .cards{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding:4px 2px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  #hand>*,#openrow .cards>*{flex:none;scroll-snap-align:start}
+  #hand .gcard,#openrow .gcard{width:64px}
+  #openrow h3{display:block;font-size:12px}
+  /* 아래 고정 행동 독 */
+  #actions{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:19;margin:0;padding:8px calc(10px + 68px) calc(8px + var(--sb)) 10px;height:calc(var(--dockh) + var(--sb));box-sizing:border-box;
+    display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;grid-template-areas:"roll roll suggest" "passage end accuse";
+    background:radial-gradient(ellipse at 50% 0%,#f1e7d0 40%,#d6c39c 160%);box-shadow:0 -6px 18px #0009;border-top:1px solid #2a1d1733}
+  #actions [data-a=roll]{grid-area:roll;font-size:16px}
+  #actions [data-a=suggest]{grid-area:suggest}#actions [data-a=passage]{grid-area:passage}#actions [data-a=end]{grid-area:end}
+  #actions [data-a=accuse]{grid-area:accuse;grid-column:auto;white-space:normal;line-height:1.15;font-size:12px}
+  #actions button{padding:4px;font-size:13px;min-height:0}
+  #actions kbd{display:none}
+  /* 메모 탭 = 독 오른쪽 칸 (서랍이 열리면 서랍 위로 함께 올라감) */
+  #drawer{z-index:20}
+  #handle{top:calc(-1 * var(--dockh) - var(--sb));right:10px;left:auto;width:62px;height:calc(var(--dockh) - 16px);margin-top:8px;padding:0;border-radius:4px;
+    writing-mode:horizontal-tb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;line-height:1.2;white-space:normal;text-align:center}
+  #drawer.open #handle{top:-50px;height:42px;margin:0;border-radius:6px 6px 0 0}
+  #drawer{height:min(72dvh,calc(100dvh - var(--hdr) - 60px))}
+  /* 대기실: 참여 코드 한 줄, 버튼은 아래에 따라옴 */
+  #wait .codebox{flex-direction:row;flex-wrap:wrap;justify-content:space-between;padding:10px 12px;gap:4px 10px}
+  #wait .codebox .sub{width:100%}
+  #wait #bigcode{font-size:30px;letter-spacing:.18em}
+  #wait #copy{padding:8px 10px;font-size:13px}
+  #wait h2{font-size:24px}
+  #wait .wcta{position:sticky;bottom:0;z-index:5;margin:0 -18px -18px;padding:10px 18px calc(12px + var(--sb));background:linear-gradient(#0000,#ece1c8 18px)}
+  #wait .wcta button{padding:12px}
+  #wait #waitmsg{font-size:12px;margin:0}
+  #wait #seats li{min-height:48px;padding:6px 4px}
+  /* 방 만들기: 버튼 줄이 화면 아래에 따라옴 */
+  #createbox .cform .cta{position:sticky;bottom:0;z-index:5;margin:0 -18px;padding:10px 18px calc(12px + var(--sb));background:linear-gradient(#0000,#ece1c8 18px)}
+  #createbox .mapprev,#createbox .mapthumb{max-width:300px}
+}

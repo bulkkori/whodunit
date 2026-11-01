@@ -1025,3 +1025,27 @@ dialog#dlg{border-radius:3px}
   #memo td{min-width:26px;font-size:24px}
 }
 @media (max-aspect-ratio:23/20) and (max-width:639px){#drawer:not(.tall) #note{display:none}}
+
+/* ---------- 폰 손가락 크기: 누르는 것은 최소 40~44px, 책상 배경이 페이지 끝까지 ---------- */
+html,body{background-color:#0b0809}
+.rname{word-break:keep-all}
+@media (max-width:639px){
+  header{gap:6px}
+  header button{min-width:44px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+  header #music{font-size:16px;padding:4px 8px}
+  #viewtog button{min-height:36px;min-width:52px}
+  #reset3d{min-width:40px}
+  #tallmemo,#closememo{min-width:40px;min-height:40px}
+  #automode{min-height:36px}
+  .dtabs button{min-height:40px}
+  #wait #copy,#wait .stepper button{min-height:40px}
+  #createbox .combo .spin button{min-width:40px}
+  #c_reroll{min-width:40px;min-height:40px}
+  #lobby #practice{padding:10px 8px}
+  #lobby #join{min-height:44px}
+}
+@media (max-width:639px){
+  .dtabs button{white-space:nowrap;padding:4px 6px}
+  #automode{max-width:none;flex:1 1 0;min-width:0;font-size:12px}
+  #drawer .sheet>div:first-child{gap:6px}
+}

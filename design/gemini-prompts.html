@@ -45,6 +45,8 @@ ul{padding-left:20px;margin:6px 0}
 <li><b>바닥과 벽은 따로</b>: 한 장에 바닥과 벽을 같이 그리지 않습니다. 바닥은 위에서 본 정사각 반복 타일(1:1)로, 게임이 칸마다 깔아 이어 붙입니다. 벽은 정면에서 본 가로로 이어지는 띠(2:1)로, 방 둘레를 따라 이어 붙입니다.</li>
 <li><b>벽 안쪽·바깥쪽</b>: 방 벽 하나에 두 면이 있습니다. 안쪽 면은 그 방의 벽 텍스처, 바깥쪽 면은 복도 벽 텍스처를 씁니다. 3D에서는 카메라 쪽 벽이 걸레받이 높이로 내려가므로(심즈식), 벽 아래쪽 걸레받이만 남아도 어색하지 않게 그려야 합니다.</li>
 <li><b>반복 확인</b>: 받은 텍스처를 2×2로 붙여 보고 이음새가 보이면 다시 생성하거나, 이미지 편집기의 '오프셋 + 이음새 지우기'로 손봅니다.</li>
+<li><b>인물 = 전신 스탠딩 일러스트</b>: 세로 1:2 전신, 마젠타 배경(게임이 빼서 투명하게). 카드에는 머리~허리만 잘라 보이고, 전신은 캐릭터 고르기 화면 등에 쓸 수 있습니다. 같은 테마 8명은 한 대화창에서 이어서 만들고 "앞 그림과 같은 화풍·같은 머리 대 몸 비율로"를 덧붙이면 통일감이 좋아집니다.</li>
+<li><b>참고 그림</b>: 마음에 드는 그림을 함께 올릴 때는 "화풍만 참고, 이 캐릭터의 얼굴·머리 모양·의상·소품은 따라 하지 말 것"을 꼭 덧붙입니다.</li>
 <li><b>카드 그림</b>: 카드의 그림 창은 세로 4:5이고 아래쪽 1/5은 이름 리본이 덮습니다. 흉기만 1:1 마젠타 배경이고, 게임이 배경을 빼서 카드 그림 창 위에 올립니다. 아직 없는 그림은 게임이 색·이모지로 대신 그립니다(장소 카드는 그 방 바닥).</li>
 <li><b>넣는 곳</b>: 각 프롬프트 옆의 경로대로 <code>텍스처/카드/s0.png</code>, <code>텍스처/바닥/floor-r0.png</code>처럼 넣으면 자동 변환·반영됩니다(png·jpg 그대로).</li>
 <li><b>저장</b>: 아래 파일명대로 <code>public/assets/{테마}/</code>에 webp(품질 80)로 저장. 한 테마 합계 1.5MB 이하.</li>
@@ -236,14 +238,16 @@ const T = {
 };
 
 const NO_TEXT = 'No text, no letters, no watermark, no frame.';
+// 인물·흉기는 고급 수집형 게임 스탠딩 일러스트 느낌으로(세밀한 선 + 부드러운 회화풍 음영)
+const GACHA = 'Premium mobile gacha game art quality, fine detailed line art, soft painterly shading with gentle gradients, clean silhouette, high detail on fabric and metal.';
 // 바닥과 벽은 따로 만든다(한 장에 합치지 않음): 바닥 = 위에서 본 정사각 반복 타일, 벽 = 정면에서 본 가로 반복 띠
 const FLOOR = (S, d) => `${S} Seamless tileable floor texture of ${d}. Perfectly flat orthographic top-down view, all four edges tile seamlessly, even flat lighting, no cast shadows, no gradient, no vignette, no furniture or objects, square 1:1. ${NO_TEXT}`;
 const WALL = (S, d) => `${S} Seamless horizontally tileable wall texture: ${d}. Flat orthographic front elevation, left and right edges tile seamlessly, a slim baseboard along the bottom edge and a slim cap along the top edge, even flat lighting, no cast shadows, no doors, no windows, no furniture, wide 2:1. ${NO_TEXT}`;
 function prompts(t) {
   const S = t.style + '.';
   return [
-    ['인물 카드', t.s.map(([ko, d], i) => [ko, `카드/s${i}.png`, `${S} Portrait 4:5 card illustration of ${d}. Waist-up, facing slightly toward the viewer, face in the upper third, softly blurred background that matches the setting, rim light, no other people. Keep the bottom fifth simple because a name ribbon covers it. Original character design that does not resemble any existing anime, game or VTuber character. ${NO_TEXT}`])],
-    ['흉기 카드', t.w.map(([ko, d], i) => [ko, `카드/w${i}.png`, `${S} Single object illustration: ${d}. Centered, three-quarter view, filling about 70% of a square 1:1 frame, isolated on a solid flat magenta (#FF00FF) background for easy cutout, no shadow on the background. ${NO_TEXT}`])],
+    ['인물 (전신 스탠딩 일러스트)', t.s.map(([ko, d], i) => [ko, `카드/s${i}.png`, `${S} ${GACHA} Full-body standing character illustration (tachi-e) of ${d}. Tall portrait 1:2 frame, whole body visible from head to shoes with a small margin, relaxed three-quarter pose, holding or wearing one signature prop that hints at their role, layered costume with fabric folds, ribbons and small accessories. Isolated on a solid flat magenta (#FF00FF) background for easy cutout, no floor, no cast shadow. Original character design that does not resemble any existing anime, game or VTuber character. ${NO_TEXT}`])],
+    ['흉기 (아이템 일러스트)', t.w.map(([ko, d], i) => [ko, `카드/w${i}.png`, `${S} ${GACHA} Detailed item illustration: ${d}. Ornate and slightly stylized like a premium game item, three-quarter view, centered and filling about 70% of a square 1:1 frame, crisp highlights and soft rim light. Isolated on a solid flat magenta (#FF00FF) background for easy cutout, no shadow on the background. ${NO_TEXT}`])],
     ['장소 카드', t.r.map(([ko, d], i) => [ko, `카드/r${i}.png`, `${S} Portrait 4:5 card illustration: eye-level interior view of ${d}. Atmospheric lighting, one clear focal point in the center, no people. Keep the bottom fifth simple because a name ribbon covers it. ${NO_TEXT}`])],
     ['카드 뒷면', [
       ['카드 뒷면', '카드/back.png', `${S} Playing card back design, portrait 5:7 ratio, perfectly symmetrical ${t.back}, an ornate thin border inset from the edges, one central emblem, no corner indices, no characters. ${NO_TEXT}`],

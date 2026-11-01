@@ -1,8 +1,8 @@
 """생성한 그림을 게임용으로 변환해 webp로 저장한다. 파일 이름으로 처리 방식을 고른다.
 - floor-*, wall-*  : 반복 텍스처. 그림에 들어간 조명 얼룩을 평탄화(흐림은 wrap 모드라 이음새 유지), 512px
                      벽은 가로 방향 얼룩만(걸레받이·장식 띠 같은 세로 구조는 그대로)
-- s0~, r0~, back   : 카드 그림. 긴 변 640px로 줄이기만
-- w0~              : 흉기 그림. 마젠타(#FF00FF) 배경을 투명하게 빼고 640px
+- r0~, back        : 카드 그림. 긴 변 640px로 줄이기만
+- s0~, w0~         : 인물 전신·흉기 그림. 마젠타(#FF00FF) 배경을 투명하게 빼고 줄이기(인물 1280px, 흉기 640px)
 사용: python tools/texprep.py 입력폴더 public/assets/테마 [평탄화 세기 0~1, 기본 1]"""
 import sys, os, re, numpy as np
 from PIL import Image
@@ -47,8 +47,8 @@ for name in sorted(os.listdir(src)):
         size = min(512, img.width)
         img = img.resize((size, round(size * img.height / img.width)), Image.LANCZOS)
     else:
-        img = unmagenta(img) if base[0] == 'w' else img.convert('RGB')
-        img.thumbnail((640, 640), Image.LANCZOS)
+        img = unmagenta(img) if base[0] in 'sw' else img.convert('RGB')   # 인물(전신)·흉기는 마젠타 배경 제거
+        img.thumbnail((640, 1280) if base[0] == 's' else (640, 640), Image.LANCZOS)
     path = os.path.join(dst, base + '.webp')
     img.save(path, 'WEBP', quality=82, method=6)
     print(f'{name} → {base}.webp  {img.width}×{img.height}  {os.path.getsize(path) // 1024}KB')

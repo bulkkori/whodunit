@@ -833,3 +833,53 @@ body:has(#pickstage:not([hidden])){background:radial-gradient(ellipse 70% 40% at
 @media (max-width:600px){#picks{grid-template-columns:repeat(3,1fr)}}
 #pickstage{max-width:1040px}
 #pickstage .pk-own{top:74%}
+
+/* ---------- 게임 화면도 서류 느낌: 책상 위 보드 + 종이 패널·수첩 메모지·종이 대화창 ---------- */
+:root{--accent:#d9a35b}
+body:has(#game:not([hidden])){background:radial-gradient(ellipse 80% 50% at 50% 100%,#d9a35b18,#0000 70%),radial-gradient(ellipse at 50% 20%,#2e2124 0%,#150f11 65%,#0b0809 100%) fixed}
+#board{box-shadow:0 0 0 3px #3a2a20,0 0 0 5px #8f7a5866,0 18px 44px #000b}
+#viewtog button{border-radius:3px}
+/* 종이 위에서 쓰는 잉크 색 */
+#panel,#drawer .sheet,#dlg,#reveal{--panel:#ece1c8;--hall:#e0d1b0;--line:#2a1d1733;--ink:#2a1d17;--sub:#6a5646;--accent:#6b1f2b;--can:#9a6a12;--danger:#a3272f;color:var(--ink)}
+#panel,#drawer .sheet,#dlg{background:radial-gradient(ellipse at 50% 30%,#f1e7d0 50%,#d6c39c 140%);border:0;border-radius:3px;box-shadow:0 1px 0 #fff8 inset,0 18px 44px #000b,0 4px 10px #0007}
+#status{font:800 16px/1.4 "Nanum Myeongjo","Batang",serif;word-break:keep-all}
+#last{background:transparent;border:1px dashed var(--sub);border-radius:2px;color:var(--sub)}
+#panel h3,#cardsbox h3{font:800 14px "Nanum Myeongjo",serif;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:4px}
+/* 버튼: 주(던지기·추론)는 밀랍색, 나머지는 잉크 테두리, 고발은 붉은 이중선 */
+#panel button,#dlg button{border-radius:3px;background:#6b1f2b;color:#f3e6cc;box-shadow:inset 0 0 0 2px #6b1f2b,inset 0 0 0 3px #f3e6cc55}
+#panel button.ghost,#dlg button.ghost,#actions [data-a=passage]{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+#actions [data-a=accuse],#dlg button.danger{background:transparent;color:#a3272f;box-shadow:inset 0 0 0 1.5px #a3272f,inset 0 0 0 3.5px #f1e7d0,inset 0 0 0 4.5px #a3272f;font-family:"Nanum Myeongjo",serif;font-weight:800}
+#actions [data-a=roll].charging{background:linear-gradient(90deg,#c9a24a calc(var(--p,0)*100%),#6b1f2b 0)}
+#panel button:disabled,#dlg button:disabled{opacity:.3}
+@media (hover:hover){
+  #panel button:hover:not(:disabled):not(.loading),#dlg button:hover:not(:disabled){filter:none;background:#80283a;color:#f3e6cc;box-shadow:inset 0 0 0 2px #80283a,0 3px 10px #6b1f2b44}
+  #panel button.ghost:hover:not(:disabled),#dlg button.ghost:hover:not(:disabled),#actions [data-a=passage]:hover:not(:disabled){background:var(--ink);color:#f1e7d0;box-shadow:none}
+  #actions [data-a=accuse]:hover:not(:disabled),#dlg button.danger:hover:not(:disabled){background:#a3272f;color:#f3e6cc}
+}
+#panel kbd{background:#0000;border:1px solid currentColor;opacity:.6}
+#rolebox{background:transparent;border:1.5px solid var(--ink);border-radius:2px;position:relative}
+#rolebox .rolehead b{font:800 16px "Nanum Myeongjo",serif}
+#rolebox .tag{color:#a3272f;font-weight:700}
+#panel :is(select,input),#dlg :is(select,input){background:transparent;border:0;border-bottom:1.5px solid var(--sub);border-radius:0;color:var(--ink)}
+@media (max-width:1099px),(max-aspect-ratio:23/20){#actions{background:#ece1c8;box-shadow:0 -8px 12px #ece1c8}}
+/* 메모지: 수첩. 줄은 잉크선, 표시는 손글씨 */
+#handle{background:#6b1f2b;color:#f3e6cc;box-shadow:-3px 3px 10px #0007;font-family:"Nanum Myeongjo",serif;font-weight:800}
+#drawer .sheet{border-radius:0}
+.sheethead b{font:800 18px "Nanum Myeongjo",serif}
+#automode{background:transparent;border:0;border-bottom:1.5px solid var(--sub);border-radius:0;color:var(--ink)}
+#closememo{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);border:0;border-radius:3px}
+#memo th,#memo td{border:0;border-bottom:1px solid #2a1d1726;border-right:1px dashed #2a1d171a}
+#memo thead th{background:#ece1c8;color:var(--ink);font-family:"Nanum Myeongjo",serif;border-bottom:1.5px solid var(--ink)}
+#memo .sec th{background:transparent;color:#6b1f2b;font:800 14px "Nanum Myeongjo",serif;border-bottom:1.5px solid #6b1f2b;padding-top:10px}
+#memo .rowname{background:#ece1c8;border-right:1.5px solid #a3272f55}
+#memo td{font:26px/1 "Nanum Pen Script",cursive}
+#memo td[data-m="✓"]{color:#2f6b34;font-weight:400}
+#memo td[data-m="✗"]{color:#a3272f}
+#memo td[data-m="?"]{color:#9a6a12}
+#memo td.hintq{color:var(--sub);opacity:.5;font-style:normal}
+#note{background:transparent;border:0;border-bottom:1.5px solid var(--sub);border-radius:0;color:var(--ink);font:24px "Nanum Pen Script",cursive}
+#logbox{color:var(--sub)}#log li:first-child{color:var(--ink)}
+/* 대화창(추론·고발·카드 보여 주기) */
+dialog#dlg{border-radius:3px}
+#dlg h2{font:800 20px "Nanum Myeongjo",serif}
+#dlg::backdrop{background:#0b0809b3}

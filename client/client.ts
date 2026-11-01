@@ -1090,7 +1090,7 @@ function renderDialogs(g: G.View) {
         box.classList.add('row-cards', 'ocards');
         (['s', 'w', 'r'] as const).forEach((k, n) => { const c = cardEl(g.theme, env[k]); c.style.animationDelay = `${0.35 + n * 0.45}s`; box.append(c); });
         f.append(box);
-        f.append(el('p', 'ofact', `범인은 ${G.cardName(g.theme, env.s)}, 도구는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
+        f.append(el('p', 'ofact', `인물은 ${G.cardName(g.theme, env.s)}, 도구는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
         const row = el('div', 'row');
         if (S?.host) { const again = el('button', '', '대기실로'); again.onclick = e => { e.preventDefault(); send({ t: 'again' }); dlg.close(); }; row.append(again); }
         row.append(el('button', 'ghost', '보드 보기')); f.append(row);
@@ -1159,7 +1159,7 @@ function buildMemo(g: G.View) {
   for (const _ of FREE) { const th = el('th', 'free', '·'); th.title = '자유 칸'; hr.append(th); }
   head.append(hr); t.append(head);
   const body = el('tbody'), all = G.allCards(g.map);
-  for (const [k, label] of [['s', '범인은?'], ['w', '도구는?'], ['r', '장소는?']] as const) {
+  for (const [k, label] of [['s', '인물은?'], ['w', '도구는?'], ['r', '장소는?']] as const) {
     const sec = el('tr', 'sec'), th = el('th', '', label); th.colSpan = g.players.length + 1 + FREE.length; sec.append(th); body.append(sec);
     for (const c of all[k]) {
       const tr = el('tr'); tr.dataset.card = c; tr.append(el('th', 'rowname', cn(g, c)));

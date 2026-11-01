@@ -25,10 +25,21 @@
     <p class="sub">사건 봉투 속 <b>범인 · 흉기 · 장소</b>를 가장 먼저 밝혀내세요. 3~8명, 빈자리는 봇.</p>
     <p id="wake" class="notice" hidden>☕ 서버를 깨우는 중입니다… (무료 서버라 최대 1분 걸릴 수 있어요)</p>
     <label class="field">닉네임 <input id="name" maxlength="12" placeholder="닉네임" aria-describedby="name_err"><small id="name_err" class="ferr" role="alert" hidden>닉네임을 입력해주세요.</small></label>
-    <button id="create">＋ 방 만들기</button>
-    <button id="practice" class="ghost">🤖 봇 2명과 바로 연습</button>
+    <button id="create" class="sk">＋ 방 만들기</button>
+    <button id="practice" class="ghost sk">🤖 봇 2명과 바로 연습</button>
     <div class="or">또는 참여 코드로 입장</div>
-    <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off"><button id="join" class="loadbtn"><span>입장</span></button></div>
+    <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off" aria-describedby="code_err"><button id="join" class="loadbtn sk"><span>입장</span></button></div>
+    <small id="code_err" class="ferr" role="alert" hidden></small>
+  </section>
+
+  <!-- 초대 링크로 들어올 때 서버 응답 전까지 보여 주는 대기실 모양 스켈레톤 -->
+  <section id="skel" class="screen card wide" hidden aria-busy="true" aria-label="방에 들어가는 중">
+    <div class="wgrid">
+      <div class="winfo"><i class="sk sk-h"></i><i class="sk sk-code"></i></div>
+      <div class="wplayers"><i class="sk sk-t"></i><i class="sk sk-row"></i><i class="sk sk-row"></i><i class="sk sk-row"></i><i class="sk sk-row"></i><i class="sk sk-btn"></i></div>
+      <div class="wsettings"><i class="sk sk-t"></i><i class="sk sk-in"></i><i class="sk sk-in"></i><i class="sk sk-in"></i></div>
+      <div class="wmap"><i class="sk sk-map"></i></div>
+    </div>
   </section>
 
   <section id="createbox" class="screen card wide" hidden>

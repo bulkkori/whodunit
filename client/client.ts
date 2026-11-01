@@ -24,18 +24,20 @@ const TOKEN = token;
 
 let S: StateMsg | null = null, ws: WebSocket | null = null, deadline = 0, total = G.TURN_MS, everConnected = false;
 let code = new URLSearchParams(location.search).get('room');
+// 초대 링크(?room=)로 열었고 닉네임이 저장돼 있으면 바로 입장 → 응답 전까지 대기실 스켈레톤
+let linkJoining = !!code && !!store.get('wd_name', '').trim(), codeJoining = false;
 
 // ---------- 연결 ----------
 function connect() {
   const sock = (ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host));
   sock.onopen = () => {
-    everConnected = true; $btn('#create').disabled = $btn('#join').disabled = $btn('#practice').disabled = false; $('#wake').hidden = true;
+    everConnected = true; for (const id of ['#create', '#join', '#practice']) { $btn(id).disabled = false; $(id).classList.remove('sk'); } $('#wake').hidden = true;
     if (code && $in('#name').value) join(code);
   };
   sock.onmessage = e => {
     const m = JSON.parse(e.data) as ServerMsg;
-    stopLoading();
-    if (m.t === 'error') { if (!S) { code = null; history.replaceState(null, '', location.pathname); } return toast(m.msg); }
+    stopLoading(); linkJoining = false; const wasCode = codeJoining; codeJoining = false;
+    if (m.t === 'error') { if (!S) { code = null; history.replaceState(null, '', location.pathname); render(); } return wasCode ? codeErr(m.msg) : toast(m.msg); }
     S = m; code = m.code; creating = false;
     if (location.search !== '?room=' + m.code) history.replaceState(null, '', '?room=' + m.code);
     deadline = m.left == null ? 0 : Date.now() + m.left;
@@ -53,6 +55,12 @@ const nameErr = (on: boolean) => {
   i.classList.remove('invalid'); if (on) { void i.offsetWidth; i.classList.add('invalid'); i.focus(); }
 };
 $in('#name').addEventListener('input', () => { if ($in('#name').value.trim()) nameErr(false); });
+// 참여 코드: 5자리가 아니거나 서버가 거절(없는 방·시작된 방 등)하면 칸 아래 인라인 오류
+const codeErr = (msg: string) => {
+  const i = $in('#code'), e = $('#code_err'); e.textContent = msg; e.hidden = !msg; i.setAttribute('aria-invalid', String(!!msg));
+  i.classList.remove('invalid'); if (msg) { void i.offsetWidth; i.classList.add('invalid'); i.focus(); }
+};
+$in('#code').addEventListener('input', () => codeErr(''));
 const theme = () => $<HTMLSelectElement>('#theme').value as G.ThemeKey;
 function join(c: string) { send({ t: 'join', code: c, name: myName(), token: TOKEN }); }
 
@@ -198,8 +206,8 @@ $('#practice').onclick = () => {
 $('#join').onclick = () => {
   const c = $in('#code').value.trim().toUpperCase();
   if (!myName()) return nameErr(true);
-  if (c.length !== 5) return toast('참여 코드 5자리를 입력하세요');
-  startLoading($btn('#join'));
+  if (c.length !== 5) return codeErr(c ? '참여 코드는 5자리예요.' : '참여 코드를 입력해주세요.');
+  codeJoining = true; startLoading($btn('#join'));
   join(c);
 };
 $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
@@ -215,18 +223,20 @@ $('#leave').onclick = () => {
 };
 
 // ---------- 렌더 ----------
-type Screen = 'lobby' | 'createbox' | 'wait' | 'pickstage' | 'game';
+type Screen = 'lobby' | 'skel' | 'createbox' | 'wait' | 'pickstage' | 'game';
+let curScreen: Screen | null = null;
 function show(id: Screen) {
-  for (const s of ['lobby', 'createbox', 'wait', 'pickstage', 'game']) $('#' + s).hidden = s !== id;
+  for (const s of ['lobby', 'skel', 'createbox', 'wait', 'pickstage', 'game']) $('#' + s).hidden = s !== id;
+  if (curScreen !== id) { const n = $('#' + id); n.classList.remove('enter'); void n.offsetWidth; n.classList.add('enter'); curScreen = id; }
   $('#drawer').hidden = $('#turnbox').hidden = id !== 'game';
-  $('#leave').hidden = id === 'lobby' || id === 'createbox';
+  $('#leave').hidden = id === 'lobby' || id === 'createbox' || id === 'skel';
 }
 
 function render() {
   const g = S?.game;
   document.body.dataset.gtheme = g?.theme ?? S?.theme ?? theme();
   $('#hcode').textContent = S ? `${S.title} · ${S.code}` : '';
-  if (!S) return show(creating ? 'createbox' : 'lobby');
+  if (!S) return show(creating ? 'createbox' : linkJoining ? 'skel' : 'lobby');
   if (S.stage === 'pick') { show('pickstage'); return renderPick(S); }
   if (!g) { show('wait'); return renderWait(S); }
   show('game');
@@ -311,10 +321,11 @@ function renderView(g: G.View) {
   }
   if (!is3) { b3?.stop(); return renderBoard(g); }
   $('#board').querySelector('.dice2d')?.remove();
+  if (!b3) $('#board3d').classList.add('sk3d');
   b3loading ??= import('./board3d.ts')
     .then(m => (b3 = m.createBoard3D($('#board3d'), COLORS, p => act({ t: 'move', to: p }), showTip, tapCell)))
     .catch(e => { console.error(e); toast('3D를 불러오지 못했어요 — 2D로 표시합니다'); view = '2d'; b3loading = null; render(); return null; });
-  b3loading.then(b => { const cur = S?.game; if (!b || view !== '3d' || !cur) return; b.update(cur, myMoves(cur)); b.start(); });
+  b3loading.then(b => { $('#board3d').classList.remove('sk3d'); const cur = S?.game; if (!b || view !== '3d' || !cur) return; b.update(cur, myMoves(cur)); b.start(); });
 }
 for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]'))
   b.onclick = () => { view = b.dataset.v === '3d' ? '3d' : '2d'; store.set('wd_view', view); if (S?.game) renderView(S.game); };

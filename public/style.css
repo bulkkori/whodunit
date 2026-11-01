@@ -414,8 +414,8 @@ button.ghost.loading::after{border-color:var(--ink);border-right-color:transpare
 
 /* PC·가로 넓은 화면: 화면 전체를 쓰는 앱형 배치, 페이지 스크롤 없음 */
 @media (min-width:1100px) and (min-aspect-ratio:23/20){
-  main:has(> #createbox:not([hidden])),main:has(> #wait:not([hidden])){padding:0}
-  #createbox.card.wide,#wait.card.wide{max-width:none;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;
+  main:has(> #createbox:not([hidden])),main:has(> #wait:not([hidden])),main:has(> #skel:not([hidden])){padding:0}
+  #createbox.card.wide,#wait.card.wide,#skel.card.wide{max-width:none;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;
     padding:var(--pad);height:calc(100dvh - var(--hdr) - var(--st));display:block}
   .panel-like,.cside,.cform,.winfo,.wplayers,.wsettings,.wmap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
   /* 방 만들기: [맵 선택 · 큰 미리보기] [설정 패널] */
@@ -505,3 +505,22 @@ button{transition:filter .15s,background-color .15s,border-color .15s,transform 
     box-shadow:0 4px 14px #0007;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
   .combo[data-tip]:hover:not(.editing):not(:has([aria-expanded="true"]))::after{opacity:1;transform:none;transition-delay:.25s}
 }
+
+/* ===== 화면 전환 페이드 ===== */
+.screen.enter{animation:screenIn .22s ease-out}
+@keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ===== 스켈레톤(반짝이는 자리 표시) ===== */
+.sk{display:block;border-radius:8px;background:linear-gradient(90deg,var(--hall) 0%,color-mix(in srgb,var(--ink) 9%,var(--hall)) 40%,var(--hall) 80%);
+  background-size:300% 100%;animation:skShine 1.4s linear infinite}
+button.sk,button.sk:disabled{color:transparent!important;border-color:transparent!important;box-shadow:none!important;filter:none!important;opacity:1;cursor:progress;
+  background:linear-gradient(90deg,var(--hall) 0%,color-mix(in srgb,var(--ink) 9%,var(--hall)) 40%,var(--hall) 80%) 0 0/300% 100%!important}
+button.sk *{visibility:hidden}
+@keyframes skShine{from{background-position:100% 0}to{background-position:-200% 0}}
+.sk-h{height:30px;width:60%}.sk-code{height:110px}.sk-t{height:16px;width:40%}
+.sk-row{height:44px}.sk-btn{height:52px;margin-top:auto}.sk-in{height:40px}
+.sk-map{width:100%;max-width:520px;aspect-ratio:1;margin:auto}
+#skel .wplayers{min-height:300px}
+#board3d.sk3d{position:relative;background:linear-gradient(90deg,var(--hall) 0%,color-mix(in srgb,var(--ink) 9%,var(--hall)) 40%,var(--hall) 80%);
+  background-size:300% 100%;animation:skShine 1.4s linear infinite}
+#board3d.sk3d::after{content:"🧊 3D 보드 불러오는 중…";position:absolute;inset:0;display:grid;place-items:center;color:var(--sub);font-size:14px}
+@media (prefers-reduced-motion:reduce){.screen.enter,.sk,#board3d.sk3d{animation:none}}

@@ -23,7 +23,7 @@ export function writeManifest() {
   const m: Record<string, string[]> = {};
   for (const t of THEMES) {
     const dir = join(root, 'public/assets', t);
-    if (existsSync(dir)) m[t] = readdirSync(dir).filter(f => /^((floor|wall)-.+|[swr]\d+|back)\.webp$/.test(f)).map(f => f.replace('.webp', '')).sort();
+    if (existsSync(dir)) m[t] = readdirSync(dir).filter(f => /^((floor|wall)-.+|[swr]\d+|back|thumb)\.webp$/.test(f)).map(f => f.replace('.webp', '')).sort();
   }
   writeFileSync(join(root, 'public/assets/manifest.json'), JSON.stringify(m));
   console.log('목록 갱신:', Object.entries(m).map(([t, l]) => `${t} ${l.length}장`).join(' · '));

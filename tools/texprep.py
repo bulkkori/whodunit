@@ -38,7 +38,7 @@ def unmagenta(img):
 for name in sorted(os.listdir(src)):
     base, ext = os.path.splitext(name)
     if ext.lower() not in ('.png', '.jpg', '.jpeg', '.webp'): continue
-    if not re.fullmatch(r'(floor|wall)-.+|[swr]\d+|back', base):
+    if not re.fullmatch(r'(floor|wall)-.+|[swr]\d+|back|thumb', base):
         print(f'{name}: 이름 규칙에 없는 파일이라 건너뜀'); continue
     img = Image.open(os.path.join(src, name))
     if base.startswith(('floor-', 'wall-')):
@@ -48,7 +48,7 @@ for name in sorted(os.listdir(src)):
         img = img.resize((size, round(size * img.height / img.width)), Image.LANCZOS)
     else:
         img = unmagenta(img) if base[0] in 'sw' else img.convert('RGB')   # 인물(전신)·흉기는 마젠타 배경 제거
-        img.thumbnail((640, 1280) if base[0] == 's' else (640, 640), Image.LANCZOS)
+        img.thumbnail((1024, 1024) if base == 'thumb' else (640, 1280) if base[0] == 's' else (640, 640), Image.LANCZOS)
     path = os.path.join(dst, base + '.webp')
     img.save(path, 'WEBP', quality=82, method=6)
     print(f'{name} → {base}.webp  {img.width}×{img.height}  {os.path.getsize(path) // 1024}KB')

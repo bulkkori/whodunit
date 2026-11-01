@@ -161,10 +161,25 @@ function refreshCreatePreview() {
   const t = theme();
   document.body.dataset.gtheme = t;
   drawMapPreview($<HTMLCanvasElement>('#c_prev'), t, maxPlayers);
+  // 썸네일: thumb 그림(없으면 첫 방 그림). 둘 다 없으면 바로 구조
+  const st = $('#c_stage'), u = asset(t, 'thumb') ?? asset(t, 'r0');
+  st.classList.toggle('nothumb', !u); if (u) st.querySelector('img')!.src = u;
+  st.querySelector('figcaption b')!.textContent = `${G.THEMES[t].icon} ${G.THEMES[t].name}`;
   for (const b of document.querySelectorAll<HTMLElement>('#c_themes .tcard')) { const on = b.dataset.k === t; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
   $('#c_info').replaceChildren(...mapSummary(t, maxPlayers));
 }
 $('#theme').addEventListener('change', refreshCreatePreview);
+// 맵 미리보기: 길게 누르면 썸네일 ↔ 구조(2D 판)로 확대 전환. 키보드는 Enter·Space
+{
+  const st = $('#c_stage'); let t: ReturnType<typeof setTimeout> | undefined, x0 = 0, y0 = 0;
+  const flip = () => { const on = st.classList.toggle('struct'); st.setAttribute('aria-pressed', String(on)); st.setAttribute('aria-label', on ? '맵 구조 — 길게 누르면 썸네일' : '맵 썸네일 — 길게 누르면 맵 구조'); };
+  const cancel = () => { clearTimeout(t); st.classList.remove('pressing'); };
+  st.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; st.classList.add('pressing'); t = setTimeout(() => { cancel(); navigator.vibrate?.(20); flip(); }, 450); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) st.addEventListener(ev, cancel);
+  st.addEventListener('pointermove', e => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); });
+  st.addEventListener('contextmenu', e => e.preventDefault());
+  st.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+}
 // 맵 카드(넓은 화면): 셀렉트와 같은 값을 쓴다
 const THEME_DESC: Record<G.ThemeKey, string> = { mansion: '촛불 아래 고딕 미스터리', atlantis: '가라앉은 신전의 비밀', station: '고립된 궤도 연구 기지' };
 for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
@@ -190,7 +205,7 @@ titleIn.addEventListener('blur', () => { if (!titleIn.value) titleIn.placeholder
 $('#create').onclick = () => {
   if (!myName()) return nameErr(true);
   titleIdx++; titleIn.value = ''; titleIn.placeholder = autoTitle();
-  creating = true; render(); refreshCreatePreview();
+  creating = true; $('#c_stage').classList.remove('struct'); render(); refreshCreatePreview();
 };
 $('#c_cancel').onclick = () => { creating = false; render(); };
 $('#c_make').onclick = () => {

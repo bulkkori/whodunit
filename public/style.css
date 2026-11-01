@@ -1200,3 +1200,11 @@ header.ping-ref{animation:hpingref 1.4s ease-out}
 #plist li .findme{font-size:10px;margin-left:1px}
 @media (prefers-reduced-motion:reduce){.tok.me,.tok.me.found{animation:none}#board.pzanim{transition:none}}
 .tokghost{animation:none!important;box-sizing:border-box}
+
+/* 헤더 음악·효과음 버튼: 직접 그린 선 아이콘, 켜짐 = 금색, 꺼짐 = 흐린 회갈색 */
+header #music,header #mute{display:inline-flex;align-items:center;justify-content:center;width:40px;height:36px;min-width:40px;padding:0;
+  background:transparent;color:#d9b36a;border:1px solid #ffffff1f;border-radius:4px;opacity:1;font-size:0}
+header #music.off,header #mute.off{color:#7d726a;opacity:1}
+header #music svg,header #mute svg{display:block}
+@media (hover:hover){header #music:hover,header #mute:hover{border-color:#d9b36a66;background:#d9b36a14;filter:none;box-shadow:none}}
+@media (max-width:639px){header #music,header #mute{width:44px;height:40px}}

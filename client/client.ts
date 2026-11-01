@@ -1278,12 +1278,21 @@ for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
   addEventListener(ev, h, { capture: true, passive: true });
 }
 const muteBtn = $btn('#mute');
-const paintMute = () => { muteBtn.textContent = Sound.isMuted() ? '🔇' : '🔊'; muteBtn.title = Sound.isMuted() ? '소리 켜기' : '소리 끄기'; };
+// 헤더 아이콘: 이모지 대신 직접 그린 선 아이콘(색은 글자색을 따라감 → 켜짐 금색, 꺼짐 흐린 회갈색)
+const svg = (d: string) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const SPEAKER = '<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor" fill-opacity=".18"/>';
+const ICON = {
+  soundOn: svg(SPEAKER + '<path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/>'),
+  soundOff: svg(SPEAKER + '<path d="M16 9.5l5 5M21 9.5l-5 5"/>'),
+  musicOn: svg('<path d="M9 17.5V6.2l10-2.2v11.3"/><path d="M9 9.2l10-2.2"/><circle cx="6.8" cy="17.5" r="2.3" fill="currentColor" fill-opacity=".18"/><circle cx="16.8" cy="15.3" r="2.3" fill="currentColor" fill-opacity=".18"/>'),
+  musicOff: svg('<path d="M9 17.5V6.2l10-2.2v11.3"/><path d="M9 9.2l10-2.2"/><circle cx="6.8" cy="17.5" r="2.3"/><circle cx="16.8" cy="15.3" r="2.3"/><path d="M3.5 3.5l17 17"/>'),
+};
+const paintMute = () => { const m = Sound.isMuted(); muteBtn.innerHTML = m ? ICON.soundOff : ICON.soundOn; muteBtn.title = m ? '효과음 켜기' : '효과음 끄기'; muteBtn.setAttribute('aria-label', muteBtn.title); muteBtn.classList.toggle('off', m); };
 muteBtn.onclick = () => { Sound.setMuted(!Sound.isMuted()); Sound.unlock(); paintMute(); };
 paintMute();
 // 배경음악 켜기/끄기
 const musicBtn = $btn('#music');
-const paintMusic = () => { const on = Sound.getMusic() === 'on'; musicBtn.textContent = on ? '🎵' : '🎵̸'; musicBtn.title = on ? '배경음악 끄기' : '배경음악 켜기'; musicBtn.classList.toggle('off', !on); };
+const paintMusic = () => { const on = Sound.getMusic() === 'on'; musicBtn.innerHTML = on ? ICON.musicOn : ICON.musicOff; musicBtn.title = on ? '배경음악 끄기' : '배경음악 켜기'; musicBtn.setAttribute('aria-label', musicBtn.title); musicBtn.classList.toggle('off', !on); };
 musicBtn.onclick = () => { Sound.setMusic(Sound.getMusic() === 'on' ? 'off' : 'on'); Sound.unlock(); paintMusic(); };
 paintMusic();
 

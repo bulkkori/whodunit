@@ -588,6 +588,10 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
 .field .hint{color:var(--sub);font-weight:400;font-size:12.5px}
 #lobby .privacy{margin:6px 0 0;font-size:12px;line-height:1.5;color:#6a5646;word-break:keep-all;border-top:1px dashed #2a1d1733;padding-top:10px}
 
+/* 참여 코드 가리기 */
+.codebox .cbhead{display:flex;align-items:center;justify-content:center;gap:10px}
+.codebox .cbeye{padding:2px 9px;min-height:0;font-size:12px;font-weight:700;border-radius:3px;background:transparent;color:var(--sub);border:1px solid var(--sub);box-shadow:none}
+.codebox .cbeye[aria-pressed=true]{background:var(--ink);color:#f1e7d0;border-color:var(--ink)}
 /* 설명서·피드백 링크(첫 화면·대기실·종결 보고서) */
 #dlg .ofb{margin-top:6px;font-size:13.5px;color:#6b1f2b;text-decoration:underline dotted 1.5px;text-underline-offset:4px}
 #lobby .guide{align-self:center;color:var(--ink3);font-size:13.5px;text-decoration:underline dotted 1.5px;text-underline-offset:4px;margin-top:-6px}
@@ -842,6 +846,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   #drawer.open #handle{top:-50px;height:42px;margin:0;border-radius:6px 6px 0 0}
   #wait .codebox{flex-direction:row;flex-wrap:wrap;justify-content:space-between;padding:10px 12px;gap:4px 10px}
   #wait .codebox .sub{width:100%}
+  #wait .codebox .cbhead{justify-content:flex-start}
   #wait #bigcode{font-size:30px;letter-spacing:.18em}
   #wait #copy{padding:8px 10px;font-size:13px}
   #wait h2{font-size:24px}

@@ -266,6 +266,11 @@ $('#join').onclick = () => {
   join(c);
 };
 $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
+// 참여 코드 가리기(방송·화면 공유용): 이 기기에서만, 다음 방에도 유지. 가려도 초대 링크 복사는 그대로
+let codeHidden = store.get('wd_hidecode', false);
+const paintHide = () => { const b = $('#hidecode'); b.textContent = codeHidden ? '보이기' : '가리기'; b.setAttribute('aria-pressed', String(codeHidden)); };
+$('#hidecode').onclick = () => { codeHidden = !codeHidden; store.set('wd_hidecode', codeHidden); paintHide(); render(); };
+paintHide();
 const inviteUrl = () => `${location.origin}${location.pathname}?room=${S?.code ?? ''}`;
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(inviteUrl()); toast('초대 링크를 복사했어요'); } catch { toast(inviteUrl()); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
@@ -336,7 +341,7 @@ function show(id: Screen) {
 function render() {
   const g = S?.game;
   document.body.dataset.gtheme = g?.theme ?? S?.theme ?? theme();
-  $('#hcode').textContent = S ? `${S.title} · ${S.code}` : '';
+  $('#hcode').textContent = S ? (codeHidden ? S.title : `${S.title} · ${S.code}`) : '';
   if (!S) return show(creating ? 'createbox' : linkJoining ? 'skel' : 'lobby');
   if (S.stage === 'pick') { show('pickstage'); return renderPick(S); }
   if (!g) { show('wait'); return renderWait(S); }
@@ -549,7 +554,7 @@ function findMe() {
 
 function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
-  $('#bigcode').textContent = s.code;
+  $('#bigcode').textContent = codeHidden ? '•'.repeat(s.code.length) : s.code;
   const chips = $('#wopts'); chips.innerHTML = '';
   for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', ...(s.opts.tempo && s.opts.tempo !== 'normal' ? [`🤖 봇 ${G.TEMPOS[s.opts.tempo].name}`] : [])])
     chips.append(el('span', 'chip', t));

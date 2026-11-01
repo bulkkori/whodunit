@@ -138,15 +138,27 @@ for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
 new ResizeObserver(() => { if (!$('#createbox').hidden) refreshCreatePreview(); }).observe($('#c_prev'));
 new ResizeObserver(() => { const c = $('#w_prev'); if (!$('#wait').hidden) { c.dataset.k = ''; if (S) renderWait(S); } }).observe($('#w_prev'));
 const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked });
+// 방 제목: 비워 두면 추리물 제목이 돌아가며 보이고, 그때 보이는 제목으로 방을 만든다. 누르면 빈 칸에서 바로 입력.
+const TITLES = ['자정의 마지막 손님', '사라진 유언장', '잠긴 서재의 비밀', '폭풍우 치는 밤', '누가 불을 껐는가', '거짓말쟁이의 만찬',
+  '열세 번째 초대장', '멈춰 버린 괘종시계', '깨진 찻잔의 증언', '안개 속 발자국', '독이 든 와인 한 잔', '마지막 기차의 승객'];
+let titleIdx = Math.floor(Math.random() * TITLES.length);
+const titleIn = $in('#c_title');
+const autoTitle = () => TITLES[titleIdx % TITLES.length];
+setInterval(() => {
+  if ($('#createbox').hidden || document.activeElement === titleIn || titleIn.value) return;
+  titleIdx++; titleIn.placeholder = autoTitle();
+}, 3000);
+titleIn.addEventListener('focus', () => { titleIn.placeholder = ''; });
+titleIn.addEventListener('blur', () => { if (!titleIn.value) titleIn.placeholder = autoTitle(); });
 $('#create').onclick = () => {
   if (!myName()) return toast('닉네임을 입력하세요');
-  $in('#c_title').placeholder = `${myName()}의 사건`;
+  titleIn.value = ''; titleIn.placeholder = autoTitle();
   creating = true; render(); refreshCreatePreview();
 };
 $('#c_cancel').onclick = () => { creating = false; render(); };
 $('#c_make').onclick = () => {
   startLoading($btn('#c_make'));
-  send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: $in('#c_title').value.trim() || `${myName()}의 사건`, maxPlayers });
+  send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: titleIn.value.trim() || autoTitle(), maxPlayers });
 };
 $('#practice').onclick = () => {
   if (!myName()) $in('#name').value = '탐정';

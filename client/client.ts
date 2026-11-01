@@ -161,17 +161,20 @@ function refreshCreatePreview() {
   const t = theme();
   document.body.dataset.gtheme = t;
   drawMapPreview($<HTMLCanvasElement>('#c_prev'), t, maxPlayers);
-  // 썸네일: thumb 그림(없으면 첫 방 그림). 둘 다 없으면 바로 구조
-  const st = $('#c_stage'), u = asset(t, 'thumb') ?? asset(t, 'r0');
-  st.classList.toggle('nothumb', !u); if (u) st.querySelector('img')!.src = u;
-  st.querySelector('figcaption b')!.textContent = `${G.THEMES[t].icon} ${G.THEMES[t].name}`;
+  setThumb($('#c_stage'), t);
   for (const b of document.querySelectorAll<HTMLElement>('#c_themes .tcard')) { const on = b.dataset.k === t; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
   $('#c_info').replaceChildren(...mapSummary(t, maxPlayers));
 }
 $('#theme').addEventListener('change', refreshCreatePreview);
-// 맵 미리보기: 길게 누르면 썸네일 ↔ 구조(2D 판)로 확대 전환. 키보드는 Enter·Space
-{
-  const st = $('#c_stage'); let t: ReturnType<typeof setTimeout> | undefined, x0 = 0, y0 = 0;
+/** 맵 썸네일: thumb 그림(없으면 첫 방 그림). 둘 다 없으면 바로 구조 */
+function setThumb(st: HTMLElement, t: G.ThemeKey) {
+  const u = asset(t, 'thumb') ?? asset(t, 'r0'), img = st.querySelector('img')!;
+  st.classList.toggle('nothumb', !u); if (u && !img.src.endsWith(u)) img.src = u;
+  st.querySelector('figcaption b')!.textContent = `${G.THEMES[t].icon} ${G.THEMES[t].name}`;
+}
+// 맵 미리보기(방 만들기·대기실): 길게 누르면 썸네일 ↔ 구조(2D 판)로 확대 전환. 키보드는 Enter·Space
+for (const st of [$('#c_stage'), $('#w_stage')]) {
+  let t: ReturnType<typeof setTimeout> | undefined, x0 = 0, y0 = 0;
   const flip = () => { const on = st.classList.toggle('struct'); st.setAttribute('aria-pressed', String(on)); st.setAttribute('aria-label', on ? '맵 구조 — 길게 누르면 썸네일' : '맵 썸네일 — 길게 누르면 맵 구조'); };
   const cancel = () => { clearTimeout(t); st.classList.remove('pressing'); };
   st.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; st.classList.add('pressing'); t = setTimeout(() => { cancel(); navigator.vibrate?.(20); flip(); }, 450); });
@@ -413,6 +416,7 @@ function renderWait(s: StateMsg) {
   $('#wdrawer_open').textContent = s.host ? '⚙️ 방 설정 · 맵' : '🗺 방 정보 · 맵';
   $('#wcount').textContent = `참가 ${s.seats.length} / ${s.maxPlayers}명`;
   const pc = s.maxPlayers, pkey = `${s.theme}:${pc}`, wp = $<HTMLCanvasElement>('#w_prev');
+  setThumb($('#w_stage'), s.theme);
   if (wp.dataset.k !== pkey) { wp.dataset.k = pkey; drawMapPreview(wp, s.theme, pc); $('#w_info').replaceChildren(...mapSummary(s.theme, pc)); }
   $('#hostctl').hidden = !s.host;
   $('#start').hidden = !s.host;

@@ -1224,3 +1224,5 @@ button svg.ic{margin-right:.15em}
   #panel #hand .gcard{width:calc((100% - 16px) / 3);max-width:150px}
   #panel #openrow .gcard{width:calc((100% - 24px) / 4);max-width:110px}
 }
+/* 반박할 카드 고르기: PC에서도 크게 */
+@media not ((max-aspect-ratio:23/20) and (max-width:639px)){#dlg .cardbtn .gcard{width:clamp(110px,14vw,150px)}}

@@ -749,7 +749,7 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   bd.addEventListener('click', e => { if (swallow) { e.stopImmediatePropagation(); swallow = false; } }, true);
 }
 $('#board').onmousemove = e => {
-  if (touchLike()) return; // 터치 뒤 브라우저가 흉내 내는 mousemove는 무시
+  if (touchLike() || tokDragOn) return; // 터치 뒤 브라우저가 흉내 내는 mousemove는 무시, 말을 끄는 중엔 끌기 쪽이 길을 그림
   const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]');
   showTip(c ? +c.dataset.p! : null, e.clientX, e.clientY);
 };

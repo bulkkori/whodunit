@@ -280,23 +280,27 @@ function renderBoard(g: G.View) {
 }
 // 클릭: 마우스는 바로 이동, 터치는 첫 탭 = 경로 미리보기, 같은 칸 두 번째 탭 = 이동
 let lastPointer = 'mouse', armed: G.Pos | null = null;
+/** 터치 기기(마우스 올리기가 없는 화면)인지 — 마지막 입력이 터치이거나, 기기 자체가 hover를 못 하면 */
+const touchLike = () => lastPointer !== 'mouse' || matchMedia('(hover: none)').matches;
 $('#board').onpointerdown = e => { lastPointer = e.pointerType; };
 $('#board').onclick = e => {
   const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]');
-  if (c) tapCell(+c.dataset.p!, e.clientX, e.clientY, lastPointer !== 'mouse');
+  if (c) tapCell(+c.dataset.p!, e.clientX, e.clientY, touchLike());
 };
 function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   const g = S?.game; if (!g) return;
   const ok = myMoves(g).has(p);
-  if (ok && (!touch || armed === p)) { armed = null; previewPath(null); act({ t: 'move', to: p }); return; }
+  touch ||= touchLike();
+  if (ok && (!touch || armed === p)) { armed = null; previewPath(null); $('#hovertip').hidden = true; act({ t: 'move', to: p }); return; }
   armed = ok ? p : null;
-  showTip(p, x, y, true);
+  showTip(p, x, y, !ok); // 갈 수 있는 칸이면 '한 번 더 누르면 이동' 안내를 계속 띄워 둠
 }
 $('#board').onmousemove = e => {
+  if (touchLike()) return; // 터치 뒤 브라우저가 흉내 내는 mousemove는 무시
   const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]');
   showTip(c ? +c.dataset.p! : null, e.clientX, e.clientY);
 };
-$('#board').onmouseleave = () => showTip(null, 0, 0);
+$('#board').onmouseleave = () => { if (!touchLike()) showTip(null, 0, 0); };
 
 // ---------- 이동 경로 미리보기: 내 이동 차례에 마우스를 올린(또는 탭한) 칸까지의 길만 칠한다 ----------
 function previewPath(p: G.Pos | null) {
@@ -334,7 +338,7 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
     const d = G.distances(g.map, me.pos, blocked).get(p);
     const moving = g.turn === g.me && g.phase === 'move' && !diceBusy && g.roll != null;
     if (d == null) line2 = blocked.has(p) ? '❌ 다른 말이 있는 칸' : '❌ 갈 수 없음 (다른 말이 길을 막음)';
-    else if (moving) line2 = d <= g.roll! ? `✅ 이동 가능 · ${d}칸 (최대 ${g.roll}칸)` + (lastPointer !== 'mouse' && armed === p ? ' — 한 번 더 누르면 이동' : '') : `❌ 이동 불가 · ${d}칸 필요 (최대 ${g.roll}칸)`;
+    else if (moving) line2 = d <= g.roll! ? `✅ 이동 가능 · ${d}칸 (최대 ${g.roll}칸)` + (touchLike() && armed === p ? ' — 한 번 더 누르면 이동' : '') : `❌ 이동 불가 · ${d}칸 필요 (최대 ${g.roll}칸)`;
     else line2 = `여기까지 ${d}칸`;
   }
   tip.innerHTML = '';
@@ -390,7 +394,7 @@ function renderPanel(g: G.View) {
     !my ? `${nm(g, g.turn)}의 차례입니다` :
     me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
     ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추론하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
-    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요 (폰: 한 번 탭 = 미리보기, 두 번 = 이동)`) :
+    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? `🎲 ${g.roll} — 칸을 한 번 누르면 길이 보이고, 한 번 더 누르면 이동해요` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
     inRoom && me.canSuggest ? '추론하거나 턴을 끝내세요' : '턴을 끝내세요';
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',

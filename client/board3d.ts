@@ -281,7 +281,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
     const p = pickAt(e.clientX, e.clientY);
     if (p == null) return;
-    onTap(p, e.clientX, e.clientY, e.pointerType !== 'mouse'); // 이동·미리보기 판단은 화면 쪽에서
+    onTap(p, e.clientX, e.clientY, e.pointerType !== 'mouse' || matchMedia('(hover: none)').matches); // 이동·미리보기 판단은 화면 쪽에서
   });
   renderer.domElement.addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse' || e.buttons) return; // 드래그(회전) 중엔 안내 안 함

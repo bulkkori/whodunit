@@ -16,7 +16,7 @@ const store = {
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경(시크릿 등)은 무시 */ } },
 };
 import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl, floorTex, TEX_CELLS, loadTexManifest } from './art.ts';
-import { drawMapPreview, mapSummary } from './preview.ts';
+import { drawMapPreview, mapSummary, onTexReady } from './preview.ts';
 
 let token = store.get<string | null>('wd_token', null);
 if (!token) { token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); store.set('wd_token', token); }
@@ -887,4 +887,16 @@ $btn('#create').disabled = $btn('#join').disabled = $btn('#practice').disabled =
 render();
 connect();
 // 텍스처 목록이 오면 보드를 다시 그림(목록 전에 그려졌으면 단색이었으므로)
-loadTexManifest().then(() => { boardKey = ''; b3?.rebuild(); if (S?.game) render(); });
+// 맵 선택·대기실 미리보기와 맵 카드도 텍스처가 준비되면 다시 그림
+const redrawPreviews = () => {
+  if (!$('#createbox').hidden) refreshCreatePreview();
+  if (!$('#wait').hidden && S) { $('#w_prev').dataset.k = ''; renderWait(S); }
+};
+onTexReady(redrawPreviews);
+loadTexManifest().then(() => {
+  boardKey = ''; b3?.rebuild(); if (S?.game) render();
+  for (const b of document.querySelectorAll<HTMLElement>('#c_themes .tcard')) { // 맵 카드 배경 = 그 맵의 복도 바닥
+    const u = floorTex(b.dataset.k!, 'hall'); if (u) Object.assign(b.style, { backgroundImage: `linear-gradient(90deg,#000c,#0006), url(${u})`, backgroundSize: 'auto, 96px' });
+  }
+  redrawPreviews();
+});

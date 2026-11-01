@@ -1,6 +1,16 @@
 // 방 만들기·대기실의 맵 미리보기: 실제 보드 평면도를 작은 캔버스에 그린다(같은 인원이면 게임 보드와 똑같음).
 import * as G from '../shared/game.ts';
-import { ROOM_TINTS } from './art.ts';
+import { ROOM_TINTS, floorTex, TEX_CELLS } from './art.ts';
+
+// 바닥 텍스처 이미지: 한 번만 불러오고, 다 받아지면 onTexReady로 등록한 함수(미리보기 다시 그리기)를 부른다
+const imgs = new Map<string, HTMLImageElement>(), ready: (() => void)[] = [];
+export const onTexReady = (f: () => void) => { ready.push(f); };
+function img(url: string | null) {
+  if (!url) return null;
+  let im = imgs.get(url);
+  if (!im) { im = new Image(); im.src = url; im.onload = () => ready.forEach(f => f()); imgs.set(url, im); }
+  return im.complete && im.naturalWidth ? im : null;
+}
 
 export function drawMapPreview(cv: HTMLCanvasElement, theme: G.ThemeKey, count: number) {
   const m = G.genMap(Math.min(G.MAX_PLAYERS, Math.max(3, count))), T = G.THEMES[theme];
@@ -10,21 +20,30 @@ export function drawMapPreview(cv: HTMLCanvasElement, theme: G.ThemeKey, count: 
   const g = cv.getContext('2d')!; g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const c = size / m.n;
   g.fillStyle = col('--bg', '#17131a'); g.fillRect(0, 0, size, size);
+  // 텍스처가 있으면 패턴(한 장 = 3×3칸, 캔버스 원점 기준이라 칸끼리 이어짐), 없으면 단색
+  const pat = (url: string | null) => {
+    const im = img(url); if (!im) return null;
+    const p = g.createPattern(im, 'repeat')!; p.setTransform(new DOMMatrix().scale((c * TEX_CELLS) / im.naturalWidth)); return p;
+  };
+  const hallPat = pat(floorTex(theme, 'hall'));
   for (let i = 0; i < m.n * m.n; i++) if (m.cells[i] === -1) {
-    g.fillStyle = m.bonus.includes(i) ? '#6b5326' : col('--hall', '#2b2430');
-    g.fillRect((i % m.n) * c + 0.5, Math.floor(i / m.n) * c + 0.5, c - 1, c - 1);
+    const x = (i % m.n) * c + 0.5, y = Math.floor(i / m.n) * c + 0.5;
+    g.fillStyle = m.bonus.includes(i) ? '#6b5326' : hallPat ?? col('--hall', '#2b2430');
+    g.fillRect(x, y, c - 1, c - 1);
+    if (hallPat && !m.bonus.includes(i)) { g.strokeStyle = 'rgba(255,236,205,.22)'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, c - 2, c - 2); } // 게임처럼 칸 테두리
   }
   const room = col('--room', '#3d2b35');
-  const rect = (q: G.Rect, fill: string, label: string, accent = false) => {
+  const rect = (q: G.Rect, fill: string | CanvasPattern, label: string, accent = false) => {
     const x = q.x0 * c + 1, y = q.y0 * c + 1, w = (q.x1 - q.x0 + 1) * c - 2, h = (q.y1 - q.y0 + 1) * c - 2;
     g.fillStyle = fill; g.beginPath(); g.roundRect(x, y, w, h, 4); g.fill();
+    if (typeof fill !== 'string') { g.fillStyle = '#0004'; g.fill(); } // 텍스처 위 글자가 읽히게 살짝 어둡게
     if (accent) { g.strokeStyle = col('--accent', '#d98a6a'); g.setLineDash([4, 3]); g.stroke(); g.setLineDash([]); }
     g.fillStyle = accent ? col('--accent', '#d98a6a') : '#e8dfe9cc';
     g.font = `600 ${Math.max(9, Math.min(13, c * 0.62))}px system-ui, "Malgun Gothic", sans-serif`;
-    g.textBaseline = 'top'; g.fillText(label, x + 4, y + 3, w - 8);
+    g.textBaseline = 'top'; g.shadowColor = '#000'; g.shadowBlur = 3; g.fillText(label, x + 4, y + 3, w - 8); g.shadowBlur = 0;
   };
-  m.rects.forEach((q, i) => rect(q, mix(room, ROOM_TINTS[i % ROOM_TINTS.length], 0.28), T.r[i]));
-  rect(m.center, mix(room, col('--accent', '#d98a6a'), 0.14), '🗂️ 사건 파일', true);
+  m.rects.forEach((q, i) => rect(q, pat(floorTex(theme, i)) ?? mix(room, ROOM_TINTS[i % ROOM_TINTS.length], 0.28), T.r[i]));
+  rect(m.center, pat(floorTex(theme, 'center')) ?? mix(room, col('--accent', '#d98a6a'), 0.14), '🗂️ 사건 파일', true);
   g.fillStyle = col('--door', '#5a4a40');
   for (const d of m.doors) { g.beginPath(); g.arc((d.cell % m.n + 0.5) * c, (Math.floor(d.cell / m.n) + 0.5) * c, c * 0.22, 0, Math.PI * 2); g.fill(); }
 }

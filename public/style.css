@@ -588,6 +588,11 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
 .field .hint{color:var(--sub);font-weight:400;font-size:12.5px}
 #lobby .privacy{margin:6px 0 0;font-size:12px;line-height:1.5;color:#6a5646;word-break:keep-all;border-top:1px dashed #2a1d1733;padding-top:10px}
 
+/* 설명서 링크(첫 화면·대기실) */
+#lobby .guide{align-self:center;color:var(--ink3);font-size:13.5px;text-decoration:underline dotted 1.5px;text-underline-offset:4px;margin-top:-6px}
+#lobby .guide:hover{color:var(--seal)}
+#wait .guide{margin-left:auto;margin-right:8px;color:var(--sub);font-size:13px;text-decoration:underline dotted 1.5px;text-underline-offset:4px;white-space:nowrap}
+
 /* ===================== 조건별 규칙(같은 조건은 한 블록) ===================== */
 /* 가로형(PC·태블릿 가로·폰 가로): 보드 왼쪽 · 패널 오른쪽 */
 @media (min-aspect-ratio:23/20){

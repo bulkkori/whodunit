@@ -35,6 +35,7 @@
     <label class="field blank"><span>서명</span><input id="name" maxlength="12" placeholder="닉네임" aria-describedby="name_err"><small id="name_err" class="ferr" role="alert" hidden>닉네임을 입력해 주세요.</small></label>
     <button id="create" class="sk">방 만들기</button>
     <button id="practice" class="ghost sk">봇 2명과 바로 연습 →</button>
+    <a class="guide" href="guide.html">처음이세요? 설명서 보기</a>
     <div class="or">또는 참여 코드로 입장</div>
     <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off" aria-describedby="code_err"><button id="join" class="loadbtn sk"><span>입장</span></button></div>
     <small id="code_err" class="ferr" role="alert" hidden></small>
@@ -87,7 +88,7 @@
         <div class="codebox"><span class="sub">참여 코드</span><b id="bigcode"></b><button id="copy" class="ghost">🔗 초대 링크 복사</button></div>
       </div>
       <div class="wplayers">
-        <div class="whead"><p class="sub" id="wcount"></p><button type="button" id="wdrawer_open" class="ghost">⚙️ 방 설정 · 맵</button></div>
+        <div class="whead"><p class="sub" id="wcount"></p><a class="guide" href="guide.html" target="_blank" rel="noopener">설명서</a><button type="button" id="wdrawer_open" class="ghost">⚙️ 방 설정 · 맵</button></div>
         <ul id="seats"></ul>
         <p id="seathint" class="hint" hidden>참가자를 길게 누르면 내보내기 · 방장 넘기기</p>
         <div class="wcta">

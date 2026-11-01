@@ -1,11 +1,17 @@
+# Render 무료 플랜 배포 설정(Blueprint). Render 대시보드 → New → Blueprint → 이 저장소 선택하면 그대로 올라감
 services:
   - type: web
     name: whodunit
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build
-    startCommand: node server.ts
+    region: singapore          # 한국에서 가장 가까운 지역
+    buildCommand: npm ci
+    startCommand: npm start    # prestart에서 글꼴 복사 + 화면 번들 → node server.ts
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION
         value: "24"
+      - key: TRUST_PROXY       # Render 프록시 뒤라 X-Forwarded-For를 믿어야 사람마다 연결 제한이 맞게 적용됨
+        value: "1"
+      - key: MAX_ROOMS
+        value: "60"            # 무료 인스턴스(512MB) 기준 여유 있게

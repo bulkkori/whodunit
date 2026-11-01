@@ -28,7 +28,11 @@ export const FEEDBACK_URL = 'https://naver.me/xzHBWAvk';
 for (const a of document.querySelectorAll<HTMLAnchorElement>('a.feedback')) { a.hidden = !FEEDBACK_URL; a.href = FEEDBACK_URL; }
 
 let S: StateMsg | null = null, ws: WebSocket | null = null, deadline = 0, total = G.TURN_MS, everConnected = false;
-let code = new URLSearchParams(location.search).get('room');
+const ss = { get: (k: string) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch { /* 저장 불가 */ } } };
+// 주소창에는 참여 코드를 남기지 않음(화면 공유·스크린숏·방문 기록에 노출 방지). 초대 링크로 왔으면 읽고 바로 지움
+let code = new URLSearchParams(location.search).get('room') ?? ss.get('wd_room');
+if (location.search) history.replaceState(null, '', location.pathname);
+const setRoom = (c: string | null) => { code = c; ss.set('wd_room', c); };
 // 초대 링크(?room=)로 열었고 닉네임이 저장돼 있으면 바로 입장 → 응답 전까지 대기실 스켈레톤
 let linkJoining = !!code && !!store.get('wd_name', '').trim(), codeJoining = false;
 
@@ -42,16 +46,15 @@ function connect() {
   sock.onmessage = e => {
     const m = JSON.parse(e.data) as ServerMsg;
     stopLoading(); linkJoining = false; const wasCode = codeJoining; codeJoining = false;
-    if (m.t === 'kicked') { S = null; code = null; history.replaceState(null, '', location.pathname); render(); return toast('방장이 이 방에서 내보냈어요'); }
+    if (m.t === 'kicked') { S = null; setRoom(null); render(); return toast('방장이 이 방에서 내보냈어요'); }
     if (m.t === 'error') {
       // 방이 사라짐(서버 재시작·정리): 게임 화면이 멈춘 채 남지 않게 첫 화면으로
-      if (m.gone && S) { const why = rejoining ? '서버가 다시 시작되어 진행 중이던 판이 사라졌어요. 새 방을 만들어 주세요' : m.msg; rejoining = false; S = null; code = null; history.replaceState(null, '', location.pathname); render(); return toast(why); }
+      if (m.gone && S) { const why = rejoining ? '서버가 다시 시작되어 진행 중이던 판이 사라졌어요. 새 방을 만들어 주세요' : m.msg; rejoining = false; S = null; setRoom(null); render(); return toast(why); }
       rejoining = false;
-      if (!S) { code = null; history.replaceState(null, '', location.pathname); render(); }
+      if (!S) { setRoom(null); render(); }
       return wasCode ? codeErr(m.msg) : toast(m.msg);
     }
-    S = m; code = m.code; creating = false; rejoining = false;
-    if (location.search !== '?room=' + m.code) history.replaceState(null, '', '?room=' + m.code);
+    S = m; setRoom(m.code); creating = false; rejoining = false;
     deadline = m.left == null ? 0 : Date.now() + m.left;
     total = m.game?.phase === 'refute' ? G.REFUTE_MS : G.TURN_MS;
     render();
@@ -263,7 +266,8 @@ $('#join').onclick = () => {
   join(c);
 };
 $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
-$('#copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast('초대 링크를 복사했어요'); } catch { toast(location.href); } };
+const inviteUrl = () => `${location.origin}${location.pathname}?room=${S?.code ?? ''}`;
+$('#copy').onclick = async () => { try { await navigator.clipboard.writeText(inviteUrl()); toast('초대 링크를 복사했어요'); } catch { toast(inviteUrl()); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
 $('#opttempo').onchange = e => send({ t: 'opt', tempo: (e.target as HTMLSelectElement).value as G.Tempo });
@@ -273,7 +277,7 @@ $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', 
 $('#leave').onclick = () => {
   if (S?.game && S.game.phase !== 'over' && !S.game.players[S.game.me]?.out && !confirm('지금 나가면 탈락하고, 가진 카드는 모두에게 공개돼요. 나갈까요?')) return;
   send({ t: 'leave' });
-  S = null; code = null; history.replaceState(null, '', location.pathname); ws?.close(); render();
+  S = null; setRoom(null); ws?.close(); render();
 };
 
 // ---------- 대기실: 방 설정·맵 드로어(폰·세로 화면) ----------

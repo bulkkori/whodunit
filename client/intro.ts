@@ -9,8 +9,8 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 export function playIntro(g: G.View, onDone: () => void) {
   const T = G.THEMES[g.theme], ov = document.createElement('div');
   ov.id = 'intro';
-  ov.innerHTML = `<div class="ititle"><b>${T.icon} 사건 발생</b><span id="istep">카드를 섞는 중…</span></div>
-    <button class="ghost iskip">건너뛰기 ⏭</button><div class="ienv">✉️<i>CONFIDENTIAL</i></div><div class="iopen"></div><div class="iseats"></div>`;
+  ov.innerHTML = `<div class="ititle"><small>CASE FILE · ${T.name}</small><b>사건 발생</b><span id="istep">카드를 섞는 중…</span></div>
+    <button class="ghost iskip">건너뛰기 ⏭</button><div class="ienv"><span class="flap"></span><i>CONFIDENTIAL</i></div><div class="iopen"></div><div class="iseats"></div>`;
   document.body.append(ov);
   let alive = true;
   const finish = () => { if (!alive) return; alive = false; ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350 }).finished.finally(() => { ov.remove(); onDone(); }); };

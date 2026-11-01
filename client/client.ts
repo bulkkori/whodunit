@@ -814,12 +814,16 @@ function renderDialogs(g: G.View) {
     if (dlgKey !== 'over' + g.seed) {
       dlgKey = 'over' + g.seed;
       openDlg('over', f => {
-        f.append(el('h2', '', g.winner === null ? '🕯️ 미제 사건' : g.winner === g.me ? '🏆 사건 해결! 당신이 이겼습니다' : `🏆 ${nm(g, g.winner)} 승리`));
-        f.append(el('p', 'sub', '사건 봉투'));
+        // 사건 종결 보고서: 결과 도장 + 봉투 속 세 장을 차례로 뒤집어 공개
+        const T = G.THEMES[g.theme];
+        f.append(el('small', 'ocase', `CASE CLOSED · ${T.name}`), el('span', 'ostamp' + (g.winner === null ? ' cold' : ''), g.winner === null ? '미제' : '해결'));
+        f.append(el('h2', '', '사건 종결 보고서'));
+        f.append(el('p', 'owin', g.winner === null ? '아무도 진실에 닿지 못했습니다.' : g.winner === g.me ? '당신이 사건을 해결했습니다!' : `${nm(g, g.winner)} 님이 사건을 해결했습니다.`));
         const box = el('div', 'cards');
-        box.classList.add('row-cards');
-        for (const k of ['s', 'w', 'r'] as const) box.append(cardEl(g.theme, env[k]));
+        box.classList.add('row-cards', 'ocards');
+        (['s', 'w', 'r'] as const).forEach((k, n) => { const c = cardEl(g.theme, env[k]); c.style.animationDelay = `${0.35 + n * 0.45}s`; box.append(c); });
         f.append(box);
+        f.append(el('p', 'ofact', `범인은 ${G.cardName(g.theme, env.s)}, 흉기는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
         const row = el('div', 'row');
         if (S?.host) { const again = el('button', '', '대기실로'); again.onclick = e => { e.preventDefault(); send({ t: 'again' }); dlg.close(); }; row.append(again); }
         row.append(el('button', 'ghost', '보드 보기')); f.append(row);

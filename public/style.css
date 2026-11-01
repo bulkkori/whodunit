@@ -883,3 +883,39 @@ body:has(#game:not([hidden])){background:radial-gradient(ellipse 80% 50% at 50% 
 dialog#dlg{border-radius:3px}
 #dlg h2{font:800 20px "Nanum Myeongjo",serif}
 #dlg::backdrop{background:#0b0809b3}
+
+/* ---------- 시작 연출: 책상 위 사건 봉투 ---------- */
+#intro{background:radial-gradient(ellipse 80% 50% at 50% 100%,#d9a35b20,#0000 70%),radial-gradient(ellipse at 50% 30%,#2e2124 0%,#150f11 65%,#0b0809 100%)}
+#intro .ititle small{font:700 11px "Nanum Gothic Coding",monospace;letter-spacing:.2em;color:#c9a96e}
+#intro .ititle b{font:800 32px "Nanum Myeongjo","Batang",serif;color:#f1e7d0}
+#intro .ititle span{color:#cdbfa8;font-size:14px}
+#intro .iskip{background:transparent;color:#f1e7d0;border:1.5px solid #f1e7d088;border-radius:3px}
+#intro .ienv{width:120px;height:80px;font-size:0;background:linear-gradient(#e2cfa6,#cdb582);border-radius:2px;box-shadow:0 10px 24px #000a;overflow:visible}
+#intro .ienv .flap{position:absolute;inset:0 0 auto 0;height:52%;background:linear-gradient(#d8c296,#c4aa76);clip-path:polygon(0 0,100% 0,50% 100%);filter:drop-shadow(0 2px 1px #0003)}
+#intro .ienv i{position:absolute;left:50%;bottom:10px;transform:translateX(-50%) rotate(-6deg);border:1.5px solid #a3272f;color:#a3272f;padding:1px 6px;font:800 9px "Nanum Gothic Coding",monospace;letter-spacing:.15em;white-space:nowrap}
+#intro .ienv.sealed::after{content:"";right:auto;left:50%;bottom:auto;top:42%;width:30px;height:30px;margin-left:-15px;border-radius:50%;font-size:0;
+  background:radial-gradient(circle at 40% 35%,#a8384a,#6b1f2b 60%,#4a1220);box-shadow:0 2px 4px #0008,inset 0 0 0 4px #ffffff14;animation:seal .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes seal{0%{transform:scale(2.2);opacity:0}100%{transform:none;opacity:1}}
+#intro .ilab{color:#cdbfa8;font-family:"Nanum Myeongjo",serif;font-weight:800}
+#intro .iseat{background:#ece1c8;color:#2a1d17;border-radius:2px;box-shadow:0 3px 8px #0008;font-weight:700}
+#intro .iseat.me{outline:0;box-shadow:0 0 0 2px #6b1f2b,0 3px 8px #0008}
+#intro .iseat b{color:#6b1f2b;font-family:"Nanum Gothic Coding",monospace}
+#intro .iseat i{box-shadow:inset 0 0 0 1.5px #0003}
+#intro .imine{background:radial-gradient(ellipse at 50% 30%,#f1e7d0 50%,#d6c39c 140%);border-radius:3px;box-shadow:0 18px 44px #000c}
+/* ---------- 게임 끝: 사건 종결 보고서 ---------- */
+#dlg[data-kind=over]{width:min(560px,94vw);position:relative;overflow:visible}
+#dlg[data-kind=over] form{align-items:center;text-align:center;gap:8px}
+#dlg .ocase{font:700 11px "Nanum Gothic Coding",monospace;letter-spacing:.2em;color:var(--sub)}
+#dlg[data-kind=over] h2{font-size:26px;padding-bottom:8px;border-bottom:1px solid var(--line);align-self:stretch}
+#dlg .owin{margin:4px 0 6px;font-weight:700}
+#dlg .ostamp{position:absolute;top:18px;right:18px;transform:rotate(12deg);border:3px double #a3272f;color:#a3272f;padding:4px 14px;
+  font:800 26px "Nanum Myeongjo",serif;letter-spacing:.2em;mix-blend-mode:multiply;animation:stamp .4s .2s cubic-bezier(.3,1.6,.5,1) both}
+#dlg .ostamp.cold{color:#3a2c24;border-color:#3a2c24}
+@keyframes stamp{0%{transform:rotate(12deg) scale(2.4);opacity:0}100%{transform:rotate(12deg);opacity:.85}}
+#dlg .ocards .gcard{width:min(140px,26vw);animation:flipin .55s ease-out both}
+#dlg .ofact{margin:4px 0 8px;font:700 15px/1.5 "Nanum Myeongjo",serif;word-break:keep-all}
+#dlg[data-kind=over] .row{align-self:stretch}
+@media (prefers-reduced-motion:reduce){#dlg .ostamp,#dlg .ocards .gcard,#intro .ienv.sealed::after{animation:none}}
+#dlg .ocards{flex-wrap:nowrap!important;align-self:stretch}
+#dlg .ocards .gcard{width:calc((100% - 20px) / 3);max-width:140px}
+@media (max-width:600px){#dlg .ostamp{top:10px;right:10px;font-size:17px;padding:2px 9px}#dlg[data-kind=over] h2{font-size:22px;padding-top:14px}}

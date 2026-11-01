@@ -141,19 +141,21 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (!isHost) return;
   if (m.t === 'again' && room.game?.phase === 'over') {
     room.game = null; room.stage = 'lobby';
+    room.seats = room.seats.filter(s => !s.bot); // 봇은 다음 시작 때 다시 채움
     for (const s of room.seats) { s.ready = false; s.suspect = null; }
     return update(room);
   }
   if (room.stage !== 'lobby') return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
   if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
-  if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n));
+  if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n)); // 이미 들어온 사람보다 적게는 못 줄임
   if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
   if (m.t === 'removeBot') { const k = room.seats.findLastIndex(s => s.bot); if (k >= 0) room.seats.splice(k, 1); }
   if (m.t === 'start') {
-    if (room.seats.length < 3) return send(ws, { t: 'error', msg: '3명 이상 필요합니다 (봇 추가 가능)' });
     const waiting = room.seats.filter(s => !s.bot && s.token !== room.host && !s.ready);
     if (waiting.length) return send(ws, { t: 'error', msg: `아직 준비하지 않은 사람: ${waiting.map(s => s.name).join(', ')}` });
+    // 최대 인원까지 남는 자리는 봇이 채움
+    for (let k = 1; room.seats.length < room.maxPlayers; k++) room.seats.push({ token: null, name: '봇 ' + k, bot: true, suspect: null, ready: true });
     room.stage = 'pick'; room.pickUntil = Date.now() + PICK_MS;
     for (const s of room.seats) s.suspect = null;
   }

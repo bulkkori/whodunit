@@ -364,3 +364,104 @@ button.ghost.loading::after{border-color:var(--ink);border-right-color:transpare
 .combo input:focus{outline:none}
 .combo:focus-within{border-color:var(--accent)}
 .combo input[readonly]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+/* ===== 방 만들기 · 대기실: 맵 미리보기 + PC 두 단 배치 ===== */
+.mapprev{width:100%;aspect-ratio:1;border-radius:10px;display:block;background:var(--bg);border:1px solid var(--line)}
+.mapinfo{display:flex;flex-wrap:wrap;gap:6px}
+.mapinfo .chip{font-size:12px}
+.cgrid,.wgrid{display:flex;flex-direction:column;gap:14px}
+.cform,.wleft,.wright,.cside{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:959px){
+  .mapprev{max-width:340px;margin:0 auto}
+}
+@media (min-width:960px){
+  .card.wide{max-width:min(1120px,94vw);padding:28px 32px;margin:4vh auto}
+  .card.wide h2{font-size:26px}
+  .cgrid,.wgrid{display:grid;grid-template-columns:minmax(340px,1fr) minmax(360px,1.1fr);gap:32px;align-items:start}
+  .cside{position:sticky;top:16px}
+  .wleft .codebox b{font-size:44px}
+  #seats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #seats li{min-height:52px;align-items:center}
+  #seats li.empty{grid-column:auto}
+  #start,#readybtn,#c_make{padding:14px;font-size:17px}
+}
+@media (min-width:2200px){
+  .card.wide{max-width:min(1500px,90vw)}
+  .mapinfo .chip{font-size:15px}
+}
+@media (min-width:960px){
+  /* 미리보기는 화면 높이 안에 들어오게 */
+  .cside .mapprev{max-width:min(100%,calc(100dvh - 260px));margin:0 auto}
+  .wleft .mapprev{max-width:min(100%,calc(100dvh - 420px));margin:0 auto}
+  #seats li.empty{justify-content:center;min-height:52px}
+}
+
+.roomset{background:var(--hall);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.roomset[open]{display:flex}
+.roomset summary{cursor:pointer;font-weight:700;list-style:none}
+.roomset summary::-webkit-details-marker{display:none}
+.roomset > *:not(summary){margin-top:10px}
+#seats li.empty{color:var(--sub)}
+
+/* ===== 방 만들기 · 대기실 레이아웃 (재설계) ===== */
+.themecards{display:none}
+.prevwrap{display:grid;place-items:center;min-height:0}
+.wgrid{display:flex;flex-direction:column;gap:14px}
+.winfo,.wplayers,.wsettings,.wmap,.wcta{display:flex;flex-direction:column;gap:12px;min-width:0}
+.roomset{display:flex;flex-direction:column;gap:12px}
+.roomset > b{font-size:15px}
+.wcta button{padding:14px;font-size:16px}
+
+/* PC·가로 넓은 화면: 화면 전체를 쓰는 앱형 배치, 페이지 스크롤 없음 */
+@media (min-width:1100px) and (min-aspect-ratio:23/20){
+  main:has(> #createbox:not([hidden])),main:has(> #wait:not([hidden])){padding:0}
+  #createbox.card.wide,#wait.card.wide{max-width:none;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;
+    padding:var(--pad);height:calc(100dvh - var(--hdr) - var(--st));display:block}
+  .panel-like,.cside,.cform,.winfo,.wplayers,.wsettings,.wmap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+  /* 방 만들기: [맵 선택 · 큰 미리보기] [설정 패널] */
+  .cgrid{display:grid;grid-template-columns:minmax(0,1fr) clamp(380px,28vw,520px);gap:var(--pad);height:100%;align-items:stretch}
+  .cside{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:14px;position:static;min-height:0}
+  .themecards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tcard{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;text-align:left;background:var(--hall);color:var(--ink);border:2px solid transparent;padding:12px 14px;border-radius:12px}
+  .tcard i{grid-row:span 2;font-style:normal;font-size:32px}
+  .tcard b{font-size:16px}.tcard small{color:var(--sub);font-size:12px;font-weight:400}
+  .tcard.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--hall))}
+  .mapsel{display:none}
+  .cside .mapprev,.wmap .mapprev{height:100%;width:auto;max-width:100%;max-height:100%;margin:0}
+  .cside,.wmap{min-height:0;overflow:hidden}
+  .wplayers{overflow:hidden}
+  .cform{display:flex;flex-direction:column;gap:16px;overflow:auto}
+  .cform h2{font-size:28px}
+  .cform .cta{margin-top:auto}
+  .cform .cta button{padding:14px;font-size:17px}
+  /* 대기실: [설정] [맵] [초대·참가자·시작] */
+  .wgrid{display:grid;height:100%;gap:var(--pad);align-items:stretch;
+    grid-template-columns:clamp(280px,20vw,360px) minmax(0,1fr) clamp(340px,24vw,460px);
+    grid-template-rows:auto minmax(0,1fr);
+    grid-template-areas:"settings map info" "settings map players"}
+  .winfo{grid-area:info}.wplayers{grid-area:players;min-height:0}.wsettings{grid-area:settings;overflow:auto}.wmap{grid-area:map;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px}
+  .winfo h2{font-size:24px;margin:0}
+  .winfo .codebox{background:var(--hall)}
+  .wplayers #seats{display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0;flex:1}
+  .wplayers #seats li{min-height:44px;align-items:center}
+  .wcta{margin-top:auto}
+  .wcta button{padding:16px;font-size:18px}
+  .roomset{background:transparent;border:0;padding:0}
+}
+@media (min-width:2200px) and (min-aspect-ratio:23/20){
+  .tcard i{font-size:42px}.tcard b{font-size:20px}.tcard small{font-size:15px}
+  .cform h2{font-size:34px}.winfo h2{font-size:30px}
+}
+/* 폰·세로: 한 줄 — 초대 → 참가자·버튼 → 설정 → 맵 */
+@media not ((min-width:1100px) and (min-aspect-ratio:23/20)){
+  .wgrid{display:flex}
+  .winfo{order:1}.wplayers{order:2}.wsettings{order:3}.wmap{order:4}
+  .cside{order:2}.cform{order:1}
+  .cgrid{display:flex;flex-direction:column}
+  .mapprev{max-width:360px;width:100%;margin:0 auto}
+}
+@media (min-width:1100px) and (min-aspect-ratio:23/20){
+  /* 미리보기는 남은 칸(가로·세로 중 작은 쪽)에 꼭 맞는 정사각형 */
+  .prevwrap{container-type:size;height:100%;width:100%}
+  .cside .mapprev,.wmap .mapprev{width:min(100cqw,100cqh);height:min(100cqw,100cqh);max-width:none;max-height:none}
+}

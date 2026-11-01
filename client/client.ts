@@ -16,6 +16,7 @@ const store = {
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경(시크릿 등)은 무시 */ } },
 };
 import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl } from './art.ts';
+import { drawMapPreview, mapSummary } from './preview.ts';
 
 let token = store.get<string | null>('wd_token', null);
 if (!token) { token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); store.set('wd_token', token); }
@@ -73,6 +74,7 @@ const maxTxt = $in('#c_max_txt'), maxList = $('#c_max_list');
 let maxPlayers = 6;
 function setMax(n: number) {
   maxPlayers = Math.min(G.MAX_PLAYERS, Math.max(3, Math.round(n) || maxPlayers));
+  queueMicrotask(refreshCreatePreview);
   maxTxt.value = String(maxPlayers);
   for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.disabled = maxPlayers + +b.dataset.d! < 3 || maxPlayers + +b.dataset.d! > G.MAX_PLAYERS;
   for (const li of maxList.children) li.setAttribute('aria-selected', String((li as HTMLElement).dataset.v === String(maxPlayers)));
@@ -116,11 +118,30 @@ maxTxt.addEventListener('keydown', e => {
 for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.onclick = () => { setMax(maxPlayers + +b.dataset.d!); listOpen(false); };
 addEventListener('pointerdown', e => { if (!(e.target as HTMLElement).closest('#c_max')) listOpen(false); });
 
+function refreshCreatePreview() {
+  const t = theme();
+  document.body.dataset.gtheme = t;
+  drawMapPreview($<HTMLCanvasElement>('#c_prev'), t, maxPlayers);
+  for (const b of document.querySelectorAll<HTMLElement>('#c_themes .tcard')) { const on = b.dataset.k === t; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
+  $('#c_info').replaceChildren(...mapSummary(t, maxPlayers));
+}
+$('#theme').addEventListener('change', refreshCreatePreview);
+// 맵 카드(넓은 화면): 셀렉트와 같은 값을 쓴다
+const THEME_DESC: Record<G.ThemeKey, string> = { mansion: '촛불 아래 고딕 미스터리', atlantis: '가라앉은 신전의 비밀', station: '고립된 궤도 연구 기지' };
+for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
+  const b = el('button', 'tcard'); b.type = 'button'; b.dataset.k = k; b.setAttribute('role', 'radio');
+  b.append(el('i', '', t.icon), el('b', '', t.name), el('small', '', THEME_DESC[k]));
+  b.onclick = () => { $<HTMLSelectElement>('#theme').value = k; refreshCreatePreview(); };
+  $('#c_themes').append(b);
+}
+// 창 크기가 바뀌면 미리보기 다시 그림
+new ResizeObserver(() => { if (!$('#createbox').hidden) refreshCreatePreview(); }).observe($('#c_prev'));
+new ResizeObserver(() => { const c = $('#w_prev'); if (!$('#wait').hidden) { c.dataset.k = ''; if (S) renderWait(S); } }).observe($('#w_prev'));
 const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked });
 $('#create').onclick = () => {
   if (!myName()) return toast('닉네임을 입력하세요');
   $in('#c_title').placeholder = `${myName()}의 사건`;
-  creating = true; render();
+  creating = true; render(); refreshCreatePreview();
 };
 $('#c_cancel').onclick = () => { creating = false; render(); };
 $('#c_make').onclick = () => {
@@ -131,7 +152,7 @@ $('#practice').onclick = () => {
   if (!myName()) $in('#name').value = '탐정';
   startLoading($btn('#practice'));
   send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: '연습 사건', maxPlayers: 3 });
-  send({ t: 'addBot' }); send({ t: 'addBot' }); send({ t: 'start' });
+  send({ t: 'start' }); // 남는 2자리는 봇이 자동으로
 };
 $('#join').onclick = () => {
   const c = $in('#code').value.trim().toUpperCase();
@@ -143,10 +164,9 @@ $('#join').onclick = () => {
 $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast('초대 링크를 복사했어요'); } catch { toast(location.href); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
-$('#addbot').onclick = () => send({ t: 'addBot' });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
-$('#rmbot').onclick = () => send({ t: 'removeBot' });
 $('#start').onclick = () => send({ t: 'start' });
+for (const b of document.querySelectorAll<HTMLButtonElement>('#wmax button')) b.onclick = () => { if (S) send({ t: 'maxp', n: S.maxPlayers + +b.dataset.d! }); };
 $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
 $('#leave').onclick = () => {
   if (S?.game && S.game.phase !== 'over' && !confirm('나가면 봇이 대신 플레이합니다. 나갈까요?')) return;
@@ -272,20 +292,25 @@ function renderWait(s: StateMsg) {
     li.append(el('span', 'tag ' + (x.ready ? 'ok' : ''), x.bot ? '🤖 봇 · 준비됨' : !x.online ? '📴 오프라인' : x.host ? '👑 방장' : x.ready ? '✅ 준비 완료' : '⏳ 준비 중'));
     ul.append(li);
   });
-  for (let k = s.seats.length; k < s.maxPlayers; k++) ul.append(el('li', 'empty', '빈 자리 — 참여 코드로 입장하거나 봇을 추가하세요'));
+  for (let k = s.seats.length; k < s.maxPlayers; k++) ul.append(el('li', 'empty', '빈 자리 · 시작하면 🤖 봇'));
   $('#wcount').textContent = `참가 ${s.seats.length} / ${s.maxPlayers}명`;
+  const pc = s.maxPlayers, pkey = `${s.theme}:${pc}`, wp = $<HTMLCanvasElement>('#w_prev');
+  if (wp.dataset.k !== pkey) { wp.dataset.k = pkey; drawMapPreview(wp, s.theme, pc); $('#w_info').replaceChildren(...mapSummary(s.theme, pc)); }
   $('#hostctl').hidden = !s.host;
+  $('#start').hidden = !s.host;
   $<HTMLSelectElement>('#theme2').value = s.theme;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
   const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
   const rb = $btn('#readybtn'); rb.hidden = s.host;
   rb.textContent = me?.ready ? '✅ 준비 완료 (누르면 취소)' : '✋ 준비 완료';
   rb.classList.toggle('ghost', !!me?.ready);
-  $btn('#start').disabled = s.seats.length < 3 || waiting.length > 0;
-  $btn('#addbot').disabled = s.seats.length >= s.maxPlayers;
-  $('#waitmsg').textContent = s.seats.length < 3 ? '3명부터 시작할 수 있어요 (봇으로 채울 수 있어요)'
-    : waiting.length ? `준비를 기다리는 중: ${waiting.map(x => x.name).join(', ')}`
-    : s.host ? '모두 준비됐어요 — 게임을 시작하세요' : '모두 준비됐어요 — 방장이 시작하기를 기다리는 중…';
+  $btn('#start').disabled = waiting.length > 0;
+  $('#wmax output').textContent = String(s.maxPlayers);
+  const [minus, plus] = document.querySelectorAll<HTMLButtonElement>('#wmax button');
+  minus.disabled = s.maxPlayers <= Math.max(3, s.seats.length); plus.disabled = s.maxPlayers >= G.MAX_PLAYERS;
+  const bots = s.maxPlayers - s.seats.length;
+  $('#waitmsg').textContent = waiting.length ? `준비를 기다리는 중: ${waiting.map(x => x.name).join(', ')}`
+    : (s.host ? '모두 준비됐어요 — 게임을 시작하세요' : '모두 준비됐어요 — 방장이 시작하기를 기다리는 중…') + (bots > 0 ? ` (빈 ${bots}자리는 봇)` : '');
 }
 
 // ---------- 말 고르기(게임 시작 후 2분) ----------

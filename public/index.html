@@ -30,36 +30,65 @@
     <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off"><button id="join" class="loadbtn"><span>입장</span></button></div>
   </section>
 
-  <section id="createbox" class="screen card" hidden>
-    <h2>방 만들기</h2>
-    <label class="field">방 제목 <input id="c_title" maxlength="20" placeholder="예: 금요일 밤의 사건"></label>
-    <label class="field">맵 <select id="theme"></select></label>
-    <div class="field">최대 인원 <small class="hint">한 번 누르면 목록 · 두 번 또는 꾹 누르면 직접 입력 · ▲▼로 한 명씩</small>
-      <div class="combo" id="c_max">
-        <input id="c_max_txt" inputmode="numeric" readonly role="combobox" aria-expanded="false" aria-controls="c_max_list" aria-label="최대 인원">
-        <span class="unit">명</span>
-        <div class="spin"><button type="button" data-d="1" aria-label="한 명 늘리기">▲</button><button type="button" data-d="-1" aria-label="한 명 줄이기">▼</button></div>
-        <ul id="c_max_list" role="listbox" hidden></ul>
+  <section id="createbox" class="screen card wide" hidden>
+    <div class="cgrid">
+      <div class="cside">
+        <p class="sub">맵 선택</p>
+        <div id="c_themes" class="themecards" role="radiogroup" aria-label="맵"></div>
+        <div class="prevwrap"><canvas id="c_prev" class="mapprev"></canvas></div>
+        <div id="c_info" class="mapinfo"></div>
+      </div>
+      <div class="cform">
+        <h2>방 만들기</h2>
+        <label class="field">방 제목 <input id="c_title" maxlength="20" placeholder="예: 금요일 밤의 사건"></label>
+        <label class="field mapsel">맵 <select id="theme"></select></label>
+        <div class="field">최대 인원 <small class="hint">한 번 누르면 목록 · 두 번 또는 꾹 누르면 직접 입력 · ▲▼로 한 명씩</small>
+          <div class="combo" id="c_max">
+            <input id="c_max_txt" inputmode="numeric" readonly role="combobox" aria-expanded="false" aria-controls="c_max_list" aria-label="최대 인원">
+            <span class="unit">명</span>
+            <div class="spin"><button type="button" data-d="1" aria-label="한 명 늘리기">▲</button><button type="button" data-d="-1" aria-label="한 명 줄이기">▼</button></div>
+            <ul id="c_max_list" role="listbox" hidden></ul>
+          </div>
+          <small class="hint">남는 자리는 게임을 시작할 때 봇이 채워요</small>
+        </div>
+        <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
+        <div class="row cta"><button id="c_cancel" class="ghost">취소</button><button id="c_make" class="loadbtn"><span>방 만들기</span></button></div>
       </div>
     </div>
-    <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
-    <div class="row"><button id="c_cancel" class="ghost">취소</button><button id="c_make" class="loadbtn"><span>방 만들기</span></button></div>
   </section>
 
-  <section id="wait" class="screen card" hidden>
-    <h2 id="wtitle"></h2>
-    <div class="codebox"><span class="sub">참여 코드</span><b id="bigcode"></b><button id="copy" class="ghost">🔗 초대 링크 복사</button></div>
-    <div class="chips" id="wopts"></div>
-    <p class="sub" id="wcount"></p>
-    <ul id="seats"></ul>
-    <div id="hostctl">
-      <div class="row"><select id="theme2" aria-label="맵"></select></div>
-      <label class="switch"><span>🎭 블러핑 허용</span><input type="checkbox" id="optbluff"><i></i></label>
-      <div class="row"><button id="addbot" class="ghost">＋ 봇</button><button id="rmbot" class="ghost">－ 봇</button></div>
-      <button id="start">▶ 게임 시작</button>
+  <section id="wait" class="screen card wide" hidden>
+    <div class="wgrid">
+      <div class="winfo">
+        <h2 id="wtitle"></h2>
+        <div class="codebox"><span class="sub">참여 코드</span><b id="bigcode"></b><button id="copy" class="ghost">🔗 초대 링크 복사</button></div>
+      </div>
+      <div class="wplayers">
+        <p class="sub" id="wcount"></p>
+        <ul id="seats"></ul>
+        <div class="wcta">
+          <button id="readybtn" hidden>✋ 준비 완료</button>
+          <button id="start" hidden>▶ 게임 시작</button>
+          <p id="waitmsg" class="sub"></p>
+        </div>
+      </div>
+      <div class="wsettings">
+        <div class="chips" id="wopts"></div>
+        <div id="hostctl">
+          <div class="roomset"><b>⚙️ 방 설정</b>
+            <label class="field">맵 <select id="theme2"></select></label>
+            <div class="field">최대 인원 <small class="hint">남는 자리는 시작할 때 봇이 채워요</small>
+              <div class="stepper" id="wmax"><button type="button" data-d="-1" aria-label="한 명 줄이기">−</button><output>6</output><span>명</span><button type="button" data-d="1" aria-label="한 명 늘리기">＋</button></div>
+            </div>
+            <label class="switch"><span>🎭 블러핑 허용</span><input type="checkbox" id="optbluff"><i></i></label>
+          </div>
+        </div>
+      </div>
+      <div class="wmap">
+        <div class="prevwrap"><canvas id="w_prev" class="mapprev"></canvas></div>
+        <div id="w_info" class="mapinfo"></div>
+      </div>
     </div>
-    <button id="readybtn" hidden>✋ 준비 완료</button>
-    <p id="waitmsg" class="sub"></p>
   </section>
 
   <section id="pickstage" class="screen card" hidden>

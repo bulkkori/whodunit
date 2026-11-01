@@ -39,12 +39,17 @@ function worldUV(m: THREE.MeshStandardMaterial) {
     sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
 #ifdef USE_MAP
   vMapUv = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xz / ${TEX_CELLS.toFixed(1)};
-#endif`);
+#endif
+vCellXZ = position.xz;`).replace('void main() {', 'varying vec2 vCellXZ;\nvoid main() {');
+    sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'varying vec2 vCellXZ;\nvoid main() {');
     // 칸 색이 4배로 들어오면(강조 칸) 어두운 텍스처에 곱하지 않고 그 색을 주로 칠한다 — 경로·보너스·문이 잘 보이게
     sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
   if (max(vColor.r, max(vColor.g, vColor.b)) > 1.5) diffuseColor.rgb = mix(diffuseColor.rgb, vColor.rgb / 4.0, 0.72);
   else diffuseColor.rgb *= vColor.rgb;
-#endif`);
+#endif
+  // 칸 테두리: 가장자리 쪽을 밝은 선으로(한 칸 = -0.47~0.47)
+  float edge = smoothstep(0.37, 0.43, max(abs(vCellXZ.x), abs(vCellXZ.y)));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.55, 0.45), edge * 0.55);`);
   };
   return m;
 }

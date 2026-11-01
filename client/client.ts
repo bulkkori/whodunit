@@ -458,7 +458,7 @@ const pz = (() => {
     start = { s, tx, ty, d: a.length === 2 ? Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) : 0, mx: m[0], my: m[1], x: a[0][0], y: a[0][1] }; };
   vp.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button) return;
-    if (!pts.size) { rect = vp.getBoundingClientRect(); bd.style.willChange = 'transform'; }
+    if (!pts.size) rect = vp.getBoundingClientRect();
     pts.set(e.pointerId, [e.clientX, e.clientY]); dragged = false; snap();
   });
   vp.addEventListener('pointermove', e => {
@@ -466,10 +466,11 @@ const pz = (() => {
     const a = [...pts.values()];
     if (a.length === 2 && start.d) {
       const mx = (a[0][0] + a[1][0]) / 2, my = (a[0][1] + a[1][1]) / 2, ns = start.s * Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) / start.d;
+      bd.style.willChange = 'transform'; // 실제로 확대·이동할 때만 GPU 레이어(그냥 누르면 다시 그려져 칸이 미세하게 흔들림)
       s = start.s; tx = start.tx + mx - start.mx; ty = start.ty + my - start.my; zoomAt(ns, mx, my); dragged = true;
     } else if (a.length === 1 && s > 1 && !tokDragOn) {
       const dx = e.clientX - start.x, dy = e.clientY - start.y;
-      if (dragged || Math.hypot(dx, dy) > 8) { dragged = true; tx = start.tx + dx; ty = start.ty + dy; apply(); }
+      if (dragged || Math.hypot(dx, dy) > 8) { dragged = true; bd.style.willChange = 'transform'; tx = start.tx + dx; ty = start.ty + dy; apply(); }
     }
   });
   const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (pts.size) snap(); else { start = null; bd.style.willChange = ''; } };

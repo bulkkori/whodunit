@@ -1,9 +1,10 @@
 """배경음악 무한 반복용 편집: 마디 경계에서 반복 구간 A~B를 고르고, B 직전 한 마디를 A 직전 한 마디와 겹쳐(이퀄 파워 크로스페이드)
 B→A로 넘어갈 때 끊김이 없게 만든다. 결과: 도입부 + 반복 구간까지 자른 mp3, 반복 지점 json.
-사용: python loopify.py 입력.mp3 출력.mp3 출력.json"""
+사용: python loopify.py 입력.mp3 출력.mp3 출력.json [최소 반복 길이(초)]"""
 import sys, json, numpy as np, librosa, soundfile as sf
 
 src, out_mp3, out_json = sys.argv[1:4]
+MIN_LOOP = float(sys.argv[4]) if len(sys.argv) > 4 else 0
 y, sr = sf.read(src, always_2d=True)               # 원본 채널 그대로(스테레오)
 mono = librosa.to_mono(y.T.astype(np.float32))
 an_sr = 22050
@@ -36,7 +37,7 @@ for i, A in enumerate(bars):
     for j in range(i + 8, len(bars)):                            # 최소 8마디
         B = bars[j]
         if B < 0.55 * L or B > L - bar_len: continue
-        if (j - i) % 4: continue                                 # 4마디(프레이즈) 단위
+        if (j - i) % 4 or B - A < MIN_LOOP * sr: continue                                 # 4마디(프레이즈) 단위
         fb_b, eb = win(B, True); fb_a, eb2 = win(B, False)
         if eb < 0.6 * med: continue                              # 페이드아웃 구간 제외
         s = cos(fa_b, fb_b) + cos(fa_a, fb_a) - abs(np.log((ea + 1e-6) / (eb + 1e-6))) * 0.3 + (B - A) / L * 0.2

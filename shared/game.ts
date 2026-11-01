@@ -148,8 +148,8 @@ const PLANS: Record<number, Plan> = {
 export const SIZES: Record<number, { n: number; rooms: number }> = Object.fromEntries(Object.entries(PLANS).map(([c, pl]) =>
   [c, { n: pl.n, rooms: pl.top.length + pl.bottom.length + pl.left.length + pl.right.length }]));
 export const MAX_PLAYERS = 8;
-/** 턴 제한 2분, 반박 제한 15초 */
-export const TURN_MS = 120000, REFUTE_MS = 15000;
+/** 단계별 2분: 주사위 눈이 나온 뒤 이동, 방에 들어가 추리, 반박. 굴리기 전에는 제한 없음(서버 update 참고) */
+export const TURN_MS = 120000, REFUTE_MS = 120000;
 const KINDS: Kind[] = ['s', 'w', 'r'];
 
 export function rng(seed: number): Rng { // mulberry32

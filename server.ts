@@ -57,10 +57,10 @@ function update(room: Room) {
   if (!g || g.phase === 'over') { room.deadline = null; broadcast(room); return; }
   const wait = (room.introUntil ?? 0) - Date.now();
   if (wait > 0) { room.deadline = null; room.timer = setTimeout(() => update(room), wait); broadcast(room); return; } // 시작 연출 중
-  const a = G.actor(g), key = `${g.turnNo}:${g.phase}:${a}`;
-  if (key !== room.key) { room.key = key; room.deadline = Date.now() + (g.phase === 'refute' ? G.REFUTE_MS : G.TURN_MS); }
-  room.timer = setTimeout(() => { G.timeout(g); update(room); }, room.deadline! - Date.now());
-  const p = g.players[a];
+  const a = G.actor(g), key = `${g.turnNo}:${g.phase}:${a}`, p = g.players[a];
+  // 단계가 바뀔 때마다 새 2분: 주사위 눈이 나온 뒤(이동) → 방에 들어간 뒤(추리) → 반박. 사람이 굴리기 전에는 제한 없음
+  if (key !== room.key) { room.key = key; room.deadline = g.phase === 'roll' && !p.bot && !p.afk ? null : Date.now() + (g.phase === 'refute' ? G.REFUTE_MS : G.TURN_MS); }
+  if (room.deadline) room.timer = setTimeout(() => { G.timeout(g); update(room); }, room.deadline - Date.now());
   if (p.bot || p.afk) room.botTimer = setTimeout(() => {
     const err = G.act(g, a, G.botAction(g));
     if (err) { console.error('bot error', err); G.act(g, a, { t: 'end' }); }

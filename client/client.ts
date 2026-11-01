@@ -116,7 +116,7 @@ maxTxt.addEventListener('keydown', e => {
 for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.onclick = () => { setMax(maxPlayers + +b.dataset.d!); listOpen(false); };
 addEventListener('pointerdown', e => { if (!(e.target as HTMLElement).closest('#c_max')) listOpen(false); });
 
-const roomOpts = () => ({ roles: $in('#c_roles').checked, bluff: $in('#c_bluff').checked });
+const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked });
 $('#create').onclick = () => {
   if (!myName()) return toast('닉네임을 입력하세요');
   $in('#c_title').placeholder = `${myName()}의 사건`;
@@ -144,7 +144,6 @@ $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast('초대 링크를 복사했어요'); } catch { toast(location.href); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#addbot').onclick = () => send({ t: 'addBot' });
-$('#optroles').onchange = e => send({ t: 'opt', roles: (e.target as HTMLInputElement).checked });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
 $('#rmbot').onclick = () => send({ t: 'removeBot' });
 $('#start').onclick = () => send({ t: 'start' });
@@ -264,7 +263,7 @@ function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
   $('#bigcode').textContent = s.code;
   const chips = $('#wopts'); chips.innerHTML = '';
-  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', s.opts.roles ? '🕵️ 탐정 직업' : '직업 없음'])
+  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지'])
     chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
@@ -277,7 +276,6 @@ function renderWait(s: StateMsg) {
   $('#wcount').textContent = `참가 ${s.seats.length} / ${s.maxPlayers}명`;
   $('#hostctl').hidden = !s.host;
   $<HTMLSelectElement>('#theme2').value = s.theme;
-  const opt = $in('#optroles'); opt.checked = s.opts.roles; opt.disabled = !s.host;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
   const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
   const rb = $btn('#readybtn'); rb.hidden = s.host;

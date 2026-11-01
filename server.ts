@@ -96,7 +96,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     const room: Room = {
       code: newCode(), title: clean(m.title, 20, `${clean(m.name)}의 사건`), maxPlayers: clampPlayers(m.maxPlayers),
       theme: m.theme, host: m.token, seats: [], stage: 'lobby', game: null, last: Date.now(),
-      opts: { roles: m.opts?.roles !== false, bluff: m.opts?.bluff !== false },
+      opts: { roles: true, bluff: m.opts?.bluff !== false }, // 탐정 직업(특수 능력)은 기본 규칙 — 끌 수 없음
     };
     rooms.set(room.code, room);
     m = { t: 'join', code: room.code, name: m.name, token: m.token };
@@ -146,7 +146,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   }
   if (room.stage !== 'lobby') return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
-  if (m.t === 'opt') room.opts = { roles: typeof m.roles === 'boolean' ? m.roles : room.opts.roles, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
+  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
   if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n));
   if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
   if (m.t === 'removeBot') { const k = room.seats.findLastIndex(s => s.bot); if (k >= 0) room.seats.splice(k, 1); }

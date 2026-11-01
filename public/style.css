@@ -1228,3 +1228,29 @@ button svg.ic{margin-right:.15em}
 @media not ((max-aspect-ratio:23/20) and (max-width:639px)){#dlg .cardbtn .gcard{width:clamp(110px,14vw,150px)}}
 /* 주사위 힘 게이지: 마우스를 올린 채 누르고 있어도(hover 배경에 덮이지 않게) 금색이 차오름 */
 #actions [data-a=roll].charging,#actions [data-a=roll].charging:hover{background:linear-gradient(90deg,#c9a24a calc(var(--p,0) * 100%),#6b1f2b 0)!important;color:#f3e6cc}
+/* PC 선택 목록(select.ts): 원래 select는 숨기고, 밑줄 칸 + 종이 목록 */
+.fsel-native{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;overflow:hidden}
+button.fsel{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;flex:1 1 auto;width:100%;text-align:left;
+  background:transparent!important;color:var(--ink,#2a1d17)!important;border:0;border-bottom:1.5px solid var(--sub,#6a5646);border-radius:0!important;
+  padding:6px 2px;font:inherit;font-size:15px;font-weight:600;box-shadow:none!important;cursor:pointer}
+button.fsel span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button.fsel::after{content:"";flex:none;width:8px;height:8px;border-right:1.8px solid currentColor;border-bottom:1.8px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.7}
+button.fsel[aria-expanded=true]{border-bottom-color:#6b1f2b;box-shadow:0 1.5px 0 #6b1f2b!important}
+button.fsel[aria-expanded=true]::after{transform:translateY(2px) rotate(-135deg)}
+button.fsel:hover:not(:disabled){border-bottom-color:#6b1f2b;filter:none}
+button.fsel:disabled{opacity:.55;cursor:default}
+button.fsel:focus-visible{outline:2px solid #c9a24a;outline-offset:2px}
+.fsel-pop{position:fixed;z-index:200;margin:0;padding:4px;list-style:none;overflow:auto;background:#f3ead6;color:#2a1d17;border:1px solid #2a1d1733;border-radius:3px;
+  box-shadow:0 12px 28px #0007,0 2px 6px #0004;font-size:15px}
+.fsel-pop li{padding:8px 12px;border-radius:2px;cursor:pointer;white-space:nowrap}
+.fsel-pop li.hl{background:#6b1f2b14}
+.fsel-pop li[aria-selected=true]{font-weight:800;background:linear-gradient(transparent 60%,#c9a24a55 0)}
+.fsel-pop li[aria-selected=true].hl{background:#6b1f2b14 linear-gradient(transparent 60%,#c9a24a55 0)}
+.fsel-pop li[aria-disabled=true]{opacity:.45;cursor:not-allowed}
+#rolebox .abil button.fsel{flex:1;min-width:90px;width:auto}
+#automode+button.fsel{width:auto;flex:0 1 220px;font-size:13px}
+.fsel-pop li[aria-selected=true],.fsel-pop li[aria-selected=true].hl{background:#6b1f2b0f;box-shadow:inset 3px 0 0 #6b1f2b}
+.fsel-pop li[aria-selected=true].hl{background:#6b1f2b1c}
+.dtabs button{white-space:nowrap}
+.sheethead{min-width:0}
+#automode+button.fsel{flex:0 1 190px;min-width:0}

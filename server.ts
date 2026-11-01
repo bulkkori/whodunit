@@ -10,7 +10,7 @@ const PORT = Number(process.env.PORT) || 3000, BOT_MS = Number(process.env.BOT_M
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml', '.map': 'application/json', '.webp': 'image/webp', '.png': 'image/png',
+  '.svg': 'image/svg+xml', '.map': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.mp3': 'audio/mpeg',
 };
 
 const server = http.createServer(async (req, res) => {

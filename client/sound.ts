@@ -32,8 +32,28 @@ export function unlock() {
     void ctx.resume();
     const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0); // iOS 잠금 해제용 무음
   }
+  playMusic();
 }
 export const isRunning = () => ctx?.state === 'running';
+
+// ---------- 배경음악: 원곡을 8비트로 바꾼 두 버전(칩튠·로파이) 또는 끄기 ----------
+export type MusicMode = 'chip' | 'lofi' | 'off';
+let music: HTMLAudioElement | null = null;
+let musicMode: MusicMode = (() => { try { return (localStorage.getItem('wd_music') as MusicMode) || 'chip'; } catch { return 'chip'; } })();
+export const getMusic = () => musicMode;
+export function setMusic(m: MusicMode) {
+  musicMode = m;
+  try { localStorage.setItem('wd_music', m); } catch { /* 저장 불가 무시 */ }
+  playMusic();
+}
+/** 사용자 입력 안에서 불러야 재생된다(iOS 포함) — unlock()에서 함께 호출 */
+export function playMusic() {
+  if (musicMode === 'off') { music?.pause(); return; }
+  const src = `/audio/bgm-${musicMode}.mp3`;
+  if (!music) { music = new Audio(); music.loop = true; music.volume = 0.32; music.preload = 'auto'; }
+  if (!music.src.endsWith(src)) music.src = src;
+  if (music.paused) void music.play().catch(() => { /* 아직 입력 전이면 다음 입력 때 다시 */ });
+}
 
 function click(at: number, vol: number, pitch: number) {
   if (!ctx || !master || !noise) return;

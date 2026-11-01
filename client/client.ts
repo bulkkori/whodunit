@@ -810,6 +810,12 @@ const muteBtn = $btn('#mute');
 const paintMute = () => { muteBtn.textContent = Sound.isMuted() ? '🔇' : '🔊'; muteBtn.title = Sound.isMuted() ? '소리 켜기' : '소리 끄기'; };
 muteBtn.onclick = () => { Sound.setMuted(!Sound.isMuted()); Sound.unlock(); paintMute(); };
 paintMute();
+// 배경음악: 누를 때마다 칩튠 → 로파이 → 끄기
+const musicBtn = $btn('#music');
+const MUSIC_LABEL: Record<Sound.MusicMode, [string, string]> = { chip: ['🎵 칩튠', '배경음악: 칩튠(8비트 재편곡) — 누르면 로파이'], lofi: ['📼 로파이', '배경음악: 로파이(원곡 8비트 질감) — 누르면 끄기'], off: ['🎵 끔', '배경음악 꺼짐 — 누르면 칩튠'] };
+const paintMusic = () => { const [t, tip] = MUSIC_LABEL[Sound.getMusic()]; musicBtn.textContent = t; musicBtn.title = tip; };
+musicBtn.onclick = () => { const order: Sound.MusicMode[] = ['chip', 'lofi', 'off']; Sound.setMusic(order[(order.indexOf(Sound.getMusic()) + 1) % 3]); Sound.unlock(); paintMusic(); };
+paintMusic();
 
 $btn('#create').disabled = $btn('#join').disabled = $btn('#practice').disabled = true;
 render();

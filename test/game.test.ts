@@ -319,22 +319,13 @@ test('게임 중 나감 → 탈락: 카드는 공개, 차례 넘김, 반박 차�
   assert.equal(g.phase, 'over');
 });
 
-test('보이스 모드: 지난 추리 기록은 안 보이고 마지막 추리부터만', () => {
-  const g = G.newGame('mansion', seats(3), 3, { roles: false, bluff: true, voice: true });
-  g.log.push({ t: 'suggest', p: 0, s: 's0', w: 'w0', r: 'r0' }, { t: 'pass', p: 1, to: 0, s: 's0', w: 'w0', r: 'r0' },
-    { t: 'suggest', p: 1, s: 's1', w: 'w1', r: 'r1' }, { t: 'norefute', p: 1, s: 's1', w: 'w1', r: 'r1' });
-  const v = G.view(g, 2).log;
-  assert.equal(v.filter(e => e.t === 'suggest').length, 1);
-  assert.equal(v[0].t, 'suggest');
-  g.opts.voice = false;
-  assert.equal(G.view(g, 2).log.filter(e => e.t === 'suggest').length, 2);
-});
-
-test('보이스 모드에서도 남끼리 보여 준 카드 내용은 숨김', () => {
-  const g = G.newGame('mansion', seats(3), 3, { roles: false, bluff: true, voice: true });
+test('남끼리 보여 준 카드 내용은 숨김(보낸 사람·받은 사람만)', () => {
+  const g = G.newGame('mansion', seats(3), 3);
   g.log.push({ t: 'suggest', p: 0, s: 's0', w: 'w0', r: 'r0' }, { t: 'shown', p: 1, to: 0, card: 's0', id: 99 });
   const e = G.view(g, 2).log.find(x => x.t === 'shown');
   assert.ok(e && e.t === 'shown' && e.card === undefined);
+  const mine = G.view(g, 0).log.find(x => x.t === 'shown');
+  assert.ok(mine && mine.t === 'shown' && mine.card === 's0');
 });
 
 test('턴 종료: 굴리기 전·이동 전에는 거부, 이동해서 방에 들어간 뒤에는 허용', () => {

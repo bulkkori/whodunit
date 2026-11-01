@@ -110,7 +110,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     const room: Room = {
       code: newCode(), title: clean(m.title, 20, `${clean(m.name)}의 사건`), maxPlayers: clampPlayers(m.maxPlayers),
       theme: m.theme, host: m.token, seats: [], stage: 'lobby', game: null, last: Date.now(),
-      opts: { roles: true, bluff: m.opts?.bluff !== false, voice: m.opts?.voice === true }, // 특수 능력은 기본 규칙 — 끌 수 없음
+      opts: { roles: true, bluff: m.opts?.bluff !== false }, // 특수 능력은 기본 규칙 — 끌 수 없음
     };
     rooms.set(room.code, room);
     m = { t: 'join', code: room.code, name: m.name, token: m.token };
@@ -163,7 +163,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   }
   if (room.stage !== 'lobby') return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
-  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff, voice: typeof m.voice === 'boolean' ? m.voice : room.opts.voice };
+  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
   if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n)); // 이미 들어온 사람보다 적게는 못 줄임
   if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
   if ((m.t === 'kick' || m.t === 'host') && Number.isInteger(m.i)) {

@@ -75,8 +75,7 @@ export type LogEntry =
   | { t: 'intel'; to: number; kind: 'interrogate' | 'tap' | 'archive' | 'search'; card?: Card; from?: number | null; a?: number; b?: number; cat?: Kind }
   | { t: 'silent'; p: number; to: number }
   | { t: 'silentnone' | 'rest' | 'bonus'; p: number };
-/** voice = 보이스 채팅 모드: 지난 추리 기록을 보여 주지 않음(지금 진행 중인 추리만). 메모는 모두 직접 */
-export interface GameOpts { roles: boolean; bluff: boolean; voice?: boolean }
+export interface GameOpts { roles: boolean; bluff: boolean }
 export interface Game {
   theme: ThemeKey; seed: number; map: GameMap; players: Player[]; env: Triple;
   turn: number; phase: Phase; roll: number | null; sug: Suggestion | null;
@@ -655,10 +654,7 @@ export function view(g: Game, i: number): View {
     })),
     sug: g.sug && { p: g.sug.p, s: g.sug.s, w: g.sug.w, r: g.sug.r, refuter: g.sug.refuter, matches: g.sug.refuter === i ? g.sug.matches : undefined },
     // 비공개 정보(intel)는 받는 사람(또는 게임 종료 후)만 보고, 오래돼도 잘리지 않게 40개 제한과 별개로 유지.
-    // 보이스 모드: 마지막 추리부터만(지난 기록은 각자 기억·메모) — 서버에서 잘라야 공정
-    log: (g.opts.voice && !over
-      ? g.log.filter((e, k) => k >= Math.max(0, g.log.findLastIndex(x => x.t === 'suggest')) && (e.t !== 'intel' || e.to === i))
-      : g.log.filter((e, k) => (e.t === 'intel' ? e.to === i || over : k >= g.log.length - 40)))
+    log: g.log.filter((e, k) => (e.t === 'intel' ? e.to === i || over : k >= g.log.length - 40))
       .map(e => (e.t === 'shown' && !(over || spect || e.p === i || e.to === i) ? { t: 'shown', p: e.p, to: e.to, id: e.id } : e)),
     env: over || spect ? g.env : undefined, opts: g.opts, weapons: g.weapons, npc: g.npc, open: g.open,
     archive: g.log.flatMap(e => (e.t === 'shown' && e.p !== i && e.to !== i ? [{ id: e.id, p: e.p, to: e.to }] : [])),

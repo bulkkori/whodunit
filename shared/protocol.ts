@@ -6,7 +6,7 @@ export type ClientMsg =
   | { t: 'join'; code: string; name: string; token: string }
   | { t: 'act'; action: Action }
   | { t: 'theme'; theme: ThemeKey }
-  | { t: 'opt'; roles?: boolean; bluff?: boolean; voice?: boolean }
+  | { t: 'opt'; roles?: boolean; bluff?: boolean }
   /** 말 고르기 단계에서 내 인물 말 고르기 */
   | { t: 'pick'; suspect: number }
   /** 대기실: 준비 완료 / 방장: 최대 인원 변경 */

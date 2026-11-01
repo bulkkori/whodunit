@@ -217,7 +217,7 @@ for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
 // 창 크기가 바뀌면 미리보기 다시 그림
 new ResizeObserver(() => { if (!$('#createbox').hidden) refreshCreatePreview(); }).observe($('#c_prev'));
 new ResizeObserver(() => { const c = $('#w_prev'); if (!$('#wait').hidden) { c.dataset.k = ''; if (S) renderWait(S); } }).observe($('#w_prev'));
-const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked, voice: $in('#c_voice').checked });
+const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked });
 // 방 제목: 방 만들기 창을 열 때마다 다음 추리물 제목이 기본값으로 보이고, 비워 두면 그 제목으로 방을 만든다. 누르면 빈 칸에서 바로 입력.
 const TITLES = ['자정의 마지막 손님', '사라진 유언장', '잠긴 서재의 비밀', '폭풍우 치는 밤', '누가 불을 껐는가', '거짓말쟁이의 만찬',
   '열세 번째 초대장', '멈춰 버린 괘종시계', '깨진 찻잔의 증언', '안개 속 발자국', '독이 든 와인 한 잔', '마지막 기차의 승객'];
@@ -256,7 +256,6 @@ $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast('초대 링크를 복사했어요'); } catch { toast(location.href); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
-$('#optvoice').onchange = e => send({ t: 'opt', voice: (e.target as HTMLInputElement).checked });
 $('#start').onclick = () => send({ t: 'start' });
 for (const b of document.querySelectorAll<HTMLButtonElement>('#wmax button')) b.onclick = () => { if (S) send({ t: 'maxp', n: S.maxPlayers + +b.dataset.d! }); };
 $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
@@ -535,7 +534,7 @@ function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
   $('#bigcode').textContent = s.code;
   const chips = $('#wopts'); chips.innerHTML = '';
-  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', ...(s.opts.voice ? ['🎙️ 보이스 모드'] : [])])
+  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지'])
     chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
@@ -559,7 +558,6 @@ function renderWait(s: StateMsg) {
   $('#start').hidden = !s.host;
   $<HTMLSelectElement>('#theme2').value = s.theme;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
-  const ov = $in('#optvoice'); ov.checked = !!s.opts.voice; ov.disabled = !s.host;
   const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
   const rb = $btn('#readybtn'); rb.hidden = s.host;
   rb.textContent = me?.ready ? '✅ 준비 완료 (누르면 취소)' : '✋ 준비 완료';
@@ -872,7 +870,6 @@ function renderLog(g: G.View) {
   if (lastSug && now) { const k = lastSug.cloneNode(true) as HTMLElement; if (g.sug) k.querySelector('ol')!.append(el('li', 'wait', `⏳ ${nm(g, g.sug.refuter ?? g.turn)} 반박 차례…`)); cs.replaceChildren(k); }
   items.reverse();
   $('#log').replaceChildren(...(items.length ? items : [el('p', 'sub', '아직 추리가 없습니다')]));
-  $('#logmode').textContent = g.opts.voice ? '🎙️ 보이스 모드: 지금 진행 중인 추리만 보입니다. 지난 추리는 각자 듣고 노트에 적으세요.' : '';
 }
 
 type ButtonAction = 'roll' | 'passage' | 'suggest' | 'end' | 'accuse';
@@ -1093,10 +1090,7 @@ function renderMemo(g: G.View) {
     buildMemo(g);
   }
   const M = memo!;
-  voiceOn = !!g.opts.voice;
-  const am = $<HTMLSelectElement>('#automode'); am.disabled = voiceOn; am.title = voiceOn ? '보이스 모드: 노트는 모두 직접' : '자동 표시 방식';
-  if (voiceOn) am.value = 'off';
-  if (voiceOn || M.auto === 'off') return;
+  if (M.auto === 'off') return;
   let ch = false;
   const mark = (card: G.Card, owner: number) => { g.players.forEach((_, j) => (M.cells[`${card}|${j}`] = j === owner ? '✓' : '✗')); ch = true; };
   for (const c of g.players[g.me].hand ?? []) if (!M.applied['h' + c]) { mark(c, g.me); M.strike[c] = true; M.applied['h' + c] = 1; }
@@ -1144,10 +1138,9 @@ function buildMemo(g: G.View) {
   }
   t.append(body); paintMemo();
 }
-let voiceOn = false;
 function paintMemo() {
   if (!memo) return;
-  const hints = memo.auto === 'hint' && !voiceOn ? memo.hint ?? {} : {};
+  const hints = memo.auto === 'hint' ? memo.hint ?? {} : {};
   for (const td of document.querySelectorAll<HTMLElement>('#memo td')) {
     const v = memo.cells[td.dataset.k!] || '', h = !v && !!hints[td.dataset.k!];
     td.textContent = v || (h ? '?' : ''); td.dataset.m = v; td.classList.toggle('hintq', h);

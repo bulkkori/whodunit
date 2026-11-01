@@ -100,6 +100,8 @@ export interface Board3D {
   rebuild(): void;
   /** 이동 경로 미리보기: cells를 칠한다(ok면 노랑, 아니면 빨강). 빈 배열이면 지움 */
   preview(cells: G.Pos[], ok: boolean): void;
+  /** 카메라가 이 칸들이 다 보이게 부드럽게 다가감. null이면 처음 시점으로 */
+  focus(cells: G.Pos[] | null): void;
   /** 주사위 두 개를 판 위로 떨어뜨린다. 멈추는 순간 resolve. power 0~1 */
   throwDice(d: [number, number], power: number): Promise<void>;
 }
@@ -142,6 +144,9 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   container.append(renderer.domElement);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
   const controls = new OrbitControls(camera, renderer.domElement);
+  // 자동 시점 이동 목표(손으로 돌리기 시작하면 취소)
+  let camGoal: { pos: THREE.Vector3; tgt: THREE.Vector3 } | null = null;
+  controls.addEventListener('start', () => { camGoal = null; });
   Object.assign(controls, { enableDamping: true, maxPolarAngle: 1.25, minDistance: 5, maxDistance: 45 });
   scene.add(new THREE.HemisphereLight(0xfff4e0, 0x202030, 1.1));
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -454,6 +459,11 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     const cur = pawns[turn];
     ring.visible = !!cur?.visible;
     if (cur && ring.visible) ring.position.set(cur.position.x, 0.12, cur.position.z);
+    if (camGoal) {
+      const k = Math.min(1, dt * 4.5);
+      camera.position.lerp(camGoal.pos, k); controls.target.lerp(camGoal.tgt, k);
+      if (camera.position.distanceTo(camGoal.pos) < 0.02) camGoal = null;
+    }
     controls.update();
     updateWalls(dt);
     renderer.render(scene, camera);
@@ -468,7 +478,23 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     update,
     start() { if (!running) { running = true; clock.getDelta(); frame(); } },
     stop() { running = false; for (const t of throws) { scene.remove(t.mesh); t.done(); } throws = []; },
-    resetView: fit,
+    resetView() { camGoal = null; fit(); },
+    focus(cells) {
+      if (!map) return;
+      // 처음 시점(fit) 위치를 계산해 두고, 칸 묶음이면 같은 방향에서 묶음 크기만큼만 떨어진 곳으로
+      const p0 = camera.position.clone(), t0 = controls.target.clone(); fit();
+      const home = { pos: camera.position.clone(), tgt: controls.target.clone() };
+      camera.position.copy(p0); controls.target.copy(t0); controls.update();
+      if (!cells?.length) { camGoal = home; return; }
+      const pts = cells.map(c => posOf(c, 0, 1));
+      const xs = pts.map(v => v.x), zs = pts.map(v => v.z);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+      const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) + 3;
+      const ratio = Math.min(1, Math.max(0.35, size / n)); // 판 전체 대비 크기만큼 거리 줄이기(너무 가까이는 안 감)
+      const off = home.pos.clone().sub(home.tgt).multiplyScalar(ratio);
+      const tgt = new THREE.Vector3(cx, 0, cz);
+      camGoal = { pos: tgt.clone().add(off), tgt };
+    },
     rebuild() { key = null; },
     throwDice,
     preview,

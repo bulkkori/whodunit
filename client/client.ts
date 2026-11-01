@@ -329,7 +329,7 @@ function render() {
   maybeIntro(g);
   watchRoll(g);
   renderView(g); renderPanel(g); renderMemo(g); renderDialogs(g); autoSuggest(g); revealCards(g);
-  notifyMe(g);
+  notifyMe(g); autoFocus(g);
 }
 
 // 내가 할 차례가 새로 오면 알림. 첫 화면(입장 직후)에는 울리지 않고, 다른 화면을 보다 돌아왔을 때 이미 내 차례면 울림
@@ -408,7 +408,7 @@ function watchRoll(g: G.View) {
   const power = last.p === g.me && myPower != null ? myPower : 0.5;
   myPower = null; diceBusy = true;
   const run = view === '3d' ? (b3 ? b3.throwDice(last.d, power) : Promise.resolve()) : throwDice2D($('#board'), last.d, power);
-  run.finally(() => { diceBusy = false; if (S?.game) { renderView(S.game); renderPanel(S.game); } });
+  run.finally(() => { diceBusy = false; if (S?.game) { renderView(S.game); renderPanel(S.game); autoFocus(S.game); } });
 }
 const myMoves = (g: G.View) => (diceBusy ? new Set<G.Pos>() : G.moves(g, g.me));
 
@@ -477,8 +477,58 @@ const pz = (() => {
   vp.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
   vp.addEventListener('wheel', e => { e.preventDefault(); rect = vp.getBoundingClientRect(); zoomAt(s * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
   new ResizeObserver(() => { rect = vp.getBoundingClientRect(); apply(); }).observe(vp);
-  return { reset() { s = 1; tx = ty = 0; apply(); } };
+  const animTo = (ns: number, ntx: number, nty: number) => {
+    bd.classList.add('pzanim'); s = ns; tx = ntx; ty = nty; apply();
+    clearTimeout(animT); animT = setTimeout(() => bd.classList.remove('pzanim'), 480);
+  };
+  let animT: ReturnType<typeof setTimeout> | undefined;
+  vp.addEventListener('pointerdown', () => bd.classList.remove('pzanim'));
+  return {
+    reset() { s = 1; tx = ty = 0; apply(); },
+    /** 판 기준 좌표(확대 전 px) 상자가 화면에 꽉 차게 부드럽게 확대. 이미 충분히 크게 보이면(1.15배 미만) 그대로 */
+    focusBox(x0: number, y0: number, x1: number, y1: number, maxS = 2.6) {
+      rect = vp.getBoundingClientRect();
+      const w = rect.width, h = rect.height, pad = w * 0.06;
+      const ns = Math.min(maxS, w / (x1 - x0 + pad * 2), h / (y1 - y0 + pad * 2));
+      if (ns < 1.15) return animTo(1, 0, 0);
+      animTo(ns, w / 2 - (x0 + x1) / 2 * ns, h / 2 - (y0 + y1) / 2 * ns);
+    },
+    home() { animTo(1, 0, 0); },
+  };
 })();
+
+// ---------- 이동 때 자동 확대: 주사위가 멈추면 내 말과 갈 수 있는 칸이 화면에 꽉 차게, 이동이 끝나면 원래대로 ----------
+let focusKey = '';
+function autoFocus(g: G.View) {
+  const me = g.players[g.me];
+  const moving = g.turn === g.me && g.phase === 'move' && !diceBusy && me.pos != null;
+  const lastRoll = g.log.findLast(e => e.t === 'roll'), key = moving ? `${g.seed}:${g.turnNo}:${lastRoll?.t === 'roll' ? lastRoll.k : 0}` : '';
+  if (key === focusKey) return; const was = focusKey; focusKey = key;
+  if (!moving) { if (was) { pz.home(); b3?.focus(null); } return; }
+  const cells = [...myMoves(g), me.pos!];
+  if (view === '3d') return b3?.focus(cells);
+  boxOf(cells, b => pz.focusBox(b[0], b[1], b[2], b[3]));
+}
+/** 칸들(방 포함)의 판 기준 상자(확대와 무관한 offset 좌표) */
+function boxOf(cells: G.Pos[], go: (b: [number, number, number, number]) => void) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of cells) {
+    const e = $('#board').querySelector<HTMLElement>(`[data-p="${p}"]`); if (!e) continue;
+    x0 = Math.min(x0, e.offsetLeft); y0 = Math.min(y0, e.offsetTop); x1 = Math.max(x1, e.offsetLeft + e.offsetWidth); y1 = Math.max(y1, e.offsetTop + e.offsetHeight);
+  }
+  if (x0 < x1) go([x0, y0, x1, y1]);
+}
+// 내 말 찾기: 참가자 줄의 내 이름을 누르면 내 말 쪽으로 다가가고 말이 반짝
+function findMe() {
+  const g = S?.game; if (!g) return; const me = g.players[g.me]; if (me.pos == null) return toast('탈락해서 판 위에 말이 없어요');
+  const tok = $('#board').querySelector<HTMLElement>(`.tok[data-k="p${g.me}"]`);
+  tok?.classList.remove('found'); void tok?.offsetWidth; tok?.classList.add('found');
+  if (view === '3d') { b3?.focus([me.pos]); return; }
+  const e = $('#board').querySelector<HTMLElement>(`[data-p="${me.pos}"]`); if (!e) return;
+  const c = $('#board').querySelector<HTMLElement>('.cell')?.offsetWidth ?? 16, x = e.offsetLeft + e.offsetWidth / 2, y = e.offsetTop + e.offsetHeight / 2;
+  const r = Math.max(c * 4, Math.max(e.offsetWidth, e.offsetHeight) / 2 + c); // 칸 하나 기준 4칸 반경, 방이면 방이 다 보이게
+  pz.focusBox(x - r, y - r, x + r, y + r, 2.4);
+}
 
 function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
@@ -853,7 +903,9 @@ function renderPanel(g: G.View) {
   $('#plist').replaceChildren(...g.players.map((p, j) => {
     const li = el('li', '', p.name), d = el('i'); d.style.background = COLORS[p.suspect]; li.prepend(d);
     li.classList.toggle('cur', j === g.turn && ph !== 'over'); li.classList.toggle('ref', ph === 'refute' && sug?.refuter === j);
-    li.classList.toggle('out', !!p.out); li.classList.toggle('me', j === g.me); return li;
+    li.classList.toggle('out', !!p.out); li.classList.toggle('me', j === g.me);
+    if (j === g.me) { li.title = '내 말 찾기'; li.onclick = findMe; li.append(el('span', 'findme', '📍')); }
+    return li;
   }));
   const lastE = g.log.filter(e => e.t !== 'roll').at(-1);
   $('#plast').textContent = lastE ? line(g, lastE) : '';

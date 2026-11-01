@@ -1189,3 +1189,13 @@ header.ping-ref{animation:hpingref 1.4s ease-out}
 @keyframes hpingref{0%,40%{background:#a3272f66;box-shadow:inset 0 -3px 0 #e0605a}20%,60%{background:#a3272f22}100%{background:transparent;box-shadow:none}}
 #netbar{position:fixed;left:50%;top:calc(var(--hdr) + var(--st) + 8px);transform:translateX(-50%);z-index:70;padding:6px 14px;border-radius:3px;background:#2a1d17ee;color:#f3e6cc;font-size:13px;box-shadow:0 4px 14px #0008;white-space:nowrap}
 #netbar::before{content:"";display:inline-block;width:10px;height:10px;margin-right:8px;border:2px solid #f3e6cc;border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:spin .7s linear infinite}
+
+/* 자동 확대·내 말 찾기 */
+#board.pzanim{transition:transform .45s cubic-bezier(.2,.85,.25,1)}
+.tok.me{box-shadow:0 0 0 2px #fff,0 1px 3px #0008;animation:mepulse 2s ease-in-out infinite}
+@keyframes mepulse{50%{box-shadow:0 0 0 2px #fff,0 0 0 calc(100cqw / var(--n) * .22) #ffffff40}}
+.tok.me.found{animation:mefound .5s ease-in-out 4}
+@keyframes mefound{50%{transform:scale(1.7);box-shadow:0 0 0 3px #fff,0 0 0 8px #c9a24a99}}
+#plist li.me{cursor:pointer}
+#plist li .findme{font-size:10px;margin-left:1px}
+@media (prefers-reduced-motion:reduce){.tok.me,.tok.me.found{animation:none}#board.pzanim{transition:none}}

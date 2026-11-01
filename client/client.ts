@@ -94,9 +94,12 @@ const listOpen = (on: boolean) => { maxList.hidden = !on; maxTxt.setAttribute('a
 // 직접 입력 검사: 숫자가 아니거나 3~8명을 벗어나면 칸 아래 인라인 오류
 const maxError = (v: string) => !v ? '' : !/^\d+$/.test(v) ? '숫자만 입력해주세요.'
   : +v < 3 || +v > G.MAX_PLAYERS ? `3~${G.MAX_PLAYERS}명 사이로 입력해주세요.` : '';
-const showMaxError = (msg: string) => {
-  const e = $('#c_max_err'); e.textContent = msg; e.hidden = !msg;
-  $('#c_max').classList.toggle('invalid', !!msg); maxTxt.setAttribute('aria-invalid', String(!!msg));
+// 오류가 새로 뜨거나 바뀔 때마다 흔들림(입력 중 같은 오류가 이어지면 다시 흔들지 않음, force면 무조건)
+const showMaxError = (msg: string, force = false) => {
+  const e = $('#c_max_err'), c = $('#c_max'), changed = e.hidden || e.textContent !== msg;
+  e.textContent = msg; e.hidden = !msg;
+  c.classList.toggle('invalid', !!msg); maxTxt.setAttribute('aria-invalid', String(!!msg));
+  c.classList.remove('shake'); if (msg && (changed || force)) { void c.offsetWidth; c.classList.add('shake'); }
 };
 maxTxt.addEventListener('input', () => showMaxError(maxError(maxTxt.value.trim())));
 // ▲▼·화살표 키: 범위 끝에서 더 누르면 인라인 오류(2.5초 뒤 사라짐)
@@ -105,7 +108,7 @@ const stepMax = (d: number) => {
   const n = maxPlayers + d;
   clearTimeout(stepErrT);
   if (n < 3 || n > G.MAX_PLAYERS) {
-    showMaxError(n < 3 ? '최소 3명부터 가능해요.' : `최대 ${G.MAX_PLAYERS}명까지 가능해요.`);
+    showMaxError(n < 3 ? '최소 3명부터 가능해요.' : `최대 ${G.MAX_PLAYERS}명까지 가능해요.`, true);
     stepErrT = setTimeout(() => { if (maxTxt.readOnly) showMaxError(''); }, 2500);
     return;
   }
@@ -138,7 +141,7 @@ maxTxt.addEventListener('click', () => {
 });
 maxTxt.addEventListener('blur', () => { if (!maxTxt.readOnly) editMode(false); });
 maxTxt.addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); if (!maxTxt.readOnly) { if (!maxError(maxTxt.value.trim())) editMode(false); } else listOpen(maxList.hidden === true); }
+  if (e.key === 'Enter') { e.preventDefault(); if (!maxTxt.readOnly) { const er = maxError(maxTxt.value.trim()); if (!er) editMode(false); else showMaxError(er, true); } else listOpen(maxList.hidden === true); }
   else if (e.key === 'Escape') { listOpen(false); if (!maxTxt.readOnly) { maxTxt.value = String(maxPlayers); editMode(false); } }
   else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepMax(e.key === 'ArrowUp' ? 1 : -1); }
 });

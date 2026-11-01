@@ -37,11 +37,14 @@ export function playIntro(g: G.View, onDone: () => void) {
   (async () => {
     await sleep(50);
     const all = G.allCards(g.map), piles: HTMLElement[][] = [];
+    // 카드 크기 = 화면에 맞춰(세 더미가 겹치지 않는 폭, 높이의 13%, 60~120px)
+    const CW = Math.round(Math.max(60, Math.min(120, W() * 0.2, H() * 0.13))), CH = CW * 1.4;
+    ov.style.setProperty('--icw', CW + 'px');
     const px = [W() * 0.25, W() * 0.5, W() * 0.75], py = H() * 0.42;
     (['s', 'w', 'r'] as const).forEach((k, n) => {
       const lab = document.createElement('div'); lab.className = 'ilab'; lab.textContent = ({ s: '인물', w: '흉기', r: '장소' })[k];
-      put(lab, px[n] - 30, py + 70);
-      piles.push(all[k].slice(0, 6).map((_, m) => put(backEl(g.theme), px[n] - 30 + m, py - 42 - m)));
+      put(lab, px[n] - CW / 2, py + CH / 2 + 14);
+      piles.push(all[k].slice(0, 6).map((_, m) => put(backEl(g.theme), px[n] - CW / 2 + m, py - CH / 2 - m)));
     });
     // ① 섞기
     for (let round = 0; round < 3 && alive; round++) {
@@ -54,22 +57,22 @@ export function playIntro(g: G.View, onDone: () => void) {
     // ② 봉투로
     step('인물 · 흉기 · 장소 한 장씩 사건 봉투에 봉인');
     const env = ov.querySelector('.ienv') as HTMLElement, er = env.getBoundingClientRect(), orr = ov.getBoundingClientRect();
-    const ex = er.left - orr.left + er.width / 2 - 30, ey = er.top - orr.top + 10;
+    const ex = er.left - orr.left + er.width / 2 - CW / 2, ey = er.top - orr.top + er.height / 2 - CH / 2; // 작아지며(.4배) 봉투 가운데로
     for (const pile of piles) { const c = pile.pop()!; await fly(c, ex, ey, 420, { transform: `translate(${ex - parseFloat(c.style.left)}px, ${ey - parseFloat(c.style.top)}px) scale(.4)` }); c.remove(); if (!alive) return; }
     env.classList.add('sealed');
     await sleep(500); if (!alive) return;
     // ③ 모아서 섞고 나눠 주기
     step('남은 카드를 모아 섞어서 나눠 줍니다');
     ov.querySelectorAll('.ilab').forEach(l => l.remove());
-    const rest = piles.flat(), cx = W() / 2 - 30, cy = py - 42;
+    const rest = piles.flat(), cx = W() / 2 - CW / 2, cy = py - CH / 2;
     await Promise.all(rest.map((c, m) => fly(c, cx + (m % 4), cy - (m % 6), 450)));
     await Promise.all(rest.map((c, m) => c.animate([{ transform: 'rotate(0)' }, { transform: `rotate(${m % 2 ? 10 : -10}deg)` }, { transform: 'rotate(0)' }], { duration: 500 }).finished));
     if (!alive) return;
     const per = g.players[0].handCount, n = g.players.length, total = per * n, gap = Math.min(120, 2600 / Math.max(total, 1));
     const seatEls = [...seatsBox.children] as HTMLElement[];
     for (let k = 0; k < total && alive; k++) {
-      const j = k % n, sr = seatEls[j].getBoundingClientRect(), c = put(backEl(g.theme, 'mini'), cx, cy);
-      void fly(c, sr.left - orr.left + sr.width / 2 - 15, sr.top - orr.top - 30, 380).then(() => { c.remove(); counts[j].textContent = String(+counts[j].textContent! + 1); });
+      const j = k % n, sr = seatEls[j].getBoundingClientRect(), c = put(backEl(g.theme, 'mini'), cx + CW / 4, cy + CH / 4);
+      void fly(c, sr.left - orr.left + sr.width / 2 - CW / 4, sr.top - orr.top - CH / 2, 380).then(() => { c.remove(); counts[j].textContent = String(+counts[j].textContent! + 1); });
       await sleep(gap);
     }
     rest.forEach(c => c.remove());

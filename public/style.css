@@ -1049,3 +1049,8 @@ html,body{background-color:#0b0809}
   #automode{max-width:none;flex:1 1 0;min-width:0;font-size:12px}
   #drawer .sheet>div:first-child{gap:6px}
 }
+/* 폰 세로 게임: 페이지 자체는 움직이지 않게(주소창이 접히며 화면이 밀려 흰 띠가 보이던 것), 3D 보드는 가로로 긴 4:3이라 아래 패널이 넓어짐 */
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  html:has(#game:not([hidden])),body:has(#game:not([hidden])){overflow:hidden;overscroll-behavior:none;height:100dvh}
+  #boardwrap #board3d{width:100%;max-width:none;aspect-ratio:4/3;height:auto}
+}

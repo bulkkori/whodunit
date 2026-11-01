@@ -13,10 +13,13 @@ let TEX: Record<string, string[]> = {};
 export const loadTexManifest = () =>
   fetch('/assets/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { TEX = m; }).catch(() => {});
 /** 방 번호(0~), 'center', 'hall' → 바닥 텍스처 주소 또는 null. 텍스처 한 장 = 3×3칸 */
-export const floorTex = (theme: string, k: number | 'center' | 'hall') => {
-  const name = `floor-${typeof k === 'number' ? 'r' + k : k}`;
+export const floorTex = (theme: string, k: number | 'center' | 'hall') => texUrl(theme, 'floor', k);
+/** 벽 텍스처(가로로 이어지는 2:1 띠). 방 벽 안쪽 면 = 방 번호/'center', 바깥쪽 면 = 'hall' */
+export const wallTex = (theme: string, k: number | 'center' | 'hall') => texUrl(theme, 'wall', k);
+function texUrl(theme: string, kind: 'floor' | 'wall', k: number | 'center' | 'hall') {
+  const name = `${kind}-${typeof k === 'number' ? 'r' + k : k}`;
   return TEX[theme]?.includes(name) ? `/assets/${theme}/${name}.webp` : null;
-};
+}
 export const TEX_CELLS = 3;
 export const ROOM_TINTS = ['#8a5a44', '#4f6b8a', '#6b7a4a', '#7a4f6b', '#8a7a44', '#4a7a73', '#80604a', '#5a5a8a', '#8a4f4f', '#4f7a55', '#76648a'];
 const KIND: Record<G.Kind, string> = { s: '인물', w: '흉기', r: '장소' };

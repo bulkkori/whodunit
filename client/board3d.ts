@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as G from '../shared/game.ts';
 import { faceValues } from './dice.ts';
-import { WEAPON_ICON, ROOM_TINTS, floorTex, TEX_CELLS } from './art.ts';
+import { WEAPON_ICON, ROOM_TINTS, floorTex, wallTex, TEX_CELLS } from './art.ts';
 import { land } from './sound.ts';
 
 interface Palette { bg: number; base: number; hall: number; door: number; room: number; wall: number; center: number; label: string }
@@ -21,6 +21,17 @@ function loadTex(url: string) {
   let t = texCache.get(url);
   if (!t) { t = texLoader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache.set(url, t); }
   return t;
+}
+/** 벽 면용: 월드 좌표로 가로 = 벽을 따라 이어지게, 세로 = 바닥에서부터(벽이 낮아지면 걸레받이만 보임). 높이 0.9 = 그림 세로 전체 */
+function wallUV(m: THREE.MeshStandardMaterial) {
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+#ifdef USE_MAP
+  vec4 wpw = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  vMapUv = vec2((wpw.x + wpw.z) / 1.8, (wpw.y - 0.05) / 0.9);
+#endif`);
+  };
+  return m;
 }
 /** 복도 칸(InstancedMesh)용: 칸마다 UV 대신 월드 좌표로 텍스처를 깔아 3×3칸에 한 장이 끊김 없이 이어지게 */
 function worldUV(m: THREE.MeshStandardMaterial) {
@@ -121,7 +132,8 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
   // 벽(심즈식 컷어웨이): 카메라 쪽을 향한 벽은 걸레받이 높이로 내려가 방 안이 보인다
   const WALL_H = 0.9, WALL_LOW = 0.08;
-  let wallMesh: THREE.InstancedMesh | null = null, walls: { x: number; z: number; vert: boolean; nx: number; nz: number; h: number }[] = [];
+  // 벽 한 조각 = 길이 1.04 · 두께 0.08 상자. 로컬 +z 면이 방 바깥(복도 벽), -z 면이 방 안쪽(그 방 벽)을 보도록 돌려 놓는다
+  let wallMeshes: THREE.InstancedMesh[] = [], walls: { x: number; z: number; nx: number; nz: number; h: number; mesh: THREE.InstancedMesh; idx: number }[] = [];
 
   function build(g: G.View) {
     if (board) {
@@ -168,8 +180,9 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       }
     });
 
-    // 벽: 방 칸 둘레를 따라, 문 자리는 비움. InstancedMesh 1개
-    walls = [];
+    // 벽: 방 칸 둘레를 따라, 문 자리는 비움. 방마다 InstancedMesh 1개(안쪽 면 텍스처가 방마다 다름)
+    walls = []; wallMeshes = [];
+    const segsByRoom = new Map<number, { x: number; z: number; nx: number; nz: number }[]>();
     for (let i = 0; i < n * n; i++) {
       const r = M.cells[i]; if (r === -1) continue;
       const x = i % n, y = Math.floor(i / n);
@@ -177,12 +190,20 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
         const X = x + dx, Y = y + dy, inside = X >= 0 && Y >= 0 && X < n && Y < n, nb = inside ? Y * n + X : -1;
         if (inside && M.cells[nb] === r) continue;
         if (M.doors.some(d => d.room === r && d.cell === nb)) continue;
-        walls.push({ x: wx(x) + dx / 2, z: wx(y) + dy / 2, vert: dx !== 0, nx: dx, nz: dy, h: WALL_H }); // n = 방 밖을 향한 방향
+        if (!segsByRoom.has(r)) segsByRoom.set(r, []);
+        segsByRoom.get(r)!.push({ x: wx(x) + dx / 2, z: wx(y) + dy / 2, nx: dx, nz: dy }); // n = 방 밖을 향한 방향
       }
     }
-    const wm = (wallMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat(P.wall, { roughness: 0.6 }), walls.length));
-    walls.forEach((w, k) => setWall(k, w));
-    wm.castShadow = wm.receiveShadow = true; noPick(wm); B.add(wm);
+    const cap = mat(P.wall, { roughness: 0.6 }), wallGeo = new THREE.BoxGeometry(1, 1, 1);
+    const face = (url: string | null) => url ? wallUV(Object.assign(mat(0xd8d8d8, { roughness: 0.8 }), { map: loadTex(url) })) : cap;
+    const outer = face(wallTex(g.theme, 'hall'));
+    for (const [r, segs] of segsByRoom) {
+      const inner = face(wallTex(g.theme, r === M.roomCount ? 'center' : r));
+      // BoxGeometry 면 순서: +x, -x, +y, -y, +z(바깥), -z(안쪽)
+      const wm = new THREE.InstancedMesh(wallGeo, [cap, cap, cap, cap, outer, inner], segs.length);
+      segs.forEach((s, idx) => { const w = { ...s, h: WALL_H, mesh: wm, idx }; walls.push(w); setWall(w); });
+      wm.castShadow = wm.receiveShadow = true; noPick(wm); B.add(wm); wallMeshes.push(wm);
+    }
 
     const c = roomMeshes[roomMeshes.length - 1].userData;
     const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.35, 24), mat(0x2a2024));
@@ -229,22 +250,23 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   }
 
   const q0 = new THREE.Quaternion(), v3 = new THREE.Vector3(), s3 = new THREE.Vector3();
-  function setWall(k: number, w: (typeof walls)[number]) {
-    s3.set(w.vert ? 0.08 : 1.04, w.h, w.vert ? 1.04 : 0.08);
-    m4.compose(v3.set(w.x, 0.05 + w.h / 2, w.z), q0, s3); wallMesh!.setMatrixAt(k, m4);
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  function setWall(w: (typeof walls)[number]) {
+    q0.setFromAxisAngle(yAxis, Math.atan2(w.nx, w.nz)); // 로컬 +z → 바깥 방향
+    m4.compose(v3.set(w.x, 0.05 + w.h / 2, w.z), q0, s3.set(1.04, w.h, 0.08)); w.mesh.setMatrixAt(w.idx, m4);
   }
   /** 카메라가 바라보는 방향(수평)으로 바깥을 향한 벽 = 시야를 가리는 벽 → 낮춤. 높이는 부드럽게 바뀜 */
   function updateWalls(dt: number) {
-    if (!wallMesh || !walls.length) return;
+    if (!walls.length) return;
     const cx = camera.position.x - controls.target.x, cz = camera.position.z - controls.target.z, l = Math.hypot(cx, cz) || 1;
-    let changed = false;
-    walls.forEach((w, k) => {
+    const changed = new Set<THREE.InstancedMesh>();
+    walls.forEach(w => {
       const goal = (w.nx * cx + w.nz * cz) / l > 0.3 ? WALL_LOW : WALL_H;
       if (Math.abs(w.h - goal) < 0.002) return;
       w.h += (goal - w.h) * Math.min(1, dt * 10); if (Math.abs(w.h - goal) < 0.002) w.h = goal;
-      setWall(k, w); changed = true;
+      setWall(w); changed.add(w.mesh);
     });
-    if (changed) wallMesh.instanceMatrix.needsUpdate = true;
+    for (const m of changed) m.instanceMatrix.needsUpdate = true;
     // 방 이름이 카메라를 돌려도 거꾸로 보이지 않게, 바닥에 누운 채 카메라 쪽으로 돌림
     const az = Math.atan2(cx, cz);
     board?.children.forEach(o => { if (o.userData.label) o.rotation.y = az; });

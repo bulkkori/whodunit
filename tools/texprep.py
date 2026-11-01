@@ -3,7 +3,7 @@
 사용: python tools/texprep.py 입력폴더 public/assets/테마 [평탄화 세기 0~1, 기본 1]"""
 import sys, os, numpy as np
 from PIL import Image
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, gaussian_filter1d
 
 src, dst = sys.argv[1], sys.argv[2]
 k = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
@@ -13,8 +13,14 @@ for name in sorted(os.listdir(src)):
     im = np.asarray(Image.open(os.path.join(src, name)).convert('RGB'), np.float32) / 255
     h, w, _ = im.shape
     lum = im.mean(2)
-    low = gaussian_filter(lum, sigma=min(h, w) / 14, mode='wrap')                 # 큰 범위 밝기(조명) 성분
-    gain = (lum.mean() / np.maximum(low, 1e-3)) ** k                            # 그 성분만 나눠서 고르게
+    if name.startswith('wall'):
+        # 벽: 가로 방향 조명 얼룩만 편다(세로 구조 = 걸레받이·장식 띠는 그대로). 가로로만 이어 붙이기 때문
+        col = gaussian_filter1d(lum.mean(0), sigma=w / 14, mode='wrap')
+        low = np.broadcast_to(col, lum.shape)
+        gain = (col.mean() / np.maximum(low, 1e-3)) ** k
+    else:
+        low = gaussian_filter(lum, sigma=min(h, w) / 14, mode='wrap')             # 큰 범위 밝기(조명) 성분
+        gain = (lum.mean() / np.maximum(low, 1e-3)) ** k                        # 그 성분만 나눠서 고르게
     out = np.clip(im * gain[..., None], 0, 1)
     size = 512 if h >= 512 else h
     img = Image.fromarray((out * 255).astype(np.uint8)).resize((size, round(size * h / w)), Image.LANCZOS)

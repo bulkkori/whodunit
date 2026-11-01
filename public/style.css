@@ -1199,3 +1199,4 @@ header.ping-ref{animation:hpingref 1.4s ease-out}
 #plist li.me{cursor:pointer}
 #plist li .findme{font-size:10px;margin-left:1px}
 @media (prefers-reduced-motion:reduce){.tok.me,.tok.me.found{animation:none}#board.pzanim{transition:none}}
+.tokghost{animation:none!important;box-sizing:border-box}

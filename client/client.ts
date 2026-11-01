@@ -723,7 +723,11 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
     if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > Math.max(26, r.width)) return;
     if (tdrag) { end(false); return; } // 두 번째 손가락 = 핀치로 전환
     bd.setPointerCapture(e.pointerId); lastPointer = e.pointerType;
-    const ghost = tok.cloneNode(true) as HTMLElement; ghost.classList.add('tokghost'); document.body.append(ghost);
+    // 판 밖(body)에 붙이면 판 기준 크기(cqw·--n)를 잃어 찌그러짐 → 지금 보이는 크기를 그대로 고정. 확대 중이면 그 배율만큼
+    const ghost = tok.cloneNode(true) as HTMLElement, cs = getComputedStyle(tok), sz = Math.max(r.width, r.height);
+    ghost.classList.add('tokghost'); ghost.classList.remove('cur', 'found');
+    Object.assign(ghost.style, { width: sz + 'px', height: sz + 'px', fontSize: parseFloat(cs.fontSize) * (sz / (tok.offsetWidth || sz)) + 'px', aspectRatio: 'auto' });
+    document.body.append(ghost);
     tdrag = { ghost, p: null, id: e.pointerId }; armed = null; tokDragOn = true;
   });
   $('#b2vp').addEventListener('pointerdown', e => { if (tdrag && e.pointerId !== tdrag.id) end(false); }, true);

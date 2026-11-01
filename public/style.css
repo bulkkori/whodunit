@@ -1,6 +1,6 @@
-:root{--bg:#17131a;--panel:#221c26;--line:#3a3040;--ink:#efe8f2;--sub:#a99fb0;--hall:#2b2430;--door:#5a4a40;--room:#3d2b35;--accent:#d98a6a;--can:#ffd36b;--danger:#c0504d}
-body[data-gtheme=atlantis]{--bg:#0d1a20;--panel:#13252d;--line:#24414c;--hall:#16303a;--door:#2f5a5a;--room:#1d4450;--accent:#5fd0c8;--sub:#8fb4bd}
-body[data-gtheme=station]{--bg:#12141b;--panel:#1a1e28;--line:#2c3344;--hall:#20252f;--door:#3c4660;--room:#28324a;--accent:#7aa7ff;--sub:#98a2b8}
+:root{--wall:#8f7a58;--bg:#17131a;--panel:#221c26;--line:#3a3040;--ink:#efe8f2;--sub:#a99fb0;--hall:#2b2430;--door:#5a4a40;--room:#3d2b35;--accent:#d98a6a;--can:#ffd36b;--danger:#c0504d}
+body[data-gtheme=atlantis]{--wall:#4f8a85;--bg:#0d1a20;--panel:#13252d;--line:#24414c;--hall:#16303a;--door:#2f5a5a;--room:#1d4450;--accent:#5fd0c8;--sub:#8fb4bd}
+body[data-gtheme=station]{--wall:#7b88a3;--bg:#12141b;--panel:#1a1e28;--line:#2c3344;--hall:#20252f;--door:#3c4660;--room:#28324a;--accent:#7aa7ff;--sub:#98a2b8}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard","Malgun Gothic",sans-serif;transition:background .3s}
@@ -538,3 +538,15 @@ button.sk *{visibility:hidden}
 #board.tex .cell.bonus:not(.path):not(.trail){background:linear-gradient(#0002,#0002),var(--hallTex) var(--tp) / 300% 300%;
   box-shadow:inset 2px 2px 3px #000c,inset -1px -1px 2px rgba(255,236,205,.25)}
 #board.tex .cell.bonus::before{font-size:calc(100cqw / var(--n) * .66);color:#c9a24a;text-shadow:-1px -1px 0 #000d,1px 1px 0 rgba(255,236,205,.35)}
+
+/* ===== 2D 벽 두께: 방 둘레 벽(밝은 윗면 + 안쪽 그림자) + 문 자리 틈 ===== */
+#board{--wallw:calc(100cqw / var(--n) * .2)}
+#board .room,#board .room.center{border:0;border-radius:3px;
+  box-shadow:inset 0 0 0 var(--wallw) var(--wall),                                  /* 벽 윗면 */
+    inset 0 0 0 calc(var(--wallw) + 1px) #000a,                                     /* 벽 안쪽 모서리 */
+    inset 0 calc(var(--wallw) * 1.6) calc(var(--wallw) * 2) -2px #0009,             /* 벽이 바닥에 드리운 그림자 */
+    0 0 0 1px #000c, 0 2px 4px #0008}                                               /* 벽 바깥 모서리 */
+#board .room .rname,#board .room .toks,#board .room .env{margin-left:var(--wallw)}
+#board .room{padding:calc(var(--wallw) + 2px)}
+.dgap{position:absolute;background:var(--door);box-shadow:inset 0 0 0 1px #0006;z-index:1}
+#board .room.center{outline:1px dashed color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:-5px}

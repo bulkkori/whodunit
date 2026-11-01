@@ -403,6 +403,17 @@ function renderBoard(g: G.View) {
       if (m.bonus.includes(i)) { d.classList.add('bonus'); d.title = '❗ 보너스칸 — 여기서 멈추면 특수 능력'; }
       b.append(d);
     });
+    // 벽 두께: 방 둘레에 벽을 그리고, 문 자리만 틈(문지방)을 낸다. 문 칸이 방의 어느 변 바깥에 붙었는지로 위치 계산
+    const doorGaps = (room: number, q: G.Rect, d: HTMLElement) => {
+      const w = q.x1 - q.x0 + 1, h = q.y1 - q.y0 + 1;
+      for (const dr of m.doors) {
+        if (dr.room !== room) continue;
+        const x = dr.cell % m.n, y = Math.floor(dr.cell / m.n), s = el('i', 'dgap');
+        if (y < q.y0 || y > q.y1) Object.assign(s.style, { left: `${(x - q.x0) * 100 / w}%`, width: `${100 / w}%`, [y < q.y0 ? 'top' : 'bottom']: '0', height: 'var(--wallw)' });
+        else Object.assign(s.style, { top: `${(y - q.y0) * 100 / h}%`, height: `${100 / h}%`, [x < q.x0 ? 'left' : 'right']: '0', width: 'var(--wallw)' });
+        d.append(s);
+      }
+    };
     m.rects.forEach((q, i) => {
       const d = el('div', 'room'); d.dataset.p = String(G.roomPos(i)); d.style.gridArea = `${q.y0 + 1}/${q.x0 + 1}/${q.y1 + 2}/${q.x1 + 2}`;
       const ft = floorTex(g.theme, i), w = q.x1 - q.x0 + 1, h = q.y1 - q.y0 + 1;
@@ -410,14 +421,14 @@ function renderBoard(g: G.View) {
         : `color-mix(in srgb, var(--room) 72%, ${ROOM_TINTS[i % ROOM_TINTS.length]})`;
       d.append(el('span', 'rname', T.r[i]));
       if (m.passages[i] !== undefined) { const p = el('span', 'pass', '🕳️'); p.title = '비밀 통로 → ' + T.r[m.passages[i]]; d.append(p); }
-      d.append(el('span', 'toks')); b.append(d);
+      d.append(el('span', 'toks')); doorGaps(i, q, d); b.append(d);
     });
     const q = m.center, d = el('div', 'room center'); d.dataset.p = String(G.centerPos(m));
     d.style.gridArea = `${q.y0 + 1}/${q.x0 + 1}/${q.y1 + 2}/${q.x1 + 2}`;
     d.title = '사건 파일실 — 출발점, 최종 고발은 여기서만';
     const ct = floorTex(g.theme, 'center');
     if (ct) d.style.background = `linear-gradient(#0003,#0003), url(${ct}) 0 0 / ${100 * TEX_CELLS / (q.x1 - q.x0 + 1)}% ${100 * TEX_CELLS / (q.y1 - q.y0 + 1)}% repeat`;
-    d.append(el('span', 'rname', '🗂️ 사건 파일'), el('span', 'env', '✉️'), el('span', 'toks')); b.append(d);
+    d.append(el('span', 'rname', '🗂️ 사건 파일'), el('span', 'env', '✉️'), el('span', 'toks')); doorGaps(m.roomCount, q, d); b.append(d);
   }
   const gen = ++gen2D; // 다시 그려지면 이전 이동 애니메이션 타이머는 무시
   const before = new Map<string, DOMRect>(); // 추리로 끌려오는 말·흉기 연출용 이전 위치

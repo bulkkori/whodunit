@@ -69,7 +69,7 @@ function toast(msg: string) { const t = $('#toast'); t.textContent = msg; t.clas
 
 // ---------- 로비 ----------
 for (const sel of [$<HTMLSelectElement>('#theme'), $<HTMLSelectElement>('#theme2')])
-  for (const [k, t] of Object.entries(G.THEMES)) sel.append(new Option(`${t.icon} ${t.name}`, k));
+  for (const k of G.OPEN_THEMES) sel.append(new Option(`${G.THEMES[k].icon} ${G.THEMES[k].name}`, k));
 $in('#name').value = store.get('wd_name', '');
 if (code) $in('#code').value = code;
 // ---------- 로딩 버튼: 누르면 돌아가는 표시 + 다시 못 누름, 서버 응답(방 정보·오류)이 오면 풀림 ----------
@@ -169,6 +169,7 @@ const THEME_DESC: Record<G.ThemeKey, string> = { mansion: '촛불 아래 고딕 
 for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
   const b = el('button', 'tcard'); b.type = 'button'; b.dataset.k = k; b.setAttribute('role', 'radio');
   b.append(el('i', '', t.icon), el('b', '', t.name), el('small', '', THEME_DESC[k]));
+  if (!G.OPEN_THEMES.includes(k)) { b.disabled = true; b.querySelector('small')!.textContent = '준비 중'; }
   b.onclick = () => { $<HTMLSelectElement>('#theme').value = k; refreshCreatePreview(); };
   $('#c_themes').append(b);
 }

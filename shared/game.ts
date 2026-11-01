@@ -127,7 +127,9 @@ export const THEMES: Record<ThemeKey, Theme> = {
     r: ['함교', '수경 재배실', '원자로실', '의무실', '동면실', '화물칸', '관측 돔', '통신실', '에어록', '체육관', '승무원 식당'],
   },
 };
-export const isTheme = (t: unknown): t is ThemeKey => typeof t === 'string' && Object.hasOwn(THEMES, t);
+/** 지금 고를 수 있는 테마(나머지는 그림 준비 전이라 보류) */
+export const OPEN_THEMES: readonly ThemeKey[] = ['mansion'];
+export const isTheme = (t: unknown): t is ThemeKey => OPEN_THEMES.includes(t as ThemeKey);
 
 /** 복도 최소 폭(칸) */
 export const CORRIDOR = 3;

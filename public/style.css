@@ -595,3 +595,6 @@ button.sk *{visibility:hidden}
 /* 메모 단서(흐린 ?): 남끼리 보여 준 세 장 중 하나 — 확실한 표시가 아님 */
 #memo td.hintq{color:var(--sub);opacity:.45;font-weight:400;font-style:italic}
 #automode{font-size:12px;padding:3px 6px;max-width:190px}
+.tcard:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+/* 그림이 있을 때 인물·흉기 배경: 쨍한 단색 대신 어두운 저택 조명 + 인물색은 은은하게 */
+.k-s .gc-art:has(img){background:radial-gradient(ellipse at 50% 32%,color-mix(in srgb,var(--tone) 38%,#4a3a34) 0%,color-mix(in srgb,var(--tone) 18%,#221a1c) 55%,#0f0b0d 100%)}

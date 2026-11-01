@@ -4,6 +4,7 @@ import type { Board3D } from './board3d.ts';
 import { throwDice2D } from './dice.ts';
 import { playIntro } from './intro.ts';
 import * as Sound from './sound.ts';
+import { startIcons } from './icons.ts';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
 const $in = (s: string) => $<HTMLInputElement>(s);
@@ -91,7 +92,7 @@ function toast(msg: string) { const t = $('#toast'); t.textContent = msg; t.clas
 
 // ---------- 로비 ----------
 for (const sel of [$<HTMLSelectElement>('#theme'), $<HTMLSelectElement>('#theme2')])
-  for (const k of G.OPEN_THEMES) sel.append(new Option(`${G.THEMES[k].icon} ${G.THEMES[k].name}`, k));
+  for (const k of G.OPEN_THEMES) sel.append(new Option(G.THEMES[k].name, k));
 $in('#name').value = store.get('wd_name', '');
 if (code) $in('#code').value = code;
 // ---------- 로딩 버튼: 누르면 돌아가는 표시 + 다시 못 누름, 서버 응답(방 정보·오류)이 오면 풀림 ----------
@@ -1298,6 +1299,7 @@ paintMusic();
 
 $btn('#create').disabled = $btn('#join').disabled = $btn('#practice').disabled = true;
 render();
+startIcons(); // 화면 글자 속 이모지 → 직접 그린 선 아이콘
 connect();
 // 텍스처 목록이 오면 보드를 다시 그림(목록 전에 그려졌으면 단색이었으므로)
 // 맵 선택·대기실 미리보기와 맵 카드도 텍스처가 준비되면 다시 그림

@@ -1208,3 +1208,7 @@ header #music.off,header #mute.off{color:#7d726a;opacity:1}
 header #music svg,header #mute svg{display:block}
 @media (hover:hover){header #music:hover,header #mute:hover{border-color:#d9b36a66;background:#d9b36a14;filter:none;box-shadow:none}}
 @media (max-width:639px){header #music,header #mute{width:44px;height:40px}}
+/* 직접 그린 선 아이콘(이모지 대체): 글자 크기·색을 따라감 */
+svg.ic{display:inline-block;width:1.2em;height:1.2em;vertical-align:-.24em;flex:none;overflow:visible}
+button svg.ic{margin-right:.15em}
+.switch>span{display:block}.switch>span small{display:block}

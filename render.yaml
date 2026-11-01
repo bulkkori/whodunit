@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: whodunit
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: node server.ts
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "24"

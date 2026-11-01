@@ -1,0 +1,27 @@
+{
+  "name": "whodunit",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "esbuild client/client.ts --bundle --splitting --format=esm --target=es2022 --minify --sourcemap --outdir=public/build",
+    "prestart": "npm run build",
+    "start": "node server.ts",
+    "typecheck": "tsc",
+    "test": "node --test test/*.test.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "ws": "^8.22.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0",
+    "typescript": "^7.0.2"
+  }
+}

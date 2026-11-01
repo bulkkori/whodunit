@@ -64,6 +64,7 @@ test('추론: 지목된 용의자 소환, 시계방향 첫 보유자가 반박',
   assert.equal(g.weapons[+g.env.w.slice(1)], 0); // 지목한 흉기 말이 이 방으로
   assert.equal(g.phase, 'refute');
   assert.equal(g.sug?.refuter, 2);
+  assert.ok(g.log.some(e => e.t === 'pass' && e.p === 1));        // 카드 없는 1번은 '반박할 카드 없음'으로 공개 기록
   const card = g.sug!.matches[0];
   assert.equal(G.act(g, 2, { t: 'show', card }), null);
   assert.ok(g.players[0].known.includes(card));

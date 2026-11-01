@@ -544,6 +544,7 @@ function line(g: G.View, e: G.LogEntry): string {
     case 'passage': return `${nm(g, e.p)} 🕳️ 비밀 통로 → ${T.r[e.room]}`;
     case 'suggest': return `🔎 ${nm(g, e.p)}: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)}`;
     case 'shown': return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: 카드 1장 공개`;
+    case 'pass': return `🙅 ${nm(g, e.p)}: 반박할 카드 없음`;
     case 'norefute': return '❗ 아무도 반박하지 못했습니다';
     case 'accuse': return `⚖️ ${nm(g, e.p)} 고발: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)} → ${e.ok ? '정답!' : e.saved ? '오답, 🛡️ 보험으로 생존' : '오답, 탈락'}`;
     case 'ability': return `${G.ROLES[e.role].icon} ${nm(g, e.p)} ${G.ROLES[e.role].name} 능력 사용` + (e.target != null ? ` → ${nm(g, e.target)}` : '') + (e.room != null ? ` → ${T.r[e.room]}` : '');
@@ -766,6 +767,13 @@ function renderMemo(g: G.View) {
   for (const c of g.players[g.me].hand ?? []) if (!M.applied['h' + c]) { mark(c, g.me); M.strike[c] = true; M.applied['h' + c] = 1; }
   for (const c of g.open) if (!M.applied['o' + c]) { g.players.forEach((_, j) => (M.cells[`${c}|${j}`] = '✗')); M.strike[c] = true; M.applied['o' + c] = 1; ch = true; }
   for (const e of g.log) if (e.t === 'shown' && e.card && !M.applied['s' + e.card]) { mark(e.card, e.p); M.applied['s' + e.card] = 1; }
+  // 반박 못 하고 넘긴 사람: 지목된 세 장 모두 그 사람에게 없음 → ✗ (이미 ✓인 칸은 그대로)
+  g.log.forEach(e => {
+    if (e.t !== 'pass') return;
+    const key = `p${e.p}|${e.s}${e.w}${e.r}`; if (M.applied[key]) return; // 기록은 최근 40개만 오므로 위치 대신 내용으로 표시
+    for (const c of [e.s, e.w, e.r]) if (M.cells[`${c}|${e.p}`] !== '✓') M.cells[`${c}|${e.p}`] = '✗';
+    M.applied[key] = 1; ch = true;
+  });
   for (const e of g.log) {
     if (e.t !== 'intel' || !e.card || M.applied['s' + e.card]) continue;
     const owner = e.kind === 'tap' ? e.a : e.from;

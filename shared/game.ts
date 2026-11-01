@@ -58,6 +58,8 @@ export type LogEntry =
   | { t: 'roll'; p: number; v: number; d: [number, number]; n: number; k: number }
   | { t: 'enter' | 'passage'; p: number; room: number }
   | ({ t: 'suggest' | 'norefute'; p: number } & Triple)
+  /** 차례대로 확인하다 카드가 없어 넘긴 사람(공개 정보: 이 사람은 세 장 모두 없음) */
+  | ({ t: 'pass'; p: number; to: number } & Triple)
   /** id: 반박 기록 고유 번호(기록 분석가가 고를 때 사용) */
   | { t: 'shown'; p: number; to: number; card?: Card; id: number }
   | ({ t: 'accuse'; p: number; ok: boolean; saved?: boolean } & Triple)
@@ -348,6 +350,7 @@ function nextRefuter(g: Game, sug: Triple & { p: number }, from: number) {
     if (j === sug.p) return null;
     const matches = g.players[j].hand.filter(c => c === sug.s || c === sug.w || c === sug.r);
     if (matches.length) return { j, matches };
+    g.log.push({ t: 'pass', p: j, to: sug.p, s: sug.s, w: sug.w, r: sug.r }); // 클루처럼 "없습니다"를 모두가 앎
   }
   return null;
 }

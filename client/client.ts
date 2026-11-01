@@ -729,6 +729,14 @@ function renderPanel(g: G.View) {
   for (const c of me.hand ?? []) hand.append(cardEl(g.theme, c));
   renderLog(g);
   $('#last').textContent = g.log.filter(e => e.t !== 'roll').slice(-2).map(e => line(g, e)).join(' / ');
+  // 폰: 보드 위 참가자 줄(누구 차례 · 누가 반박 중 · 탈락) + 마지막 행동 한 줄
+  $('#plist').replaceChildren(...g.players.map((p, j) => {
+    const li = el('li', '', p.name), d = el('i'); d.style.background = COLORS[p.suspect]; li.prepend(d);
+    li.classList.toggle('cur', j === g.turn && ph !== 'over'); li.classList.toggle('ref', ph === 'refute' && sug?.refuter === j);
+    li.classList.toggle('out', !!p.out); li.classList.toggle('me', j === g.me); return li;
+  }));
+  const lastE = g.log.filter(e => e.t !== 'roll').at(-1);
+  $('#plast').textContent = lastE ? line(g, lastE) : '';
   renderRole(g, my);
 }
 
@@ -765,10 +773,14 @@ function renderRole(g: G.View, my: boolean) {
     else btn(`${R.icon} 준비하기`, () => go({ t: 'ability' }));
     box.append(row, el('p', 'sub', '쓰지 않으려면 ⏭ 턴 종료'));
   }
+  box.classList.toggle('usable', usable);
   const known = g.players.map((p, j) => (j !== g.me && p.role ? `${G.ROLES[p.role].icon} ${p.name}(${G.ROLES[p.role].name})` : '')).filter(Boolean);
   if (known.length) box.append(el('p', 'sub', '공개된 능력: ' + known.join(' · ')));
 }
 
+// 폰: 보드 위 내 카드 부채꼴을 누르면 크게 펼쳐 보기(다시 누르면 접기)
+const phoneLayout = matchMedia('(max-aspect-ratio:23/20) and (max-width:639px)');
+$('#cardsbox').onclick = () => { if (phoneLayout.matches) $('#cardsbox').classList.toggle('open'); };
 for (const b of document.querySelectorAll<HTMLButtonElement>('#actions button')) b.onclick = () => {
   const a = b.dataset.a as ButtonAction;
   if (a === 'suggest' || a === 'accuse') return openPick(a);

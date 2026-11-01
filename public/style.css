@@ -1054,3 +1054,70 @@ html,body{background-color:#0b0809}
   html:has(#game:not([hidden])),body:has(#game:not([hidden])){overflow:hidden;overscroll-behavior:none;height:100dvh}
   #boardwrap #board3d{width:100%;max-width:none;aspect-ratio:4/3;height:auto}
 }
+
+/* ========== 폰 세로 게임 화면 재구성: [참가자 줄] [큰 보드 + 카드 부채꼴 + 메모·기록 탭] [상황 글 + 지금 누를 수 있는 버튼만] ========== */
+#pstrip{display:none}
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  :root{--dockh:0px;--strip:46px;--sheetmin:190px;
+    --bs:min(calc(100vw - var(--pad) * 2 - var(--sl) - var(--sr)), calc(100dvh - var(--hdr) - var(--st) - var(--sb) - var(--strip) - var(--sheetmin)))}
+  body:has(#game:not([hidden])) main{padding:6px var(--pad) 0}
+  #game{display:flex;flex-direction:column;gap:6px;height:100%}
+  /* 위: 참가자 줄 + 보기 전환(지금 아닌 쪽 버튼 하나만) */
+  #boardwrap{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 8px;flex:none;position:relative}
+  #pstrip{display:flex;flex-direction:column;gap:2px;min-width:0;height:var(--strip);justify-content:center}
+  #plist{display:flex;gap:4px;list-style:none;margin:0;padding:0;overflow-x:auto;scrollbar-width:none}
+  #plist li{flex:none;display:flex;align-items:center;gap:4px;padding:3px 7px 3px 5px;border-radius:3px;font-size:12px;color:#cfc4b8;border:1px solid #ffffff1a;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #plist li i{flex:none;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 1.5px #0006}
+  #plist li.me{font-weight:700;color:#f1e7d0}
+  #plist li.cur{background:#f1e7d0;color:#2a1d17;font-weight:800;border-color:#f1e7d0}
+  #plist li.ref{background:#c9a24a;color:#2a1d17;font-weight:800;border-color:#c9a24a}
+  #plist li.out{opacity:.45;text-decoration:line-through}
+  #plast{margin:0;font-size:11.5px;color:#a99f94;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #viewtog{grid-column:2;align-self:start;margin:0;gap:4px}
+  #viewtog button.on{display:none}
+  #viewtog button{min-width:44px;min-height:36px;padding:0 10px}
+  #maxmove{font-size:12px}
+  #board,#board3d,#boardwrap #board3d{grid-column:1/-1;justify-self:center}
+  #boardwrap #board3d{width:100%;aspect-ratio:4/3}
+  /* 아래: 상황 시트(스크롤), 버튼은 지금 누를 수 있는 것만 */
+  #panel{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:10px 12px calc(10px + var(--sb));margin:0 calc(-1 * var(--pad));border-radius:6px 6px 0 0}
+  #status{order:1;font-size:15px;line-height:1.35}
+  #cursug{order:2}
+  #actions{order:3;position:static;height:auto;padding:0;margin:0;background:none;box-shadow:none;border:0;display:flex;flex-wrap:wrap;gap:6px}
+  #actions button{flex:1 1 30%;min-height:46px;font-size:14px;padding:6px 8px}
+  #actions button:disabled{display:none}
+  #actions [data-a=roll]{flex-basis:100%;min-height:52px;font-size:17px}
+  #actions [data-a=accuse]{font-size:13px}
+  #rolebox{order:4}
+  #rolebox:not(.usable)>p.sub:first-of-type{display:none}
+  #rolebox:not(.usable){padding:8px 10px}
+  #last{display:none}
+  #cursug .sg{padding:6px 8px;gap:4px}
+  #cursug .sg-c span{font-size:12.5px;padding:2px 7px}
+  /* 내 카드: 보드 왼쪽 아래에 작은 부채꼴, 누르면 크게 펼침 */
+  #cardsbox{position:fixed;left:calc(10px + var(--sl));bottom:calc(100dvh - var(--paneltop, 60dvh) + 8px);z-index:12;order:0;cursor:pointer;
+    padding:4px 6px 2px;border-radius:4px;background:#0b0809aa;backdrop-filter:blur(2px)}
+  #cardsbox::before{display:none}
+  #cardsbox #hand{display:flex;flex-wrap:nowrap;gap:0;overflow:visible;padding:0 0 0 12px}
+  #cardsbox #hand .gcard{width:38px;margin-left:-12px;transform:rotate(calc((var(--i,0) - 1) * 6deg));transform-origin:50% 120%;box-shadow:0 2px 6px #000a}
+  #cardsbox #hand>*:nth-child(1){--i:0}#cardsbox #hand>*:nth-child(2){--i:1}#cardsbox #hand>*:nth-child(3){--i:2}#cardsbox #hand>*:nth-child(4){--i:3}#cardsbox #hand>*:nth-child(5){--i:4}#cardsbox #hand>*:nth-child(6){--i:5}
+  #cardsbox #openrow{display:none}
+  #cardsbox.open{left:0;right:0;bottom:calc(100dvh - var(--paneltop, 60dvh));top:calc(var(--hdr) + var(--st));border-radius:0;background:#0b0809e6;
+    display:flex;flex-direction:column;justify-content:center;gap:10px;padding:16px;overflow:auto}
+  #cardsbox.open::before{display:block;content:"내 카드 · 누르면 닫기";color:#cfc4b8;text-align:center}
+  #cardsbox.open #hand{flex-wrap:wrap;justify-content:center;gap:10px;padding:0}
+  #cardsbox.open #hand .gcard{width:96px;margin:0;transform:none}
+  #cardsbox.open #openrow:not([hidden]){display:block}
+  #cardsbox.open #openrow h3{color:#cfc4b8;text-align:center}
+  #cardsbox.open #openrow .cards{justify-content:center;flex-wrap:wrap}
+  /* 메모·기록 탭: 보드 오른쪽 위 세로 탭 */
+  body:has(#game:not([hidden])) #dockside{top:calc(var(--hdr) + var(--st) + var(--strip) + 14px);bottom:auto;right:0;width:40px;height:auto;gap:4px}
+  #dockside button{flex:none;flex-direction:column;height:58px;border-radius:4px 0 0 4px;font-size:11px;gap:2px}
+  #drawer{bottom:0}
+}
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  #panel{width:auto;max-width:none;align-self:stretch}
+  #panel>*{flex-shrink:0}
+  #dockside button{height:52px}
+}
+@media (max-aspect-ratio:23/20) and (max-width:639px){#viewtog #maxmove{display:none!important}}

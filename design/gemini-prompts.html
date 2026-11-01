@@ -31,7 +31,7 @@ ul{padding-left:20px;margin:6px 0}
 <body>
 <main>
 <h1>🎨 후더닛 · Gemini 프롬프트</h1>
-<p class="lead">테마당 그림 23장 + 바닥 13장 + 벽 13장 = 49장, 로고까지 총 148장. 각 프롬프트는 [복사]로 그대로 붙여 넣으면 됩니다(테마 스타일 문장이 이미 앞에 붙어 있음).</p>
+<p class="lead">테마당 카드 그림 28장(인물 8 · 흉기 8 · 장소 11 · 뒷면 1) + 바닥 13장 + 벽 13장 = 54장, 로고까지 총 163장. 각 프롬프트는 [복사]로 그대로 붙여 넣으면 됩니다(테마 스타일 문장이 이미 앞에 붙어 있음).</p>
 <nav id="nav"></nav>
 
 <section>
@@ -45,6 +45,8 @@ ul{padding-left:20px;margin:6px 0}
 <li><b>바닥과 벽은 따로</b>: 한 장에 바닥과 벽을 같이 그리지 않습니다. 바닥은 위에서 본 정사각 반복 타일(1:1)로, 게임이 칸마다 깔아 이어 붙입니다. 벽은 정면에서 본 가로로 이어지는 띠(2:1)로, 방 둘레를 따라 이어 붙입니다.</li>
 <li><b>벽 안쪽·바깥쪽</b>: 방 벽 하나에 두 면이 있습니다. 안쪽 면은 그 방의 벽 텍스처, 바깥쪽 면은 복도 벽 텍스처를 씁니다. 3D에서는 카메라 쪽 벽이 걸레받이 높이로 내려가므로(심즈식), 벽 아래쪽 걸레받이만 남아도 어색하지 않게 그려야 합니다.</li>
 <li><b>반복 확인</b>: 받은 텍스처를 2×2로 붙여 보고 이음새가 보이면 다시 생성하거나, 이미지 편집기의 '오프셋 + 이음새 지우기'로 손봅니다.</li>
+<li><b>카드 그림</b>: 카드의 그림 창은 세로 4:5이고 아래쪽 1/5은 이름 리본이 덮습니다. 흉기만 1:1 마젠타 배경이고, 게임이 배경을 빼서 카드 그림 창 위에 올립니다. 아직 없는 그림은 게임이 색·이모지로 대신 그립니다(장소 카드는 그 방 바닥).</li>
+<li><b>넣는 곳</b>: 각 프롬프트 옆의 경로대로 <code>텍스처/카드/s0.png</code>, <code>텍스처/바닥/floor-r0.png</code>처럼 넣으면 자동 변환·반영됩니다(png·jpg 그대로).</li>
 <li><b>저장</b>: 아래 파일명대로 <code>public/assets/{테마}/</code>에 webp(품질 80)로 저장. 한 테마 합계 1.5MB 이하.</li>
 </ul>
 </section>
@@ -70,6 +72,8 @@ const T = {
       ['주치의 마르타', 'a stern female family physician in her fifties, high-collared dark dress, round wire spectacles, brass stethoscope around her neck'],
       ['사서 에드거', 'a thin elderly male librarian, buttoned waistcoat, half-moon glasses, ink-stained fingers, secretive look'],
       ['가정교사 클레어', 'a governess in her thirties, plain grey dress with a lace collar, hair in a tight bun, guarded polite smile'],
+      ['요리사 마틸드', 'a stout female cook in her forties, flour-dusted apron over a dark dress, rolled sleeves, sharp suspicious eyes'],
+      ['마부 바솔로', 'a lean male coachman in a long dark coat and top hat, leather gloves, weathered face, quiet watchful look'],
     ],
     w: [
       ['독 찻잔', 'a fine porcelain teacup on a saucer with faint sickly green vapor rising'],
@@ -78,6 +82,8 @@ const T = {
       ['수면제 병', 'a small amber glass sleeping-draught bottle with a cork stopper and a blank paper label'],
       ['청동 흉상', 'a small bronze bust of a stern bearded man on a marble base'],
       ['벽난로 부지깽이', 'a heavy wrought-iron fireplace poker with a hooked tip'],
+      ['깨진 샴페인 병', 'a broken champagne bottle with a jagged neck and torn gold foil'],
+      ['독침 브로치', 'an ornate antique brooch hiding a tiny poisoned needle with a single drop on its tip'],
     ],
     r: [
       ['시계탑', 'a clock tower room with an enormous exposed clock mechanism of brass gears'],
@@ -89,6 +95,8 @@ const T = {
       ['마구간', 'stables with wooden stalls, hay bales and hanging saddles'],
       ['별관 침실', 'an annex guest bedroom with a canopy bed and heavy drapes'],
       ['지하 실험실', 'a hidden basement laboratory with glass alembics and bubbling flasks'],
+      ['하인 숙소', 'cramped servants quarters with narrow iron beds and a washstand'],
+      ['탑 전망대', 'a tower observatory with a brass telescope and tall arched windows at night'],
     ],
     center: 'a case file room: a dark oak table holding a sealed envelope with a red wax seal, an evidence board with pinned notes and red string behind it',
     floor: 'dark herringbone wooden parquet floor',
@@ -121,6 +129,8 @@ const T = {
       ['상인 마로', 'a plump male merchant with many pearl rings, an embroidered coat patterned like fish scales, a sly grin'],
       ['수호병 브론', 'a broad-shouldered temple guard in verdigris bronze armor with a round shield, stern face'],
       ['견습 무녀 이오', 'a young apprentice shrine maiden with seashell hair ornaments, nervous wide eyes'],
+      ['해적 선장 바르보', 'a burly pirate captain with a braided beard decorated with shells, a kelp-draped tricorn hat, roguish grin'],
+      ['인어 가수 셀레네', 'a graceful mermaid singer with iridescent scales on her shoulders, flowing aqua hair, pearl earrings, melancholic gaze'],
     ],
     w: [
       ['삼지창', 'an ornate golden trident with coral inlays'],
@@ -129,6 +139,8 @@ const T = {
       ['산호 단검', 'a dagger carved from blood-red coral'],
       ['봉인 구슬', 'a stone sphere carved with glowing blue runes'],
       ['크라켄 비늘', 'a huge iridescent kraken scale with a razor-sharp edge'],
+      ['독 산호 가시', 'a cluster of venomous purple coral spines'],
+      ['심해 작살', 'a barbed deep-sea harpoon with a corroded brass shaft'],
     ],
     r: [
       ['신탁의 방', 'an oracle chamber with a glowing circular pool and carved pillars'],
@@ -140,6 +152,8 @@ const T = {
       ['수정 보물고', 'a treasury filled with glowing crystals and gold coins'],
       ['숨결 공방', 'a workshop where glassblowers craft breathing air bubbles under glass domes'],
       ['심연 계단', 'a spiral stone staircase descending into a dark abyss'],
+      ['해마 마구간', 'seahorse stables with coral stalls and kelp feed'],
+      ['등대 탑', 'an underwater lighthouse tower with a glowing crystal lamp'],
     ],
     center: 'a case file chamber: a stone table holding a sealed envelope under a glass dome, surrounded by glowing glyphs',
     floor: 'ancient stone mosaic tiles with scattered sand and tiny shells',
@@ -172,6 +186,8 @@ const T = {
       ['보안관 렉스', 'a male security officer in an armored vest, buzz cut, suspicious frown'],
       ['안드로이드 SIL-4', 'a humanoid android with porcelain-white face plates, visible panel seams, faint blue glowing eyes'],
       ['화물 조종사 다닐', 'a male cargo pilot in a worn bomber jacket with blank patches, stubble, easy grin'],
+      ['의무관 하나', 'a young female medical officer in a teal medical uniform, hair in a neat bun, holding a scanner tablet, calm but tired expression'],
+      ['견습 엔지니어 토비', 'a teenage male apprentice engineer in an oversized orange jumpsuit with a tool belt, freckles, eager nervous smile'],
     ],
     w: [
       ['플라스마 커터', 'a handheld plasma cutter tool with a glowing blue tip'],
@@ -180,6 +196,8 @@ const T = {
       ['렌치 드론', 'a small hovering drone with a mechanical wrench arm'],
       ['독성 영양팩', 'a foil nutrient pouch marked with a biohazard symbol'],
       ['에어록 해제기', 'a handheld airlock override device with a red pull lever'],
+      ['방사능 샘플', 'a sealed lead canister with a glowing green radioactive sample visible through a small window'],
+      ['고장 난 로봇 팔', 'a broken robotic arm with sparking exposed wires'],
     ],
     r: [
       ['함교', 'a command bridge with consoles and a large viewport showing stars'],
@@ -191,6 +209,8 @@ const T = {
       ['관측 돔', 'an observation dome with a huge planet visible through the glass'],
       ['통신실', 'a communications room with antenna readouts and screens'],
       ['에어록', 'an airlock chamber with heavy double doors and warning stripes'],
+      ['체육관', 'a station gym with treadmills and resistance machines facing a viewport'],
+      ['승무원 식당', 'a crew mess hall with long tables and a food dispenser'],
     ],
     center: 'a secure evidence vault: a sealed envelope inside a glass case on a pedestal, amber warning lights',
     floor: 'metal deck plates with grating and subtle rivets',
@@ -222,22 +242,21 @@ const WALL = (S, d) => `${S} Seamless horizontally tileable wall texture: ${d}. 
 function prompts(t) {
   const S = t.style + '.';
   return [
-    ['용의자 초상', t.s.map(([ko, d], i) => [ko, `s${i}.webp`, `${S} Square 1:1 bust portrait of ${d}. Facing slightly toward the viewer, face centered so it survives a circular crop, plain ${t.bg} background, soft key light from upper left. Original character design that does not resemble any existing anime, game or VTuber character. ${NO_TEXT}`])],
-    ['도구 아이콘', t.w.map(([ko, d], i) => [ko, `w${i}.webp`, `${S} Single object icon: ${d}. Centered, three-quarter view, isolated on a solid flat magenta (#FF00FF) background for easy cutout, soft shadow beneath. ${NO_TEXT}`])],
-    ['방 그림', t.r.map(([ko, d], i) => [ko, `r${i}.webp`, `${S} Square 1:1 top-down three-quarter view of ${d}. Readable at small size, the center kept simple and slightly darker so a label can sit on top, no people. ${NO_TEXT}`])],
-    ['보드 · 카드', [
-      ['사건 파일실(중앙)', 'center.webp', `${S} Square 1:1 top-down three-quarter view of ${t.center}. The center kept simple for a label, no people. ${NO_TEXT}`],
-      ['카드 뒷면', 'back.webp', `${S} Playing card back design, portrait 5:7 ratio, symmetrical ${t.back}, thin border. ${NO_TEXT}`],
+    ['인물 카드', t.s.map(([ko, d], i) => [ko, `카드/s${i}.png`, `${S} Portrait 4:5 card illustration of ${d}. Waist-up, facing slightly toward the viewer, face in the upper third, softly blurred background that matches the setting, rim light, no other people. Keep the bottom fifth simple because a name ribbon covers it. Original character design that does not resemble any existing anime, game or VTuber character. ${NO_TEXT}`])],
+    ['흉기 카드', t.w.map(([ko, d], i) => [ko, `카드/w${i}.png`, `${S} Single object illustration: ${d}. Centered, three-quarter view, filling about 70% of a square 1:1 frame, isolated on a solid flat magenta (#FF00FF) background for easy cutout, no shadow on the background. ${NO_TEXT}`])],
+    ['장소 카드', t.r.map(([ko, d], i) => [ko, `카드/r${i}.png`, `${S} Portrait 4:5 card illustration: eye-level interior view of ${d}. Atmospheric lighting, one clear focal point in the center, no people. Keep the bottom fifth simple because a name ribbon covers it. ${NO_TEXT}`])],
+    ['카드 뒷면', [
+      ['카드 뒷면', '카드/back.png', `${S} Playing card back design, portrait 5:7 ratio, perfectly symmetrical ${t.back}, an ornate thin border inset from the edges, one central emblem, no corner indices, no characters. ${NO_TEXT}`],
     ]],
     ['바닥 텍스처 (방 11 + 사건 파일실 + 복도)', [
-      ...t.surf.r.map(([ko, f], i) => [ko + ' 바닥', `floor-r${i}.webp`, FLOOR(S, f)]),
-      ['사건 파일실 바닥', 'floor-center.webp', FLOOR(S, t.surf.center[0])],
-      ['복도 바닥', 'floor-hall.webp', FLOOR(S, t.surf.hall[0])],
+      ...t.surf.r.map(([ko, f], i) => [ko + ' 바닥', `바닥/floor-r${i}.png`, FLOOR(S, f)]),
+      ['사건 파일실 바닥', '바닥/floor-center.png', FLOOR(S, t.surf.center[0])],
+      ['복도 바닥', '바닥/floor-hall.png', FLOOR(S, t.surf.hall[0])],
     ]],
     ['벽 텍스처 (방 안쪽 11 + 사건 파일실 + 복도 쪽)', [
-      ...t.surf.r.map(([ko, , w], i) => [ko + ' 벽(안쪽 면)', `wall-r${i}.webp`, WALL(S, w)]),
-      ['사건 파일실 벽(안쪽 면)', 'wall-center.webp', WALL(S, t.surf.center[1])],
-      ['복도 벽(방 바깥면·보드 가장자리)', 'wall-hall.webp', WALL(S, t.surf.hall[1])],
+      ...t.surf.r.map(([ko, , w], i) => [ko + ' 벽(안쪽 면)', `벽/wall-r${i}.png`, WALL(S, w)]),
+      ['사건 파일실 벽(안쪽 면)', '벽/wall-center.png', WALL(S, t.surf.center[1])],
+      ['복도 벽(방 바깥면·보드 가장자리)', '벽/wall-hall.png', WALL(S, t.surf.hall[1])],
     ]],
   ];
 }

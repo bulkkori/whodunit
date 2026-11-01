@@ -1,15 +1,10 @@
 // 게임 시작 연출: ① 인물·흉기·장소 더미를 뒷면으로 섞기 ② 한 장씩 뽑아 사건 봉투에 봉인
 // ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개. 약 8.5초, 건너뛰기 가능.
 import * as G from '../shared/game.ts';
-import { COLORS, cardEl } from './art.ts';
+import { COLORS, cardEl, backEl } from './art.ts';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-function back(cls = '') {
-  const c = document.createElement('div'); c.className = 'cback ' + cls;
-  c.innerHTML = '<span>?</span>';
-  return c;
-}
 
 export function playIntro(g: G.View, onDone: () => void) {
   const T = G.THEMES[g.theme], ov = document.createElement('div');
@@ -46,7 +41,7 @@ export function playIntro(g: G.View, onDone: () => void) {
     (['s', 'w', 'r'] as const).forEach((k, n) => {
       const lab = document.createElement('div'); lab.className = 'ilab'; lab.textContent = ({ s: '인물', w: '흉기', r: '장소' })[k];
       put(lab, px[n] - 30, py + 70);
-      piles.push(all[k].slice(0, 6).map((_, m) => put(back(), px[n] - 30 + m, py - 42 - m)));
+      piles.push(all[k].slice(0, 6).map((_, m) => put(backEl(g.theme), px[n] - 30 + m, py - 42 - m)));
     });
     // ① 섞기
     for (let round = 0; round < 3 && alive; round++) {
@@ -73,7 +68,7 @@ export function playIntro(g: G.View, onDone: () => void) {
     const per = g.players[0].handCount, n = g.players.length, total = per * n, gap = Math.min(120, 2600 / Math.max(total, 1));
     const seatEls = [...seatsBox.children] as HTMLElement[];
     for (let k = 0; k < total && alive; k++) {
-      const j = k % n, sr = seatEls[j].getBoundingClientRect(), c = put(back('mini'), cx, cy);
+      const j = k % n, sr = seatEls[j].getBoundingClientRect(), c = put(backEl(g.theme, 'mini'), cx, cy);
       void fly(c, sr.left - orr.left + sr.width / 2 - 15, sr.top - orr.top - 30, 380).then(() => { c.remove(); counts[j].textContent = String(+counts[j].textContent! + 1); });
       await sleep(gap);
     }

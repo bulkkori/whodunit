@@ -550,3 +550,41 @@ button.sk *{visibility:hidden}
 #board .room{padding:calc(var(--wallw) + 2px)}
 .dgap{position:absolute;background:var(--door);box-shadow:inset 0 0 0 1px #0006;z-index:1}
 #board .room.center{outline:1px dashed color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:-5px}
+
+/* ===== 카드 앞면(고급형): 크기는 width만, 안쪽은 cqw(카드 너비 비율) ===== */
+.gcard{--kc:#b23a3a;--kc2:#6e1f22;container-type:inline-size;position:relative;display:block;padding:0;border:0;
+  border-radius:7%/5%;overflow:hidden;color:#2a1f17;
+  background:radial-gradient(ellipse at 50% 35%,#fbf6ea 0%,#efe3c8 60%,#dcc8a0 100%);
+  box-shadow:0 0 0 1px #0007,0 3px 8px #0009,inset 0 0 0 1px #fff6}
+.gcard.k-w{--kc:#2f5d9e;--kc2:#18325a}.gcard.k-r{--kc:#2e7d4f;--kc2:#164229}
+.gcard::before{content:"";position:absolute;inset:3.5cqw;border-radius:5cqw;border:1.6cqw solid var(--kc);box-shadow:inset 0 0 0 .8cqw #c9a96e,inset 0 0 0 1.2cqw #0003;pointer-events:none;z-index:3}
+.gcard::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;mix-blend-mode:multiply;opacity:.35;
+  background:repeating-linear-gradient(45deg,#0000 0 2px,#7a5a3010 2px 3px),radial-gradient(ellipse at 50% 50%,#0000 60%,#6b4a2240 100%)}
+.gc-band{position:absolute;left:6cqw;right:6cqw;top:6cqw;height:15cqw;display:flex;align-items:center;justify-content:center;gap:2cqw;z-index:2;
+  background:linear-gradient(180deg,var(--kc),var(--kc2));color:#fff4dc;border-radius:2cqw 2cqw 0 0;
+  font:800 max(7px,9cqw)/1 system-ui,"Pretendard","Malgun Gothic",sans-serif;letter-spacing:.25em;text-shadow:0 1px 0 #0008}
+.gc-band i{font-style:normal;font-size:max(7px,9cqw);letter-spacing:0}
+.gc-art{position:absolute;left:6cqw;right:6cqw;top:21cqw;bottom:8cqw;padding-bottom:20cqw;z-index:1;overflow:hidden;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 38%,#3a4458,#12151d);box-shadow:inset 0 0 0 .8cqw #c9a96e,inset 0 0 6cqw #000c}
+.k-s .gc-art{background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--tone) 60%,#fff) 0%,var(--tone) 40%,color-mix(in srgb,var(--tone) 35%,#120d10) 100%)}
+.k-r .gc-art{background:linear-gradient(#0000,#0006),var(--floor,none) center/160%,radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--tone) 70%,#fff),color-mix(in srgb,var(--tone) 50%,#111))}
+.gc-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 25%}
+.k-w .gc-art img{object-fit:contain;padding:6cqw 8cqw 24cqw;filter:drop-shadow(0 2cqw 2cqw #000a)}
+.gc-ph{font-size:max(16px,40cqw);line-height:1;filter:drop-shadow(0 1.5cqw 1.5cqw #000a)}
+.k-s .gc-ph{width:52cqw;height:52cqw;border-radius:50%;display:grid;place-items:center;font:900 max(12px,28cqw)/1 system-ui,sans-serif;color:#1b1215;
+  background:radial-gradient(circle at 40% 35%,#fff8,#0000 60%),var(--tone);box-shadow:0 0 0 1.5cqw #c9a96e,0 0 0 2.3cqw #0006,0 2cqw 4cqw #0008}
+.gc-name{position:absolute;left:4cqw;right:4cqw;bottom:6cqw;min-height:22cqw;z-index:2;display:grid;place-items:center;text-align:center;padding:1.5cqw 3cqw;
+  background:linear-gradient(180deg,#fbf4e2,#e6d4ae);border-radius:2cqw;box-shadow:0 0 0 .8cqw var(--kc),0 0 0 1.4cqw #c9a96e,0 1.5cqw 3cqw #0007;
+  font:800 max(8px,11.5cqw)/1.12 system-ui,"Pretendard","Malgun Gothic",sans-serif;color:#2a1f17;word-break:keep-all}
+/* 작은 카드: 띠 글자는 아이콘만 */
+.gcard.small .gc-band span{display:none}
+/* ===== 카드 뒷면 ===== */
+.cback{container-type:inline-size;border:0;border-radius:7%/5%;overflow:hidden;background:#141019 center/cover no-repeat;box-shadow:0 0 0 1px #0008,0 3px 8px #000a}
+/* 무늬는 자식 층(::before)에 — cqw는 자기 자신이 아니라 감싼 컨테이너 기준이라 */
+.cback:not(.has-img)::before{content:"";position:absolute;inset:0;
+  background-image:
+    radial-gradient(circle at 50% 50%,#0000 0 22cqw,#c9a96e 22cqw 23.5cqw,#0000 23.5cqw 27cqw,#c9a96e55 27cqw 27.8cqw,#0000 27.8cqw),
+    repeating-linear-gradient(45deg,#c9a96e2a 0 1px,#0000 1px 9cqw),repeating-linear-gradient(-45deg,#c9a96e2a 0 1px,#0000 1px 9cqw),
+    radial-gradient(ellipse at 50% 45%,#3a2230,#141019 75%);
+  box-shadow:inset 0 0 0 3cqw #141019,inset 0 0 0 4cqw #c9a96e,inset 0 0 0 5.5cqw #141019,inset 0 0 0 6cqw #c9a96e88}
+.cback .cb-emblem{position:absolute;inset:0;display:grid;place-items:center;color:#e3c27e;font:900 max(10px,30cqw)/1 Georgia,serif;text-shadow:0 0 4cqw #c9a96e88,0 1cqw 1cqw #000}

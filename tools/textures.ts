@@ -1,7 +1,7 @@
-// 텍스처 자동 반영: 폴더에 이미지(floor-r0.png, wall-hall.png …)를 넣으면 게임용으로 변환해 public/assets/<테마>/에 넣고
+// 그림 자동 반영: 폴더에 이미지(floor-r0.png, wall-hall.png, s0.png, w0.png, r0.png, back.png …)를 넣으면 게임용으로 변환해 public/assets/<테마>/에 넣고
 // public/assets/manifest.json(테마별로 준비된 텍스처 목록)을 다시 쓴다. 게임은 이 목록에 있는 것만 쓴다(없으면 단색).
 // 사용: node tools/textures.ts <원본 폴더> <테마: mansion|atlantis|station> [--watch]
-//   --watch: 폴더를 지켜보다가 파일이 바뀌면 자동으로 다시 변환. 하위 폴더(바닥/, 벽/)도 포함.
+//   --watch: 폴더를 지켜보다가 파일이 바뀌면 자동으로 다시 변환. 하위 폴더(바닥/, 벽/, 카드/)도 포함.
 import { execFileSync } from 'node:child_process';
 import { readdirSync, watch, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -23,7 +23,7 @@ export function writeManifest() {
   const m: Record<string, string[]> = {};
   for (const t of THEMES) {
     const dir = join(root, 'public/assets', t);
-    if (existsSync(dir)) m[t] = readdirSync(dir).filter(f => /^(floor|wall)-.+\.webp$/.test(f)).map(f => f.replace('.webp', '')).sort();
+    if (existsSync(dir)) m[t] = readdirSync(dir).filter(f => /^((floor|wall)-.+|[swr]\d+|back)\.webp$/.test(f)).map(f => f.replace('.webp', '')).sort();
   }
   writeFileSync(join(root, 'public/assets/manifest.json'), JSON.stringify(m));
   console.log('목록 갱신:', Object.entries(m).map(([t, l]) => `${t} ${l.length}장`).join(' · '));

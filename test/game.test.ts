@@ -346,3 +346,10 @@ test('턴 종료: 굴렸는데 갈 칸이 없으면 허용', () => {
   assert.equal(G.moves(g, 0).size, 0);
   assert.equal(G.act(g, 0, { t: 'end' }), null);
 });
+
+test('브라우저로 가는 view에는 패 배분 시드가 없다(공개 id만) — 시드로 봉투를 역산하는 치트 차단', () => {
+  const g = G.newGame('mansion', seats(3), 12345); g.pub = 999;
+  const v = G.view(g, 0);
+  assert.equal(v.seed, 999);
+  assert.notEqual(G.newGame('mansion', seats(3), v.seed).env.s + G.newGame('mansion', seats(3), v.seed).env.w, g.env.s + g.env.w);
+});

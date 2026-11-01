@@ -78,6 +78,8 @@ export type LogEntry =
 export interface GameOpts { roles: boolean; bluff: boolean }
 export interface Game {
   theme: ThemeKey; seed: number; map: GameMap; players: Player[]; env: Triple;
+  /** 브라우저에 보내는 판 번호(서버가 따로 뽑음). 패 배분 시드(seed)는 절대 밖으로 내보내지 않는다 */
+  pub?: number;
   turn: number; phase: Phase; roll: number | null; sug: Suggestion | null;
   log: LogEntry[]; winner: number | null; turnNo: number; rolls: number; opts: GameOpts;
   /** 도구 말 위치: weapons[k] = 도구 k가 놓인 방 번호. 추리하면 그 방으로 옮겨진다 */
@@ -645,7 +647,8 @@ export function botAction(g: Game, r: Rng = Math.random): Action {
 export function view(g: Game, i: number): View {
   const me = g.players[i], over = g.phase === 'over', spect = !!me?.out;
   return {
-    theme: g.theme, seed: g.seed, map: g.map, turn: g.turn, phase: g.phase, roll: g.roll, turnNo: g.turnNo, winner: g.winner, me: i,
+    // seed 자리에는 공개 id만(진짜 시드로 패를 역산하지 못하게)
+    theme: g.theme, seed: g.pub ?? g.seed, map: g.map, turn: g.turn, phase: g.phase, roll: g.roll, turnNo: g.turnNo, winner: g.winner, me: i,
     players: g.players.map((p, j) => ({
       name: p.name, suspect: p.suspect, pos: p.pos, out: p.out, bot: p.bot, afk: p.afk, handCount: p.hand.length, left: p.left,
       canSuggest: j === i ? p.canSuggest : undefined, fresh: p.fresh, hand: j === i || over ? p.hand : undefined,

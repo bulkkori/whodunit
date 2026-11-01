@@ -300,7 +300,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
 
   function fit() {
     const v = THREE.MathUtils.degToRad(camera.fov) / 2, h = Math.atan(Math.tan(v) * camera.aspect);
-    const d = (n * 0.52) / Math.sin(Math.min(v, h)); // 비스듬히 내려다보면 세로로 납작해져서 구 반지름(0.71n)보다 좁게 잡아도 들어옴
+    const d = (n * (camera.aspect > 1.2 ? 0.52 : 0.66)) / Math.sin(Math.min(v, h)); // 가로로 긴 칸(폰 4:3)은 더 가까이, 정사각형은 앞쪽 모서리가 넓게 보여서 조금 멀리
     camera.position.set(0, d * 0.78, d * 0.62); controls.target.set(0, 0, 0); controls.update();
   }
 

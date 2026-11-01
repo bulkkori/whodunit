@@ -69,7 +69,7 @@
           <small class="hint">남는 자리는 게임을 시작할 때 봇이 채워요</small>
         </div>
         <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
-        <label class="switch"><span>🎙️ 보이스 채팅 모드<small>지난 추리 기록을 숨겨요. 말로 듣고 각자 메모하는 실제 보드게임처럼</small></span><input type="checkbox" id="c_voice"><i></i></label>
+        <label class="switch"><span>🎙️ 보이스 채팅 모드<small>수사 일지의 지난 추리를 숨겨요. 말로 듣고 각자 노트에 적는 실제 보드게임처럼</small></span><input type="checkbox" id="c_voice"><i></i></label>
         <div class="row cta"><button id="c_cancel" class="ghost">취소</button><button id="c_make" class="loadbtn"><span>방 만들기</span></button></div>
       </div>
     </div>
@@ -102,7 +102,7 @@
               <div class="stepper" id="wmax"><button type="button" data-d="-1" aria-label="한 명 줄이기">−</button><output>6</output><span>명</span><button type="button" data-d="1" aria-label="한 명 늘리기">＋</button></div>
             </div>
             <label class="switch"><span>🎭 블러핑 허용</span><input type="checkbox" id="optbluff"><i></i></label>
-            <label class="switch"><span>🎙️ 보이스 채팅 모드<small>지난 추리 기록 숨김 · 메모는 직접</small></span><input type="checkbox" id="optvoice"><i></i></label>
+            <label class="switch"><span>🎙️ 보이스 채팅 모드<small>지난 수사 일지 숨김 · 노트는 직접</small></span><input type="checkbox" id="optvoice"><i></i></label>
           </div>
         </div>
       </div>
@@ -152,9 +152,10 @@
 </main>
 
 <div id="drawer" hidden>
-  <button id="handle" aria-label="메모지 열기/닫기">📒 메모 <kbd>N</kbd></button>
+  <button id="handle" aria-label="추리 노트 열기/닫기">📒 추리 노트 <kbd>N</kbd></button>
   <div class="sheet">
-    <div class="sheethead"><div class="dtabs" role="tablist"><button type="button" data-tab="memo" class="on">📒 메모</button><button type="button" data-tab="log">📜 추리 기록</button></div><button type="button" id="tallmemo" class="ghost" aria-label="크게 보기" title="크게 보기">⤢</button><select id="automode" aria-label="자동 메모" title="자동 메모 방식"><option value="hint">자동: 확실한 것 + 단서(?)</option><option value="sure">자동: 확실한 것만</option><option value="off">직접 표시 (자동 없음)</option></select><button id="closememo" class="ghost" aria-label="메모지 닫기">✕</button></div>
+    <i class="grab" aria-hidden="true"></i>
+    <div class="sheethead"><div class="dtabs" role="tablist"><button type="button" data-tab="memo" class="on">📒 추리 노트</button><button type="button" data-tab="log">📜 수사 일지</button></div><button type="button" id="tallmemo" class="ghost" aria-label="크게 보기" title="크게 보기">⤢</button><select id="automode" aria-label="자동 메모" title="자동 메모 방식"><option value="hint">자동: 확실한 것 + 단서(?)</option><option value="sure">자동: 확실한 것만</option><option value="off">직접 표시 (자동 없음)</option></select><button id="closememo" class="ghost" aria-label="추리 노트 닫기">✕</button></div>
     <p class="hint t-memo">칸: 빈칸 → ✗ → ✓ → ? · 이름 누르면 줄 긋기 · 흐린 ?는 단서(남끼리 보여 준 세 장 중 하나)</p>
     <div class="memowrap t-memo"><table id="memo"></table></div>
     <input id="note" class="t-memo" maxlength="200" placeholder="자유 메모">
@@ -162,7 +163,7 @@
   </div>
 </div>
 
-<div id="dockside"><button type="button" data-tab="memo">📒<span>메모</span></button><button type="button" data-tab="log">📜<span>기록</span></button></div>
+<div id="dockside"><button type="button" data-tab="memo">📒<span>노트</span></button><button type="button" data-tab="log">📜<span>일지</span></button></div>
 <dialog id="dlg"></dialog>
 <div id="toast"></div>
 <div id="reveal" hidden></div>

@@ -613,6 +613,36 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   armed = ok ? p : null;
   showTip(p, x, y, !ok); // 갈 수 있는 칸이면 '한 번 더 누르면 이동' 안내를 계속 띄워 둠
 }
+// 내 말 끌어서 놓기(터치·마우스): 말을 누른 채 끌면 손가락 위에 말이 떠서 따라오고 길이 보임 → 놓으면 이동
+{
+  const bd = $('#board'); let tdrag: { ghost: HTMLElement; p: G.Pos | null } | null = null, swallow = false;
+  const LIFT = 46; // 손가락에 가리지 않게 말을 손가락보다 위에 띄움
+  bd.addEventListener('pointerdown', e => {
+    const g = S?.game; if (!g || g.turn !== g.me || g.phase !== 'move' || diceBusy) return;
+    const tok = bd.querySelector<HTMLElement>(`.tok[data-k="p${g.me}"]`); if (!tok) return;
+    const r = tok.getBoundingClientRect();
+    if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > Math.max(26, r.width)) return;
+    e.stopPropagation(); bd.setPointerCapture(e.pointerId); lastPointer = e.pointerType;
+    const ghost = tok.cloneNode(true) as HTMLElement; ghost.classList.add('tokghost'); document.body.append(ghost);
+    tdrag = { ghost, p: null }; armed = null;
+  });
+  bd.addEventListener('pointermove', e => {
+    if (!tdrag) return; const g = S?.game; if (!g) return;
+    const y = e.clientY - (e.pointerType === 'mouse' ? 0 : LIFT);
+    tdrag.ghost.style.transform = `translate(${e.clientX}px,${y}px) translate(-50%,-50%) scale(1.6)`;
+    const c = document.elementFromPoint(e.clientX, y)?.closest<HTMLElement>('#board [data-p]');
+    let p = c ? +c.dataset.p! : null;
+    if (p == null || !myMoves(g).has(p)) p = nearestMove(g, e.clientX, y) ?? p;
+    if (p !== tdrag.p) { tdrag.p = p; showTip(p, e.clientX, y - 80); }
+  });
+  const end = (ok: boolean) => {
+    if (!tdrag) return; const { ghost, p } = tdrag; tdrag = null; ghost.remove(); swallow = true; setTimeout(() => (swallow = false), 60);
+    const g = S?.game; $('#hovertip').hidden = true; previewPath(null);
+    if (ok && g && p != null && myMoves(g).has(p)) act({ t: 'move', to: p });
+  };
+  bd.addEventListener('pointerup', () => end(true)); bd.addEventListener('pointercancel', () => end(false));
+  bd.addEventListener('click', e => { if (swallow) { e.stopImmediatePropagation(); swallow = false; } }, true);
+}
 $('#board').onmousemove = e => {
   if (touchLike()) return; // 터치 뒤 브라우저가 흉내 내는 mousemove는 무시
   const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]');
@@ -656,11 +686,15 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
     const d = G.distances(g.map, me.pos, blocked).get(p);
     const moving = g.turn === g.me && g.phase === 'move' && !diceBusy && g.roll != null;
     if (d == null) line2 = blocked.has(p) ? '❌ 다른 말이 있는 칸' : '❌ 갈 수 없음 (다른 말이 길을 막음)';
-    else if (moving) line2 = d <= g.roll! ? `✅ 이동 가능 · ${d}칸 (최대 ${g.roll}칸)` + (touchLike() && armed === p ? ' — 한 번 더 누르면 이동' : '') : `❌ 이동 불가 · ${d}칸 필요 (최대 ${g.roll}칸)`;
+    else if (moving) line2 = d <= g.roll! ? `✅ 이동 가능 · ${d}칸 (최대 ${g.roll}칸)` + (touchLike() && armed === p ? ' — 버튼이나 같은 칸을 한 번 더' : '') : `❌ 이동 불가 · ${d}칸 필요 (최대 ${g.roll}칸)`;
     else line2 = `여기까지 ${d}칸`;
   }
   tip.innerHTML = '';
   tip.append(el('b', '', name), el('span', '', line2));
+  // 터치: 갈 수 있는 칸을 골랐으면 큰 '여기로 이동' 버튼(작은 칸을 다시 정확히 누를 필요 없음)
+  const go = touchLike() && armed === p && g.turn === g.me && g.phase === 'move' && !diceBusy;
+  tip.classList.toggle('act', go);
+  if (go) { const b = el('button', 'tipgo', '📍 여기로 이동'); b.onclick = ev => { ev.stopPropagation(); tapCell(p, x, y, true); }; tip.append(b); }
   tip.style.left = Math.min(x + 14, innerWidth - 220) + 'px';
   tip.style.top = Math.min(y + 14, innerHeight - 70) + 'px';
   tip.hidden = false;
@@ -732,7 +766,7 @@ function renderLog(g: G.View) {
   if (lastSug && now) { const k = lastSug.cloneNode(true) as HTMLElement; if (g.sug) k.querySelector('ol')!.append(el('li', 'wait', `⏳ ${nm(g, g.sug.refuter ?? g.turn)} 반박 차례…`)); cs.replaceChildren(k); }
   items.reverse();
   $('#log').replaceChildren(...(items.length ? items : [el('p', 'sub', '아직 추리가 없습니다')]));
-  $('#logmode').textContent = g.opts.voice ? '🎙️ 보이스 모드: 지금 진행 중인 추리만 보입니다. 지난 기록은 각자 듣고 메모하세요.' : '';
+  $('#logmode').textContent = g.opts.voice ? '🎙️ 보이스 모드: 지금 진행 중인 추리만 보입니다. 지난 추리는 각자 듣고 노트에 적으세요.' : '';
 }
 
 type ButtonAction = 'roll' | 'passage' | 'suggest' | 'end' | 'accuse';
@@ -750,13 +784,13 @@ function renderPanel(g: G.View) {
     !my ? `${nm(g, g.turn)}의 차례입니다` :
     me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
     ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추론하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
-    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? `🎲 ${g.roll} — 칸을 한 번 누르면 길이 보이고, 한 번 더 누르면 이동해요` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
+    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
     inRoom && me.canSuggest ? '추론하거나 턴을 끝내세요' : '턴을 끝내세요';
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',
     passage: my && ph === 'roll' && inRoom && g.map.passages[G.roomOf(me.pos!)] !== undefined,
     suggest: my && (ph === 'roll' || ph === 'act') && inRoom && !!me.canSuggest,
-    end: my && ph !== 'refute',
+    end: my && G.canEnd(g, g.me), // 굴리기 전·굴리고 이동 전에는 못 끝냄
     accuse: my && ph !== 'refute' && ph !== 'move' && inCenter && !me.fresh,
   };
   for (const b of document.querySelectorAll<HTMLButtonElement>('#actions button')) b.disabled = !en[b.dataset.a as ButtonAction];
@@ -952,7 +986,7 @@ function renderMemo(g: G.View) {
   }
   const M = memo!;
   voiceOn = !!g.opts.voice;
-  const am = $<HTMLSelectElement>('#automode'); am.disabled = voiceOn; am.title = voiceOn ? '보이스 모드: 메모는 모두 직접' : '자동 메모 방식';
+  const am = $<HTMLSelectElement>('#automode'); am.disabled = voiceOn; am.title = voiceOn ? '보이스 모드: 노트는 모두 직접' : '자동 표시 방식';
   if (voiceOn) am.value = 'off';
   if (voiceOn || M.auto === 'off') return;
   let ch = false;
@@ -1058,6 +1092,27 @@ const syncTabs = () => {
 };
 new MutationObserver(syncTabs).observe(dr, { attributes: true, attributeFilter: ['class', 'data-tab'] });
 for (const b of document.querySelectorAll<HTMLElement>('.dtabs [data-tab]')) b.onclick = () => { dr.dataset.tab = b.dataset.tab; };
+// 폰 스와이프: 머리줄(손잡이)을 위로 = 크게, 아래로 = 작게 → 닫기 / 내용을 좌우로 = 추리 노트 ↔ 수사 일지
+{
+  const sheet = dr.querySelector<HTMLElement>('.sheet')!, TABS = ['memo', 'log'];
+  const phone = () => matchMedia('(max-aspect-ratio:23/20) and (max-width:639px)').matches;
+  let sw: { x: number; y: number; head: boolean } | null = null;
+  sheet.addEventListener('pointerdown', e => {
+    if (!phone() || (e.target as HTMLElement).closest('button,select,input,textarea')) return;
+    sw = { x: e.clientX, y: e.clientY, head: !!(e.target as HTMLElement).closest('.grab,.sheethead') };
+  });
+  sheet.addEventListener('pointerup', e => {
+    if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y, head = sw.head; sw = null;
+    if (head && Math.abs(dy) > 36 && Math.abs(dy) > Math.abs(dx)) {
+      if (dy < 0) dr.classList.add('tall'); else if (dr.classList.contains('tall')) dr.classList.remove('tall'); else dr.classList.remove('open');
+      store.set('wd_tallmemo', dr.classList.contains('tall'));
+    } else if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
+      const i = TABS.indexOf(dr.dataset.tab ?? 'memo'), j = Math.min(TABS.length - 1, Math.max(0, i + (dx < 0 ? 1 : -1)));
+      dr.dataset.tab = TABS[j];
+    }
+  });
+  sheet.addEventListener('pointercancel', () => (sw = null));
+}
 // 폰: 아래 독의 메모·기록 버튼 — 같은 탭을 다시 누르면 닫힘
 for (const b of document.querySelectorAll<HTMLElement>('#dockside [data-tab]')) b.onclick = () => {
   const same = dr.classList.contains('open') && (dr.dataset.tab ?? 'memo') === b.dataset.tab;

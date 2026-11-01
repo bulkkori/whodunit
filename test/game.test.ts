@@ -336,3 +336,22 @@ test('보이스 모드에서도 남끼리 보여 준 카드 내용은 숨김', (
   const e = G.view(g, 2).log.find(x => x.t === 'shown');
   assert.ok(e && e.t === 'shown' && e.card === undefined);
 });
+
+test('턴 종료: 굴리기 전·이동 전에는 거부, 이동해서 방에 들어간 뒤에는 허용', () => {
+  const g = G.newGame('mansion', seats(3), 5);
+  assert.ok(G.act(g, 0, { t: 'end' }));                        // 굴리기 전
+  G.act(g, 0, { t: 'roll' }, () => 0.99);
+  assert.equal(g.phase, 'move');
+  assert.ok(G.act(g, 0, { t: 'end' }));                        // 굴렸는데 이동 전
+  g.phase = 'act';
+  assert.equal(G.act(g, 0, { t: 'end' }), null);
+  assert.equal(g.turn, 1);
+});
+
+test('턴 종료: 굴렸는데 갈 칸이 없으면 허용', () => {
+  const g = G.newGame('mansion', seats(3), 5);
+  G.act(g, 0, { t: 'roll' }, () => 0);
+  g.roll = 0;                                                  // 갈 수 있는 칸 없음
+  assert.equal(G.moves(g, 0).size, 0);
+  assert.equal(G.act(g, 0, { t: 'end' }), null);
+});

@@ -287,6 +287,11 @@ export function path(map: GameMap, from: Pos, to: Pos, blocked: Set<Pos> = new S
   return out;
 }
 
+/** 턴 종료 가능: 행동(굴려서 이동·추론·능력)을 한 뒤에만. 굴렸는데 갈 칸이 하나도 없으면(길이 막힘) 예외로 허용 */
+export function canEnd(g: BoardState, i: number): boolean {
+  return g.turn === i && (g.phase === 'act' || (g.phase === 'move' && moves(g, i).size === 0));
+}
+
 export function moves(g: BoardState, i: number): Set<Pos> {
   const pos = g.players[i]?.pos;
   if (g.phase !== 'move' || g.turn !== i || pos == null || g.roll == null) return new Set();
@@ -529,6 +534,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     }
     case 'end':
+      if (!canEnd(g, i)) return g.phase === 'roll' ? '먼저 주사위를 굴리세요' : g.phase === 'move' ? '먼저 말을 이동하세요' : '지금은 턴을 끝낼 수 없습니다';
       endTurn(g); return null;
   }
   return '알 수 없는 행동';
@@ -631,7 +637,7 @@ export function botAction(g: Game, r: Rng = Math.random): Action {
       const d = Math.min(...dists.map(m => m.get(o) ?? Infinity));
       if (d < bd) { bd = d; best = o; }
     }
-    return best === null ? { t: 'end' } : { t: 'move', to: best };
+    return best !== null ? { t: 'move', to: best } : opts.length ? { t: 'move', to: opts[0] } : { t: 'end' }; // 복도 칸이 없으면 아무 방이라도
   }
   return { t: 'end' };
 }

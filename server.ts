@@ -84,7 +84,7 @@ function update(room: Room) {
   if (room.deadline) room.timer = setTimeout(() => { G.timeout(g); update(room); }, room.deadline - Date.now());
   if (p.bot || p.afk) room.botTimer = setTimeout(() => {
     const err = G.act(g, a, G.botAction(g));
-    if (err) { console.error('bot error', err); G.act(g, a, { t: 'end' }); }
+    if (err) { console.error('bot error', err); G.timeout(g); } // 턴 종료가 막힌 단계에서도 넘어가도록 시간 초과 처리
     update(room);
   }, g.phase === 'move' ? BOT_MS * 2.3 : BOT_MS); // 굴린 직후엔 주사위 연출(약 1.5초)이 끝날 때까지 기다림
   broadcast(room);

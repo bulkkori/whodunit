@@ -21,30 +21,55 @@
   <section id="lobby" class="screen card">
     <span class="badge">EARLY ACCESS · 데모</span>
     <h1>🕵️ 후더닛</h1>
-    <p class="sub">사건 봉투 속 <b>범인 · 흉기 · 장소</b>를 가장 먼저 밝혀내세요. 3~6명, 빈자리는 봇.</p>
+    <p class="sub">사건 봉투 속 <b>범인 · 흉기 · 장소</b>를 가장 먼저 밝혀내세요. 3~8명, 빈자리는 봇.</p>
     <p id="wake" class="notice" hidden>☕ 서버를 깨우는 중입니다… (무료 서버라 최대 1분 걸릴 수 있어요)</p>
     <label class="field">닉네임 <input id="name" maxlength="12" placeholder="탐정 이름"></label>
-    <div class="opts"><label class="opt"><input type="checkbox" id="c_roles" checked> 🕵️ 탐정 직업 (보너스칸 특수 능력)</label><label class="opt"><input type="checkbox" id="c_bluff" checked> 🎭 블러핑 허용 (내 카드 지목 가능)</label></div>
-    <div class="row"><select id="theme"></select><button id="create">방 만들기</button></div>
+    <button id="create">＋ 방 만들기</button>
     <button id="practice" class="ghost">🤖 봇 2명과 바로 연습</button>
-    <div class="or">또는</div>
-    <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off"><button id="join">입장</button></div>
+    <div class="or">또는 참여 코드로 입장</div>
+    <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off"><button id="join" class="loadbtn"><span>입장</span></button></div>
+  </section>
+
+  <section id="createbox" class="screen card" hidden>
+    <h2>방 만들기</h2>
+    <label class="field">방 제목 <input id="c_title" maxlength="20" placeholder="예: 금요일 밤의 사건"></label>
+    <label class="field">맵 <select id="theme"></select></label>
+    <div class="field">최대 인원
+      <div class="seg" id="maxmode" role="tablist" aria-label="인원수 입력 방식 시안">
+        <button data-m="select" class="on">셀렉트</button><button data-m="text">텍스트 필드</button><button data-m="stepper">수량 스테퍼</button>
+      </div>
+      <select id="c_max_sel"></select>
+      <input id="c_max_txt" type="number" inputmode="numeric" min="3" max="8" hidden>
+      <div id="c_max_step" class="stepper" hidden><button type="button" data-d="-1" aria-label="한 명 줄이기">−</button><output id="c_max_val">6</output><span>명</span><button type="button" data-d="1" aria-label="한 명 늘리기">＋</button></div>
+    </div>
+    <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
+    <label class="switch"><span>🕵️ 탐정 직업<small>보너스칸(!)에서 쓰는 특수 능력</small></span><input type="checkbox" id="c_roles" checked><i></i></label>
+    <div class="row"><button id="c_cancel" class="ghost">취소</button><button id="c_make" class="loadbtn"><span>방 만들기</span></button></div>
   </section>
 
   <section id="wait" class="screen card" hidden>
-    <p class="sub">참여 코드</p>
-    <div id="bigcode"></div>
-    <button id="copy" class="ghost">🔗 초대 링크 복사</button>
+    <h2 id="wtitle"></h2>
+    <div class="codebox"><span class="sub">참여 코드</span><b id="bigcode"></b><button id="copy" class="ghost">🔗 초대 링크 복사</button></div>
+    <div class="chips" id="wopts"></div>
+    <p class="sub" id="wcount"></p>
     <ul id="seats"></ul>
-    <p class="sub">내 인물 말 고르기</p>
-    <div id="picks"></div>
-    <label class="opt"><input type="checkbox" id="optroles"> 🕵️ 탐정 직업 (보너스칸 특수 능력)</label>
-    <label class="opt"><input type="checkbox" id="optbluff"> 🎭 블러핑 허용</label>
     <div id="hostctl">
-      <select id="theme2"></select>
-      <div class="row"><button id="addbot" class="ghost">＋ 봇</button><button id="rmbot" class="ghost">－ 봇</button><button id="start">시작</button></div>
+      <div class="row"><select id="theme2" aria-label="맵"></select></div>
+      <label class="switch"><span>🎭 블러핑 허용</span><input type="checkbox" id="optbluff"><i></i></label>
+      <label class="switch"><span>🕵️ 탐정 직업</span><input type="checkbox" id="optroles"><i></i></label>
+      <div class="row"><button id="addbot" class="ghost">＋ 봇</button><button id="rmbot" class="ghost">－ 봇</button></div>
+      <button id="start">▶ 게임 시작</button>
     </div>
+    <button id="readybtn" hidden>✋ 준비 완료</button>
     <p id="waitmsg" class="sub"></p>
+  </section>
+
+  <section id="pickstage" class="screen card" hidden>
+    <h2>🎭 말 고르기</h2>
+    <div class="pickbar"><div id="pbar"><i></i></div><b id="ptime">2:00</b></div>
+    <p class="sub">이번 판에 맡을 인물 말을 고르세요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.</p>
+    <div id="picks"></div>
+    <ul id="pickseats"></ul>
   </section>
 
   <section id="game" class="screen" hidden>

@@ -301,3 +301,46 @@ main{padding:var(--pad)}
 }
 #cardsbox{display:flex;flex-direction:column;gap:8px}
 #cardsbox h3{margin:6px 0 0;font-size:13px;color:var(--sub)}
+
+/* ===== 방 만들기 · 대기실 · 말 고르기 ===== */
+.card h2{margin:0;font-size:22px}
+.seg{display:flex;gap:4px;margin:2px 0 4px}
+.seg button{flex:1;padding:5px 6px;font-size:12px;background:transparent;color:var(--sub);border:1px solid var(--line)}
+.seg button.on{background:var(--accent);color:#16110f;border-color:var(--accent)}
+.field select,.field input{color:var(--ink);font-size:15px}
+.stepper{display:flex;align-items:center;gap:10px;background:var(--hall);border:1px solid var(--line);border-radius:8px;padding:4px}
+.stepper button{width:40px;height:36px;padding:0;font-size:20px}
+.stepper output{font-size:20px;font-weight:800;min-width:2ch;text-align:center;color:var(--ink)}
+.stepper span{color:var(--sub);margin-right:auto}
+/* 스위치(토글) */
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer;color:var(--ink);font-size:15px}
+.switch span{flex:1;display:flex;flex-direction:column}
+.switch small{color:var(--sub);font-size:12px}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch i{width:46px;height:26px;border-radius:999px;background:var(--line);position:relative;transition:background .2s;flex:none}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px #0006}
+.switch input:checked + i{background:var(--accent)}
+.switch input:checked + i::after{transform:translateX(20px)}
+.switch input:focus-visible + i{outline:2px solid var(--accent);outline-offset:2px}
+.switch input:disabled + i{opacity:.45}
+/* 로딩 버튼 */
+.loadbtn{position:relative}
+button.loading{color:transparent!important;pointer-events:none}
+button.loading::after{content:"";position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:50%;border:2px solid #16110f;border-right-color:transparent;animation:spin .7s linear infinite}
+button.ghost.loading::after{border-color:var(--ink);border-right-color:transparent}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* 대기실 */
+.codebox{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--hall);border-radius:12px;padding:12px}
+.codebox b{font-size:36px;letter-spacing:.25em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+#seats li.me,#pickseats li.me{outline:1px solid var(--accent)}
+#seats li.empty{background:transparent;border:1px dashed var(--line);color:var(--sub);font-size:13px;justify-content:center}
+#seats .tag.ok{color:#7fd47f}
+#pickseats{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+#pickseats li{background:var(--hall);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;font-size:14px}
+#pickseats .tag{color:var(--sub);font-size:12px}
+.pickbar{display:flex;align-items:center;gap:10px}
+#pbar{flex:1;height:8px;background:var(--hall);border-radius:4px;overflow:hidden}
+#pbar i{display:block;height:100%;background:var(--accent);width:100%;transition:width .2s linear}
+#ptime{font-variant-numeric:tabular-nums}
+#start:disabled{opacity:.4}

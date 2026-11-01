@@ -33,8 +33,9 @@ function connect() {
   };
   sock.onmessage = e => {
     const m = JSON.parse(e.data) as ServerMsg;
+    stopLoading();
     if (m.t === 'error') { if (!S) { code = null; history.replaceState(null, '', location.pathname); } return toast(m.msg); }
-    S = m; code = m.code;
+    S = m; code = m.code; creating = false;
     if (location.search !== '?room=' + m.code) history.replaceState(null, '', '?room=' + m.code);
     deadline = m.left == null ? 0 : Date.now() + m.left;
     total = m.game?.phase === 'refute' ? G.REFUTE_MS : G.TURN_MS;
@@ -56,17 +57,60 @@ for (const sel of [$<HTMLSelectElement>('#theme'), $<HTMLSelectElement>('#theme2
   for (const [k, t] of Object.entries(G.THEMES)) sel.append(new Option(`${t.icon} ${t.name}`, k));
 $in('#name').value = store.get('wd_name', '');
 if (code) $in('#code').value = code;
+// ---------- 로딩 버튼: 누르면 돌아가는 표시 + 다시 못 누름, 서버 응답(방 정보·오류)이 오면 풀림 ----------
+let loadingBtn: HTMLButtonElement | null = null, loadingT: ReturnType<typeof setTimeout> | undefined;
+function startLoading(b: HTMLButtonElement) {
+  loadingBtn = b; b.classList.add('loading'); b.disabled = true;
+  clearTimeout(loadingT); loadingT = setTimeout(() => { stopLoading(); toast('응답이 늦어요 — 다시 시도해 주세요'); }, 15000);
+}
+function stopLoading() { clearTimeout(loadingT); if (loadingBtn) { loadingBtn.classList.remove('loading'); loadingBtn.disabled = false; loadingBtn = null; } }
+
+// ---------- 방 만들기 화면 ----------
+let creating = false;
+const maxSel = $<HTMLSelectElement>('#c_max_sel'), maxTxt = $in('#c_max_txt');
+for (let n = 3; n <= G.MAX_PLAYERS; n++) maxSel.append(new Option(`${n}명`, String(n)));
+let maxPlayers = 6;
+function setMax(n: number) {
+  maxPlayers = Math.min(G.MAX_PLAYERS, Math.max(3, Math.round(n) || 6));
+  maxSel.value = String(maxPlayers); maxTxt.value = String(maxPlayers); $('#c_max_val').textContent = String(maxPlayers);
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max_step button')) b.disabled = maxPlayers + +b.dataset.d! < 3 || maxPlayers + +b.dataset.d! > G.MAX_PLAYERS;
+}
+setMax(6);
+maxSel.onchange = () => setMax(+maxSel.value);
+maxTxt.onchange = () => setMax(+maxTxt.value);
+for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max_step button')) b.onclick = () => setMax(maxPlayers + +b.dataset.d!);
+// 인원수 입력 방식 시안: 셀렉트 / 텍스트 필드 / 수량 스테퍼를 탭으로 바꿔 보기
+for (const b of document.querySelectorAll<HTMLElement>('#maxmode button')) b.onclick = e => {
+  e.preventDefault();
+  const m = b.dataset.m;
+  document.querySelectorAll('#maxmode button').forEach(x => x.classList.toggle('on', x === b));
+  maxSel.hidden = m !== 'select'; maxTxt.hidden = m !== 'text'; $('#c_max_step').hidden = m !== 'stepper';
+  store.set('wd_maxmode', m);
+};
+(document.querySelector<HTMLElement>(`#maxmode [data-m="${store.get('wd_maxmode', 'select')}"]`) ?? document.querySelector<HTMLElement>('#maxmode button'))!.click();
+
 const roomOpts = () => ({ roles: $in('#c_roles').checked, bluff: $in('#c_bluff').checked });
-$('#create').onclick = () => { if (!myName()) return toast('닉네임을 입력하세요'); send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts() }); };
+$('#create').onclick = () => {
+  if (!myName()) return toast('닉네임을 입력하세요');
+  $in('#c_title').placeholder = `${myName()}의 사건`;
+  creating = true; render();
+};
+$('#c_cancel').onclick = () => { creating = false; render(); };
+$('#c_make').onclick = () => {
+  startLoading($btn('#c_make'));
+  send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: $in('#c_title').value.trim() || `${myName()}의 사건`, maxPlayers });
+};
 $('#practice').onclick = () => {
   if (!myName()) $in('#name').value = '탐정';
-  send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts() });
+  startLoading($btn('#practice'));
+  send({ t: 'create', theme: theme(), name: myName(), token: TOKEN, opts: roomOpts(), title: '연습 사건', maxPlayers: 3 });
   send({ t: 'addBot' }); send({ t: 'addBot' }); send({ t: 'start' });
 };
 $('#join').onclick = () => {
   const c = $in('#code').value.trim().toUpperCase();
   if (!myName()) return toast('닉네임을 입력하세요');
   if (c.length !== 5) return toast('참여 코드 5자리를 입력하세요');
+  startLoading($btn('#join'));
   join(c);
 };
 $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
@@ -77,23 +121,26 @@ $('#optroles').onchange = e => send({ t: 'opt', roles: (e.target as HTMLInputEle
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
 $('#rmbot').onclick = () => send({ t: 'removeBot' });
 $('#start').onclick = () => send({ t: 'start' });
+$('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
 $('#leave').onclick = () => {
   if (S?.game && S.game.phase !== 'over' && !confirm('나가면 봇이 대신 플레이합니다. 나갈까요?')) return;
   S = null; code = null; history.replaceState(null, '', location.pathname); ws?.close(); render();
 };
 
 // ---------- 렌더 ----------
-function show(id: 'lobby' | 'wait' | 'game') {
-  for (const s of ['lobby', 'wait', 'game']) $('#' + s).hidden = s !== id;
+type Screen = 'lobby' | 'createbox' | 'wait' | 'pickstage' | 'game';
+function show(id: Screen) {
+  for (const s of ['lobby', 'createbox', 'wait', 'pickstage', 'game']) $('#' + s).hidden = s !== id;
   $('#drawer').hidden = $('#turnbox').hidden = id !== 'game';
-  $('#leave').hidden = id === 'lobby';
+  $('#leave').hidden = id === 'lobby' || id === 'createbox';
 }
 
 function render() {
   const g = S?.game;
   document.body.dataset.gtheme = g?.theme ?? S?.theme ?? theme();
-  $('#hcode').textContent = S ? '방 ' + S.code : '';
-  if (!S) return show('lobby');
+  $('#hcode').textContent = S ? `${S.title} · ${S.code}` : '';
+  if (!S) return show(creating ? 'createbox' : 'lobby');
+  if (S.stage === 'pick') { show('pickstage'); return renderPick(S); }
   if (!g) { show('wait'); return renderWait(S); }
   show('game');
   maybeIntro(g);
@@ -187,17 +234,39 @@ for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]'))
 $('#reset3d').onclick = () => b3?.resetView();
 
 function renderWait(s: StateMsg) {
+  $('#wtitle').textContent = s.title;
   $('#bigcode').textContent = s.code;
+  const chips = $('#wopts'); chips.innerHTML = '';
+  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', s.opts.roles ? '🕵️ 탐정 직업' : '직업 없음'])
+    chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
-    const li = el('li'); li.append(el('span', '', x.name + (i === s.you ? ' (나)' : '')));
-    li.append(el('span', 'tag', x.bot ? '🤖 봇' : !x.online ? '오프라인' : i === 0 ? '👑' : ''));
+    const li = el('li'); if (i === s.you) li.classList.add('me');
+    li.append(el('span', '', x.name + (i === s.you ? ' (나)' : '')));
+    li.append(el('span', 'tag ' + (x.ready ? 'ok' : ''), x.bot ? '🤖 봇 · 준비됨' : !x.online ? '📴 오프라인' : x.host ? '👑 방장' : x.ready ? '✅ 준비 완료' : '⏳ 준비 중'));
     ul.append(li);
   });
+  for (let k = s.seats.length; k < s.maxPlayers; k++) ul.append(el('li', 'empty', '빈 자리 — 참여 코드로 입장하거나 봇을 추가하세요'));
+  $('#wcount').textContent = `참가 ${s.seats.length} / ${s.maxPlayers}명`;
   $('#hostctl').hidden = !s.host;
   $<HTMLSelectElement>('#theme2').value = s.theme;
   const opt = $in('#optroles'); opt.checked = s.opts.roles; opt.disabled = !s.host;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
+  const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
+  const rb = $btn('#readybtn'); rb.hidden = s.host;
+  rb.textContent = me?.ready ? '✅ 준비 완료 (누르면 취소)' : '✋ 준비 완료';
+  rb.classList.toggle('ghost', !!me?.ready);
+  $btn('#start').disabled = s.seats.length < 3 || waiting.length > 0;
+  $btn('#addbot').disabled = s.seats.length >= s.maxPlayers;
+  $('#waitmsg').textContent = s.seats.length < 3 ? '3명부터 시작할 수 있어요 (봇으로 채울 수 있어요)'
+    : waiting.length ? `준비를 기다리는 중: ${waiting.map(x => x.name).join(', ')}`
+    : s.host ? '모두 준비됐어요 — 게임을 시작하세요' : '모두 준비됐어요 — 방장이 시작하기를 기다리는 중…';
+}
+
+// ---------- 말 고르기(게임 시작 후 2분) ----------
+let pickDeadline = 0;
+function renderPick(s: StateMsg) {
+  pickDeadline = Date.now() + s.pickLeft;
   const picks = $('#picks'); picks.innerHTML = '';
   G.THEMES[s.theme].s.slice(0, Math.max(6, s.seats.length)).forEach((name, v) => {
     const owner = s.seats.findIndex(x => x.suspect === v), b = el('button', 'pick' + (owner === s.you ? ' mine' : ''));
@@ -207,8 +276,13 @@ function renderWait(s: StateMsg) {
     b.onclick = () => send({ t: 'pick', suspect: v });
     picks.append(b);
   });
-  $btn('#start').disabled = s.seats.length < 3;
-  $('#waitmsg').textContent = s.host ? `${s.seats.length}/${G.MAX_PLAYERS}명 · 3명부터 시작 가능 (봇으로 채울 수 있어요)` : '방장이 시작하기를 기다리는 중…';
+  const ul = $('#pickseats'); ul.innerHTML = '';
+  s.seats.forEach((x, i) => {
+    const li = el('li'); if (i === s.you) li.classList.add('me');
+    li.append(el('span', '', x.name + (i === s.you ? ' (나)' : '')));
+    li.append(el('span', 'tag', x.bot ? '🤖 시간이 지나면 무작위' : x.suspect == null ? '⏳ 고르는 중' : `✅ ${G.THEMES[s.theme].s[x.suspect]}`));
+    ul.append(li);
+  });
 }
 
 let boardKey: string | null = null, lastPos2D: (G.Pos | null)[] = [], gen2D = 0;
@@ -663,6 +737,11 @@ addEventListener('keydown', e => {
 
 // ---------- 타이머 ----------
 setInterval(() => {
+  if (S?.stage === 'pick') {
+    const left = Math.max(0, pickDeadline - Date.now());
+    $('#ptime').textContent = `${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`;
+    $<HTMLElement>('#pbar i').style.width = (100 * left / 120000) + '%';
+  }
   const bar = $('#bar'), fill = $('#bar i');
   if (!deadline) { $('#secs').textContent = ''; fill.style.width = '0'; return; }
   const left = Math.max(0, deadline - Date.now());

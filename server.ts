@@ -25,34 +25,53 @@ const server = http.createServer(async (req, res) => {
   } catch { res.writeHead(404); res.end('not found'); }
 });
 
-interface Seat { token: string | null; name: string; bot: boolean; suspect: number | null; ws?: WebSocket | null; drop?: NodeJS.Timeout }
+interface Seat { token: string | null; name: string; bot: boolean; suspect: number | null; ready: boolean; ws?: WebSocket | null; drop?: NodeJS.Timeout }
 interface Room {
-  code: string; theme: G.ThemeKey; host: string; seats: Seat[]; game: G.Game | null; last: number; opts: G.GameOpts;
+  code: string; title: string; maxPlayers: number; theme: G.ThemeKey; host: string; seats: Seat[];
+  /** lobby = 대기실(준비), pick = 말 고르기(2분), game = 게임 중 */
+  stage: 'lobby' | 'pick' | 'game'; pickUntil?: number;
+  game: G.Game | null; last: number; opts: G.GameOpts;
   key?: string | null; deadline?: number | null; timer?: NodeJS.Timeout; botTimer?: NodeJS.Timeout; introUntil?: number;
 }
 interface Conn { room?: Room; seat?: Seat; alive: boolean }
+const PICK_MS = Number(process.env.PICK_MS ?? 120000);
 
 // ponytail: 방 상태는 메모리만. 서버 재시작 시 진행 중인 판은 사라짐 — 필요하면 Redis 등에 저장.
 const rooms = new Map<string, Room>();
 const conns = new WeakMap<WebSocket, Conn>();
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newCode = () => { let c: string; do c = Array.from({ length: 5 }, () => ABC[Math.floor(Math.random() * ABC.length)]).join(''); while (rooms.has(c)); return c; };
-const clean = (s: unknown) => String(s ?? '').trim().slice(0, 12) || '탐정';
+const clean = (s: unknown, max = 12, fallback = '탐정') => String(s ?? '').trim().slice(0, max) || fallback;
 const validToken = (t: unknown): t is string => typeof t === 'string' && t.length >= 8 && t.length <= 64;
+const clampPlayers = (n: unknown) => Math.min(G.MAX_PLAYERS, Math.max(3, Math.round(Number(n)) || 6));
+const picksOpen = (room: Room) => Math.max(6, room.seats.length); // 고를 수 있는 인물 수
 
 function send(ws: WebSocket | null | undefined, msg: ServerMsg) { if (ws?.readyState === 1) ws.send(JSON.stringify(msg)); }
 
 function broadcast(room: Room) {
   const g = room.game, left = room.deadline ? Math.max(0, room.deadline - Date.now()) : null;
   room.seats.forEach((s, i) => send(s.ws, {
-    t: 'state', code: room.code, theme: room.theme, you: i, host: room.host === s.token,
-    seats: room.seats.map(x => ({ name: x.name, bot: x.bot, online: x.bot || !!x.ws, suspect: x.suspect })),
+    t: 'state', code: room.code, title: room.title, maxPlayers: room.maxPlayers, stage: room.stage,
+    pickLeft: room.stage === 'pick' ? Math.max(0, (room.pickUntil ?? 0) - Date.now()) : 0,
+    theme: room.theme, you: i, host: room.host === s.token,
+    seats: room.seats.map(x => ({ name: x.name, bot: x.bot, online: x.bot || !!x.ws, suspect: x.suspect, ready: x.bot || x.ready || x.token === room.host, host: x.token === room.host })),
     game: g && G.view(g, i), left, opts: room.opts, intro: Math.max(0, (room.introUntil ?? 0) - Date.now()),
   }));
 }
 
+/** 말 고르기 끝: 안 고른 사람(봇 포함)은 남은 인물 중 무작위 → 게임 시작 */
+function finishPick(room: Room) {
+  if (room.stage !== 'pick') return;
+  room.stage = 'game';
+  room.game = G.newGame(room.theme, room.seats, Math.floor(Math.random() * 2 ** 31), room.opts);
+  room.introUntil = Date.now() + INTRO_MS; // 카드 섞기·봉투·분배 연출 동안 대기
+  room.key = null;
+  update(room);
+}
+
 function update(room: Room) {
   clearTimeout(room.timer); clearTimeout(room.botTimer);
+  if (room.stage === 'pick') { room.deadline = null; room.timer = setTimeout(() => finishPick(room), Math.max(0, (room.pickUntil ?? 0) - Date.now())); broadcast(room); return; }
   const g = room.game;
   if (!g || g.phase === 'over') { room.deadline = null; broadcast(room); return; }
   const wait = (room.introUntil ?? 0) - Date.now();
@@ -74,8 +93,11 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (m.t === 'create') {
     if (!validToken(m.token) || !G.isTheme(m.theme)) return;
     if (rooms.size >= 100) return send(ws, { t: 'error', msg: '데모 서버가 붐빕니다. 잠시 후 다시 시도해 주세요' });
-    const room: Room = { code: newCode(), theme: m.theme, host: m.token, seats: [], game: null, last: Date.now(),
-      opts: { roles: m.opts?.roles !== false, bluff: m.opts?.bluff !== false } }; // 방 설정(만들 때 선택, 대기실에서 방장이 변경 가능)
+    const room: Room = {
+      code: newCode(), title: clean(m.title, 20, `${clean(m.name)}의 사건`), maxPlayers: clampPlayers(m.maxPlayers),
+      theme: m.theme, host: m.token, seats: [], stage: 'lobby', game: null, last: Date.now(),
+      opts: { roles: m.opts?.roles !== false, bluff: m.opts?.bluff !== false },
+    };
     rooms.set(room.code, room);
     m = { t: 'join', code: room.code, name: m.name, token: m.token };
   }
@@ -85,9 +107,9 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     if (!room) return send(ws, { t: 'error', msg: '없는 방 코드입니다' });
     let i = room.seats.findIndex(s => s.token === m.token && !s.bot);
     if (i < 0) {
-      if (room.game) return send(ws, { t: 'error', msg: '이미 시작된 방입니다' });
-      if (room.seats.length >= G.MAX_PLAYERS) return send(ws, { t: 'error', msg: `방이 꽉 찼습니다 (최대 ${G.MAX_PLAYERS}명)` });
-      room.seats.push({ token: m.token, name: clean(m.name), bot: false, suspect: null });
+      if (room.stage !== 'lobby') return send(ws, { t: 'error', msg: '이미 시작된 방입니다' });
+      if (room.seats.length >= room.maxPlayers) return send(ws, { t: 'error', msg: `방이 꽉 찼습니다 (최대 ${room.maxPlayers}명)` });
+      room.seats.push({ token: m.token, name: clean(m.name), bot: false, suspect: null, ready: false });
       i = room.seats.length - 1;
     }
     const seat = room.seats[i];
@@ -107,25 +129,33 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     const p = room.game.players[i]; p.timeouts = 0; p.afk = false;
     return update(room);
   }
-  if (m.t === 'pick' && !room.game) {
+  if (m.t === 'ready' && room.stage === 'lobby') { seat.ready = m.on === true; return update(room); }
+  if (m.t === 'pick' && room.stage === 'pick') {
     const v = m.suspect;
-    if (!Number.isInteger(v) || v < 0 || v >= Math.max(6, room.seats.length)) return;
+    if (!Number.isInteger(v) || v < 0 || v >= picksOpen(room)) return;
     if (room.seats.some(s => s !== seat && s.suspect === v)) return send(ws, { t: 'error', msg: '이미 다른 사람이 고른 인물입니다' });
     seat.suspect = seat.suspect === v ? null : v; // 같은 걸 다시 누르면 취소
+    if (room.seats.every(s => s.bot || s.suspect !== null)) return finishPick(room); // 사람이 모두 골랐으면 바로 시작
     return update(room);
   }
   if (!isHost) return;
-  if (m.t === 'again' && room.game?.phase === 'over') { room.game = null; return update(room); }
-  if (room.game) return;
+  if (m.t === 'again' && room.game?.phase === 'over') {
+    room.game = null; room.stage = 'lobby';
+    for (const s of room.seats) { s.ready = false; s.suspect = null; }
+    return update(room);
+  }
+  if (room.stage !== 'lobby') return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
   if (m.t === 'opt') room.opts = { roles: typeof m.roles === 'boolean' ? m.roles : room.opts.roles, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
-  if (m.t === 'addBot' && room.seats.length < G.MAX_PLAYERS) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null });
+  if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n));
+  if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
   if (m.t === 'removeBot') { const k = room.seats.findLastIndex(s => s.bot); if (k >= 0) room.seats.splice(k, 1); }
   if (m.t === 'start') {
     if (room.seats.length < 3) return send(ws, { t: 'error', msg: '3명 이상 필요합니다 (봇 추가 가능)' });
-    room.game = G.newGame(room.theme, room.seats, Math.floor(Math.random() * 2 ** 31), room.opts);
-    room.introUntil = Date.now() + INTRO_MS; // 카드 섞기·봉투·분배 연출 동안 대기
-    room.key = null;
+    const waiting = room.seats.filter(s => !s.bot && s.token !== room.host && !s.ready);
+    if (waiting.length) return send(ws, { t: 'error', msg: `아직 준비하지 않은 사람: ${waiting.map(s => s.name).join(', ')}` });
+    room.stage = 'pick'; room.pickUntil = Date.now() + PICK_MS;
+    for (const s of room.seats) s.suspect = null;
   }
   update(room);
 }
@@ -147,6 +177,7 @@ wss.on('connection', ws => {
     seat.drop = setTimeout(() => { // 60초 안에 돌아오지 않으면: 대기실이면 퇴장, 게임 중이면 봇 전환
       const i = room.seats.indexOf(seat);
       if (i < 0) return;
+      if (room.stage === 'pick') return; // 말 고르기 중 끊기면 시간이 지나 무작위로
       if (!room.game) {
         room.seats.splice(i, 1);
         const next = room.seats.find(s => !s.bot);

@@ -5,14 +5,14 @@ import * as G from '../shared/game.ts';
 const seats = (n: number) => Array.from({ length: n }, (_, i) => ({ name: 'P' + i, bot: true }));
 
 test('인원별 그리드·방 개수', () => {
-  for (const [c, n, rooms] of [[3, 15, 6], [4, 18, 7], [5, 18, 8], [6, 21, 9]]) {
+  for (const [c, n, rooms] of [[3, 15, 6], [4, 17, 7], [5, 18, 8], [6, 22, 9], [7, 23, 10], [8, 24, 11]]) {
     const m = G.genMap(c, 1);
     assert.equal(m.n, n); assert.equal(m.roomCount, rooms); assert.equal(m.rects.length, rooms);
   }
 });
 
 test('시드 1000개: 중앙 출발점에서 모든 방에 도달 가능, 모두 중앙에서 출발', () => {
-  for (let seed = 0; seed < 1000; seed++) for (const c of [3, 4, 5, 6]) {
+  for (let seed = 0; seed < 1000; seed++) for (const c of [3, 4, 5, 6, 7, 8]) {
     const m = G.genMap(c, seed), r = G.reachable(m, G.centerPos(m), Infinity);
     for (let i = 0; i < m.roomCount; i++) assert.ok(r.has(G.roomPos(i)), `seed ${seed} c ${c} room ${i}`);
   }
@@ -23,11 +23,11 @@ test('시드 1000개: 중앙 출발점에서 모든 방에 도달 가능, 모두
 });
 
 test('카드 분배: 봉투 종류별 1장, 패 장수 차이 ≤ 1, 중복 없음', () => {
-  for (const c of [3, 4, 5, 6]) {
+  for (const c of [3, 4, 5, 6, 7, 8]) {
     const g = G.newGame('mansion', seats(c), 42), sizes = g.players.map(p => p.hand.length);
     assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1);
     const all = g.players.flatMap(p => p.hand).concat(Object.values(g.env), g.open);
-    assert.equal(new Set(all).size, 12 + g.map.roomCount);
+    assert.equal(new Set(all).size, 2 * g.map.people + g.map.roomCount);
     assert.deepEqual(Object.values(g.env).map(x => x[0]), ['s', 'w', 'r']);
   }
 });
@@ -120,7 +120,7 @@ test('틀린 고발 → 탈락·봉투 확인, 이후에도 반박함 / 맞는 �
 });
 
 test('봇끼리 3~6인 각 100판: 200턴 안에 끝나고 대부분 정답', () => {
-  for (const c of [3, 4, 5, 6]) {
+  for (const c of [3, 4, 5, 6, 7, 8]) {
     let solved = 0;
     for (let seed = 1; seed <= 100; seed++) {
       const g = G.newGame((['mansion', 'atlantis', 'station'] as const)[seed % 3], seats(c), seed), r = G.rng(seed * 31);
@@ -130,7 +130,7 @@ test('봇끼리 3~6인 각 100판: 200턴 안에 끝나고 대부분 정답', ()
         assert.equal(err, null, `seed ${seed}: ${err}`);
         assert.ok(++steps < 5000);
       }
-      assert.ok(g.turnNo <= 200, `c ${c} seed ${seed} turns ${g.turnNo}`);
+      assert.ok(g.turnNo <= 40 * c, `c ${c} seed ${seed} turns ${g.turnNo}`); // 한 사람당 40차례 이내
       if (g.winner !== null) solved++;
     }
     assert.ok(solved >= 95, `c ${c} solved ${solved}`);
@@ -150,11 +150,11 @@ function onBonus(g: G.Game, i: number) {
 }
 
 test('준비: 고른 인물 반영, 같은 장수 분배, 남는 카드는 공개, 고르지 않은 인물 말은 중앙', () => {
-  for (const n of [3, 4, 5, 6]) {
+  for (const n of [3, 4, 5, 6, 7, 8]) {
     const g = G.newGame('mansion', seats(n).map((s, i) => ({ ...s, suspect: (i * 2) % 6 })), 9);
     const sizes = new Set(g.players.map(p => p.hand.length));
     assert.equal(sizes.size, 1);
-    const total = 12 + g.map.roomCount - 3;
+    const total = 2 * g.map.people + g.map.roomCount - 3;
     assert.equal(g.open.length, total % n);
     assert.ok(g.players.every(p => g.open.every(c => p.known.includes(c))));
     const picked = new Set(g.players.map(p => p.suspect));
@@ -231,7 +231,7 @@ test('직업: 보너스칸 능력 — 심문·수색·지름길·추격·도청�
 });
 
 test('직업: 봇끼리 직업 켜고 3~6인 각 100판 — 오류 없이 끝남', () => {
-  for (const c of [3, 4, 5, 6]) for (let seed = 1; seed <= 100; seed++) {
+  for (const c of [3, 4, 5, 6, 7, 8]) for (let seed = 1; seed <= 100; seed++) {
     const g = roleGame(c, seed), r = G.rng(seed * 17);
     let steps = 0;
     while (g.phase !== 'over') {
@@ -239,7 +239,7 @@ test('직업: 봇끼리 직업 켜고 3~6인 각 100판 — 오류 없이 끝남
       assert.equal(err, null, `c ${c} seed ${seed}: ${err}`);
       assert.ok(++steps < 8000);
     }
-    assert.ok(g.turnNo <= 250, `c ${c} seed ${seed} turns ${g.turnNo}`);
+    assert.ok(g.turnNo <= 50 * c, `c ${c} seed ${seed} turns ${g.turnNo}`); // 한 사람당 50차례 이내
   }
 });
 
@@ -260,7 +260,7 @@ test('이동은 상하좌우만: 대각선 칸은 이웃이 아니고, 경로도
 });
 
 test('복도 폭 3칸 이상: 모든 방·사건 파일실 사이 간격 ≥ 3, 중앙 문 4개', () => {
-  for (let seed = 0; seed < 200; seed++) for (const c of [3, 4, 5, 6]) {
+  for (let seed = 0; seed < 200; seed++) for (const c of [3, 4, 5, 6, 7, 8]) {
     const m = G.genMap(c, seed), rects = [...m.rects, m.center];
     for (let a = 0; a < rects.length; a++) for (let b = a + 1; b < rects.length; b++) {
       const A = rects[a], B = rects[b];

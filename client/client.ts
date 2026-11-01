@@ -15,7 +15,7 @@ const store = {
   get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? d; } catch { return d; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경(시크릿 등)은 무시 */ } },
 };
-import { COLORS, WEAPON_ICON, cardEl } from './art.ts';
+import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl } from './art.ts';
 
 let token = store.get<string | null>('wd_token', null);
 if (!token) { token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); store.set('wd_token', token); }
@@ -199,7 +199,7 @@ function renderWait(s: StateMsg) {
   const opt = $in('#optroles'); opt.checked = s.opts.roles; opt.disabled = !s.host;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
   const picks = $('#picks'); picks.innerHTML = '';
-  G.THEMES[s.theme].s.forEach((name, v) => {
+  G.THEMES[s.theme].s.slice(0, Math.max(6, s.seats.length)).forEach((name, v) => {
     const owner = s.seats.findIndex(x => x.suspect === v), b = el('button', 'pick' + (owner === s.you ? ' mine' : ''));
     const face = el('i', '', name.split(' ').pop()![0]); face.style.background = COLORS[v];
     b.append(face, el('span', '', name), el('small', '', owner < 0 ? '' : owner === s.you ? '내 말' : s.seats[owner].name));
@@ -208,7 +208,7 @@ function renderWait(s: StateMsg) {
     picks.append(b);
   });
   $btn('#start').disabled = s.seats.length < 3;
-  $('#waitmsg').textContent = s.host ? `${s.seats.length}/6명 · 3명부터 시작 가능 (봇으로 채울 수 있어요)` : '방장이 시작하기를 기다리는 중…';
+  $('#waitmsg').textContent = s.host ? `${s.seats.length}/${G.MAX_PLAYERS}명 · 3명부터 시작 가능 (봇으로 채울 수 있어요)` : '방장이 시작하기를 기다리는 중…';
 }
 
 let boardKey: string | null = null, lastPos2D: (G.Pos | null)[] = [], gen2D = 0;
@@ -226,6 +226,7 @@ function renderBoard(g: G.View) {
     });
     m.rects.forEach((q, i) => {
       const d = el('div', 'room'); d.dataset.p = String(G.roomPos(i)); d.style.gridArea = `${q.y0 + 1}/${q.x0 + 1}/${q.y1 + 2}/${q.x1 + 2}`;
+      d.style.background = `color-mix(in srgb, var(--room) 72%, ${ROOM_TINTS[i % ROOM_TINTS.length]})`;
       d.append(el('span', 'rname', T.r[i]));
       if (m.passages[i] !== undefined) { const p = el('span', 'pass', '🕳️'); p.title = '비밀 통로 → ' + T.r[m.passages[i]]; d.append(p); }
       d.append(el('span', 'toks')); b.append(d);
@@ -484,7 +485,7 @@ function openDlg(kind: string, build: (f: HTMLFormElement) => void) {
 }
 function selectOf(g: G.View, kind: G.Kind) {
   const s = el('select'); s.name = kind;
-  for (const id of G.allCards(g.map.roomCount)[kind]) {
+  for (const id of G.allCards(g.map)[kind]) {
     const owner = g.players.findIndex((_, j) => memo?.cells[`${id}|${j}`] === '✓');
     s.append(new Option(cn(g, id) + (owner < 0 ? '' : `  — ✓ ${owner === g.me ? '내 카드' : nm(g, owner)}`), id));
   }
@@ -593,7 +594,7 @@ function buildMemo(g: G.View) {
   g.players.forEach((p, j) => { const th = el('th', '', j === g.me ? '나' : p.name); th.title = p.name; hr.append(th); });
   for (const _ of FREE) { const th = el('th', 'free', '·'); th.title = '자유 칸'; hr.append(th); }
   head.append(hr); t.append(head);
-  const body = el('tbody'), all = G.allCards(g.map.roomCount);
+  const body = el('tbody'), all = G.allCards(g.map);
   for (const [k, label] of [['s', '범인은?'], ['w', '흉기는?'], ['r', '장소는?']] as const) {
     const sec = el('tr', 'sec'), th = el('th', '', label); th.colSpan = g.players.length + 1 + FREE.length; sec.append(th); body.append(sec);
     for (const c of all[k]) {

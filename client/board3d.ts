@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as G from '../shared/game.ts';
 import { faceValues } from './dice.ts';
-import { WEAPON_ICON } from './art.ts';
+import { WEAPON_ICON, ROOM_TINTS } from './art.ts';
 import { land } from './sound.ts';
 
 interface Palette { bg: number; base: number; hall: number; door: number; room: number; wall: number; center: number; label: string }
@@ -120,7 +120,8 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     [...M.rects, M.center].forEach((q, i) => {
       const w = q.x1 - q.x0 + 1, h = q.y1 - q.y0 + 1, cx = (wx(q.x0) + wx(q.x1)) / 2, cz = (wx(q.y0) + wx(q.y1)) / 2;
       const isC = i === M.roomCount;
-      const f = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, 0.12, h - 0.06), mat(isC ? P.center : P.room)) as RoomMesh;
+      const tone = isC ? new THREE.Color(P.center) : new THREE.Color(P.room).lerp(new THREE.Color(ROOM_TINTS[i % ROOM_TINTS.length]), 0.3);
+      const f = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, 0.12, h - 0.06), mat(tone.getHex())) as RoomMesh;
       f.position.set(cx, 0.02, cz); f.receiveShadow = true; f.userData = { p: G.roomPos(i), cx, cz, w, h };
       B.add(f); roomMeshes.push(f);
       const lb = label(isC ? '사건 파일' : T.r[i], P.label, Math.min(w - 0.15, 3.2));

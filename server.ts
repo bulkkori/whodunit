@@ -86,7 +86,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     let i = room.seats.findIndex(s => s.token === m.token && !s.bot);
     if (i < 0) {
       if (room.game) return send(ws, { t: 'error', msg: '이미 시작된 방입니다' });
-      if (room.seats.length >= 6) return send(ws, { t: 'error', msg: '방이 꽉 찼습니다 (최대 6명)' });
+      if (room.seats.length >= G.MAX_PLAYERS) return send(ws, { t: 'error', msg: `방이 꽉 찼습니다 (최대 ${G.MAX_PLAYERS}명)` });
       room.seats.push({ token: m.token, name: clean(m.name), bot: false, suspect: null });
       i = room.seats.length - 1;
     }
@@ -109,7 +109,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   }
   if (m.t === 'pick' && !room.game) {
     const v = m.suspect;
-    if (!Number.isInteger(v) || v < 0 || v > 5) return;
+    if (!Number.isInteger(v) || v < 0 || v >= Math.max(6, room.seats.length)) return;
     if (room.seats.some(s => s !== seat && s.suspect === v)) return send(ws, { t: 'error', msg: '이미 다른 사람이 고른 인물입니다' });
     seat.suspect = seat.suspect === v ? null : v; // 같은 걸 다시 누르면 취소
     return update(room);
@@ -119,7 +119,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (room.game) return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
   if (m.t === 'opt') room.opts = { roles: typeof m.roles === 'boolean' ? m.roles : room.opts.roles, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
-  if (m.t === 'addBot' && room.seats.length < 6) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null });
+  if (m.t === 'addBot' && room.seats.length < G.MAX_PLAYERS) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null });
   if (m.t === 'removeBot') { const k = room.seats.findLastIndex(s => s.bot); if (k >= 0) room.seats.splice(k, 1); }
   if (m.t === 'start') {
     if (room.seats.length < 3) return send(ws, { t: 'error', msg: '3명 이상 필요합니다 (봇 추가 가능)' });

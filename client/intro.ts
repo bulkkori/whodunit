@@ -41,7 +41,7 @@ export function playIntro(g: G.View, onDone: () => void) {
 
   (async () => {
     await sleep(50);
-    const all = G.allCards(g.map.roomCount), piles: HTMLElement[][] = [];
+    const all = G.allCards(g.map), piles: HTMLElement[][] = [];
     const px = [W() * 0.25, W() * 0.5, W() * 0.75], py = H() * 0.42;
     (['s', 'w', 'r'] as const).forEach((k, n) => {
       const lab = document.createElement('div'); lab.className = 'ilab'; lab.textContent = ({ s: '인물', w: '흉기', r: '장소' })[k];

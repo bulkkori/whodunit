@@ -2,7 +2,7 @@
 
 export type ThemeKey = 'mansion' | 'atlantis' | 'station';
 export type Kind = 's' | 'w' | 'r';
-/** 카드 id: 's0'~'s5'(인물), 'w0'~'w5'(흉기), 'r0'~(장소) */
+/** 카드 id: 's0'~(인물), 'w0'~(흉기), 'r0'~(장소). 인물·흉기는 6~8장(인원에 따라), 장소는 방 개수만큼 */
 export type Card = string;
 /** 0 이상 = 복도 칸 인덱스(y*n+x), 음수 = 방 -(방번호+1). null = 탈락해 보드에 없음 */
 export type Pos = number;
@@ -14,6 +14,8 @@ export interface Door { room: number; cell: number }
 export interface GameMap {
   n: number; cells: number[]; rects: Rect[]; center: Rect; doors: Door[];
   passages: Record<number, number>; roomCount: number;
+  /** 이 판의 인물·흉기 카드 수 = max(6, 인원) */
+  people: number;
   /** 보너스칸(!) — 이동을 이 칸에서 멈추면 특수 능력을 쓸 수 있다 */
   bonus: Pos[];
 }
@@ -106,31 +108,45 @@ type BoardState = Pick<Game, 'phase' | 'turn' | 'map' | 'roll'> & { players: { p
 export const THEMES: Record<ThemeKey, Theme> = {
   mansion: {
     name: '고딕 저택', icon: '🏚️',
-    s: ['정원사 오스윈', '상속녀 아이린', '화가 루시앙', '주치의 마르타', '사서 에드거', '가정교사 클레어'],
-    w: ['독 찻잔', '사냥용 석궁', '거울 조각', '수면제 병', '청동 흉상', '벽난로 부지깽이'],
-    r: ['시계탑', '화랑', '예배당', '와인 저장고', '음악실', '다락방', '마구간', '별관 침실', '지하 실험실'],
+    s: ['정원사 오스윈', '상속녀 아이린', '화가 루시앙', '주치의 마르타', '사서 에드거', '가정교사 클레어', '요리사 마틸드', '마부 바솔로'],
+    w: ['독 찻잔', '사냥용 석궁', '거울 조각', '수면제 병', '청동 흉상', '벽난로 부지깽이', '깨진 샴페인 병', '독침 브로치'],
+    r: ['시계탑', '화랑', '예배당', '와인 저장고', '음악실', '다락방', '마구간', '별관 침실', '지하 실험실', '하인 숙소', '탑 전망대'],
   },
   atlantis: {
     name: '해저 신전', icon: '🌊',
-    s: ['대사제 네레아', '잠수부 코랄', '학자 테티스', '상인 마로', '수호병 브론', '견습 무녀 이오'],
-    w: ['삼지창', '독 해파리', '저주 진주', '산호 단검', '봉인 구슬', '크라켄 비늘'],
-    r: ['신탁의 방', '진주 회랑', '해류 정원', '침몰 서고', '크라켄 우리', '조수 제단', '수정 보물고', '숨결 공방', '심연 계단'],
+    s: ['대사제 네레아', '잠수부 코랄', '학자 테티스', '상인 마로', '수호병 브론', '견습 무녀 이오', '해적 선장 바르보', '인어 가수 셀레네'],
+    w: ['삼지창', '독 해파리', '저주 진주', '산호 단검', '봉인 구슬', '크라켄 비늘', '독 산호 가시', '심해 작살'],
+    r: ['신탁의 방', '진주 회랑', '해류 정원', '침몰 서고', '크라켄 우리', '조수 제단', '수정 보물고', '숨결 공방', '심연 계단', '해마 마구간', '등대 탑'],
   },
   station: {
     name: '우주 정거장', icon: '🚀',
-    s: ['함장 오렌', '기관사 피오', '생물학자 유나', '보안관 렉스', '안드로이드 SIL-4', '화물 조종사 다닐'],
-    w: ['플라스마 커터', '산소 차단 코드', '오염 배양체', '렌치 드론', '독성 영양팩', '에어록 해제기'],
-    r: ['함교', '수경 재배실', '원자로실', '의무실', '동면실', '화물칸', '관측 돔', '통신실', '에어록'],
+    s: ['함장 오렌', '기관사 피오', '생물학자 유나', '보안관 렉스', '안드로이드 SIL-4', '화물 조종사 다닐', '의무관 하나', '견습 엔지니어 토비'],
+    w: ['플라스마 커터', '산소 차단 코드', '오염 배양체', '렌치 드론', '독성 영양팩', '에어록 해제기', '방사능 샘플', '고장 난 로봇 팔'],
+    r: ['함교', '수경 재배실', '원자로실', '의무실', '동면실', '화물칸', '관측 돔', '통신실', '에어록', '체육관', '승무원 식당'],
   },
 };
 export const isTheme = (t: unknown): t is ThemeKey => typeof t === 'string' && Object.hasOwn(THEMES, t);
 
 /** 복도 최소 폭(칸) */
 export const CORRIDOR = 3;
-/** k×k 구역, 방 한 변 w칸, 구역 사이 복도 CORRIDOR칸 → 보드 한 변 n = k·w + (k−1)·CORRIDOR */
-const LAYOUT: Record<number, { k: number; w: number; rooms: number }> = { 3: { k: 3, w: 3, rooms: 6 }, 4: { k: 3, w: 4, rooms: 7 }, 5: { k: 3, w: 4, rooms: 8 }, 6: { k: 4, w: 3, rooms: 9 } };
-export const SIZES: Record<number, { n: number; rooms: number }> = Object.fromEntries(
-  Object.entries(LAYOUT).map(([c, l]) => [c, { n: l.k * l.w + (l.k - 1) * CORRIDOR, rooms: l.rooms }]));
+/**
+ * 저택 평면도(인원별 고정 설계). 보드 가장자리 네 띠에 크기가 다른 방을 늘어놓고 사이사이·안쪽에 폭 3칸 복도,
+ * 가운데에 사건 파일실. top/bottom = 위·아래 띠의 방 폭(왼→오), left/right = 양옆 띠의 방 높이(위→아래).
+ * 띠 두께 d. 조건: 위·아래 폭 합 + 3×(개수−1) = n, 양옆 높이 합 + 3×(개수−1) = n − 2d − 6.
+ * 방 번호: 0 왼위, 1 오위, 2 왼아래, 3 오아래(모서리 — 비밀 통로 0↔3, 1↔2), 그다음 위·아래 가운데 방, 왼쪽, 오른쪽.
+ */
+interface Plan { n: number; d: number; top: number[]; bottom: number[]; left: number[]; right: number[]; center: number }
+const PLANS: Record<number, Plan> = {
+  3: { n: 15, d: 3, top: [6, 6], bottom: [4, 8], left: [3], right: [3], center: 3 },
+  4: { n: 17, d: 4, top: [5, 9], bottom: [3, 5, 3], left: [3], right: [3], center: 3 },
+  5: { n: 18, d: 4, top: [5, 3, 4], bottom: [4, 5, 3], left: [4], right: [4], center: 4 },
+  6: { n: 22, d: 4, top: [6, 4, 6], bottom: [3, 4, 3, 3], left: [8], right: [8], center: 5 },
+  7: { n: 23, d: 4, top: [7, 4, 6], bottom: [5, 6, 6], left: [3, 3], right: [3, 3], center: 5 },
+  8: { n: 24, d: 4, top: [5, 3, 4, 3], bottom: [6, 5, 7], left: [4, 3], right: [3, 4], center: 6 },
+};
+export const SIZES: Record<number, { n: number; rooms: number }> = Object.fromEntries(Object.entries(PLANS).map(([c, pl]) =>
+  [c, { n: pl.n, rooms: pl.top.length + pl.bottom.length + pl.left.length + pl.right.length }]));
+export const MAX_PLAYERS = 8;
 export const TURN_MS = 30000, REFUTE_MS = 15000;
 const KINDS: Kind[] = ['s', 'w', 'r'];
 
@@ -150,25 +166,29 @@ export const roomPos = (i: number): Pos => -i - 1;
 export const roomOf = (p: Pos): number => -p - 1;
 export const inRoom = (p: Pos | null | undefined): p is Pos => p != null && p < 0;
 export const cardName = (theme: ThemeKey, id: Card): string => THEMES[theme][id[0] as Kind][+id.slice(1)];
-export function allCards(roomCount: number): Record<Kind, Card[]> {
-  return { s: [0, 1, 2, 3, 4, 5].map(i => 's' + i), w: [0, 1, 2, 3, 4, 5].map(i => 'w' + i), r: Array.from({ length: roomCount }, (_, i) => 'r' + i) };
+export function allCards(m: { roomCount: number; people: number }): Record<Kind, Card[]> {
+  const seq = (k: Kind, len: number) => Array.from({ length: len }, (_, i) => k + i);
+  return { s: seq('s', m.people), w: seq('w', m.people), r: seq('r', m.roomCount) };
 }
 
-// 보드를 k×k 구역으로 나누고 구역 사이에 폭 3칸 복도를 둔다. 바깥 고리 구역에 방(네 모서리 + 무작위),
-// 정중앙에 사건 파일실(방 번호 = roomCount, 출발점이자 최종 추리 전용, 네 변에 문 하나씩).
-export function genMap(count: number, seed: number): GameMap {
-  const { k, w, rooms: R } = LAYOUT[count], n = SIZES[count].n, r = rng(seed), e = k - 1, step = w + CORRIDOR;
-  const z0 = (z: number) => z * step, z1 = (z: number) => z * step + w - 1; // 구역 z의 방이 차지하는 첫·끝 칸
-  const ringZones: [number, number][] = [];
-  for (let zy = 0; zy < k; zy++) for (let zx = 0; zx < k; zx++)
-    if ((zx === 0 || zx === e || zy === 0 || zy === e) && !((zx === 0 || zx === e) && (zy === 0 || zy === e))) ringZones.push([zx, zy]);
-  const slots: [number, number][] = [[0, 0], [e, 0], [0, e], [e, e], ...shuffle(r, ringZones).slice(0, R - 4)];
+// 인원별 평면도로 방을 배치. 문·보너스칸 위치도 인원별로 고정(같은 인원이면 늘 같은 보드). seed는 호환용으로만 받음.
+export function genMap(count: number, _seed = 0): GameMap {
+  const pl = PLANS[count], { n, d } = pl, r = rng(7700 + count), C = CORRIDOR;
   const cells: number[] = new Array(n * n).fill(-1);
-  const fill = (q: Rect, i: number) => { for (let y = q.y0; y <= q.y1; y++) for (let x = q.x0; x <= q.x1; x++) cells[y * n + x] = i; return q; };
-  const rects = slots.map(([zx, zy], i) => fill({ x0: z0(zx), y0: z0(zy), x1: z1(zx), y1: z1(zy) }, i));
-  // 중앙: 3×3 구역이면 가운데 구역 전체, 4×4면 가운데 두 구역을 합치되 둘레를 1칸씩 띄움
-  const c0 = k === 3 ? z0(1) : z0(1) + 1, c1 = k === 3 ? z1(1) : z1(2) - 1;
-  const center = fill({ x0: c0, y0: c0, x1: c1, y1: c1 }, R);
+  const band = (sizes: number[], start: number, mk: (from: number, size: number) => Rect) => {
+    let cur = start; return sizes.map(sz => { const q = mk(cur, sz); cur += sz + C; return q; });
+  };
+  const top = band(pl.top, 0, (x, w) => ({ x0: x, y0: 0, x1: x + w - 1, y1: d - 1 }));
+  const bottom = band(pl.bottom, 0, (x, w) => ({ x0: x, y0: n - d, x1: x + w - 1, y1: n - 1 }));
+  const left = band(pl.left, d + C, (y, h) => ({ x0: 0, y0: y, x1: d - 1, y1: y + h - 1 }));
+  const right = band(pl.right, d + C, (y, h) => ({ x0: n - d, y0: y, x1: n - 1, y1: y + h - 1 }));
+  const rects = [top[0], top[top.length - 1], bottom[0], bottom[bottom.length - 1],
+    ...top.slice(1, -1), ...bottom.slice(1, -1), ...left, ...right];
+  const R = rects.length;
+  rects.forEach((q, i) => { for (let y = q.y0; y <= q.y1; y++) for (let x = q.x0; x <= q.x1; x++) cells[y * n + x] = i; });
+  const c0 = Math.floor((n - pl.center) / 2), c1 = c0 + pl.center - 1;
+  const center = { x0: c0, y0: c0, x1: c1, y1: c1 };
+  for (let y = c0; y <= c1; y++) for (let x = c0; x <= c1; x++) cells[y * n + x] = R;
   const doors: Door[] = [];
   const mid = Math.floor((c0 + c1) / 2); // 중앙은 네 변 가운데에 문 하나씩(전원 출발 → 공평하게, 덜 막히게)
   for (const [x, y] of [[mid, c0 - 1], [mid, c1 + 1], [c0 - 1, mid], [c1 + 1, mid]]) doors.push({ room: R, cell: y * n + x });
@@ -177,10 +197,10 @@ export function genMap(count: number, seed: number): GameMap {
     for (let x = q.x0; x <= q.x1; x++) { sides[0].push([x, q.y0 - 1]); sides[1].push([x, q.y1 + 1]); }
     for (let y = q.y0; y <= q.y1; y++) { sides[2].push([q.x0 - 1, y]); sides[3].push([q.x1 + 1, y]); }
     const ok = shuffle(r, sides.map(s => s.filter(([x, y]) => x >= 0 && y >= 0 && x < n && y < n && cells[y * n + x] === -1)).filter(s => s.length));
-    ok.slice(0, r() < 0.5 ? 2 : 1).forEach(s => { const [x, y] = pick(r, s); doors.push({ room: i, cell: y * n + x }); });
+    ok.slice(0, r() < 0.5 ? 2 : 1).forEach(s => { const [x, y] = s[Math.floor(s.length / 2)]; doors.push({ room: i, cell: y * n + x }); }); // 변 가운데에 문
   });
-  const map: GameMap = { n, cells, rects, center, doors, passages: { 0: 3, 3: 0, 1: 2, 2: 1 }, roomCount: R, bonus: [] };
-  map.bonus = placeBonus(map, count <= 4 ? 4 : 6, r);
+  const map: GameMap = { n, cells, rects, center, doors, passages: { 0: 3, 3: 0, 1: 2, 2: 1 }, roomCount: R, people: Math.max(6, count), bonus: [] };
+  map.bonus = placeBonus(map, count <= 4 ? 4 : count <= 6 ? 6 : 8, r);
   return map;
 }
 
@@ -266,13 +286,14 @@ export interface SeatIn { name: string; bot?: boolean; suspect?: number | null }
  * ③ 나머지를 섞어 모두에게 같은 장수로 ④ 남는 카드는 공개(진실이 아님)
  */
 export function newGame(theme: ThemeKey, seats: SeatIn[], seed: number, opts: GameOpts = { roles: false, bluff: true }): Game {
-  const count = seats.length, map = genMap(count, seed), R = map.roomCount, r = rng(seed ^ 0x9e3779b9), all = allCards(R);
+  const count = seats.length, map = genMap(count, seed), R = map.roomCount, S = map.people, r = rng(seed ^ 0x9e3779b9), all = allCards(map);
   const env = { s: pick(r, all.s), w: pick(r, all.w), r: pick(r, all.r) };
   const rest = shuffle(r, [...all.s, ...all.w, ...all.r].filter(c => c !== env.s && c !== env.w && c !== env.r));
   const per = Math.floor(rest.length / count), open = rest.slice(per * count);
   const taken = new Set<number>(), suspects: number[] = [];
-  for (const s of seats) { const v = s.suspect; if (v != null && v >= 0 && v < 6 && !taken.has(v)) { taken.add(v); suspects.push(v); } else suspects.push(-1); }
-  const free = shuffle(r, [0, 1, 2, 3, 4, 5].filter(v => !taken.has(v)));
+  const ids = Array.from({ length: S }, (_, v) => v);
+  for (const s of seats) { const v = s.suspect; if (v != null && v >= 0 && v < S && !taken.has(v)) { taken.add(v); suspects.push(v); } else suspects.push(-1); }
+  const free = shuffle(r, ids.filter(v => !taken.has(v)));
   for (let i = 0; i < count; i++) if (suspects[i] < 0) suspects[i] = free.shift()!;
   const C = roomPos(R);
   const players: Player[] = seats.map((s, i) => ({
@@ -280,8 +301,8 @@ export function newGame(theme: ThemeKey, seats: SeatIn[], seed: number, opts: Ga
     hand: rest.slice(i * per, (i + 1) * per), known: [...open], shown: [], out: false, canSuggest: false, timeouts: 0,
     role: null, uses: 0, revealed: false, charged: 0, skip: false, onBonus: false, usedBonus: false,
   }));
-  const npc = [0, 1, 2, 3, 4, 5].map(v => (suspects.includes(v) ? null : C));
-  const weapons = shuffle(r, Array.from({ length: R }, (_, k) => k)).slice(0, 6); // 흉기 6개를 서로 다른 방에 하나씩
+  const npc = ids.map(v => (suspects.includes(v) ? null : C));
+  const weapons = shuffle(r, Array.from({ length: R }, (_, k) => k)).slice(0, S); // 흉기 말을 서로 다른 방에 하나씩
   const g: Game = { theme, seed, map, players, env, turn: 0, phase: 'roll', roll: null, sug: null, log: [{ t: 'start' }], winner: null, turnNo: 1, rolls: 0, opts, weapons, npc, open };
   if (opts.roles) assignRoles(g, r);
   return g;
@@ -351,7 +372,7 @@ export function canAbility(g: Game, i: number): boolean {
 /** 행동 적용. 성공하면 null, 실패하면 에러 문자열(상태 변경 없음). a는 네트워크에서 온 값일 수 있어 내부에서 전부 검증한다. */
 export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string | null {
   if (g.phase === 'over') return '게임이 끝났습니다';
-  const p = g.players[i], all = allCards(g.map.roomCount);
+  const p = g.players[i], all = allCards(g.map);
   if (!p || !a) return '잘못된 요청';
   if (a.t === 'show') {
     const sug = g.sug;
@@ -507,7 +528,7 @@ export function timeout(g: Game, r: Rng = Math.random): void {
 }
 
 export function candidates(g: Game, i: number): Record<Kind, Card[]> {
-  const p = g.players[i], known = new Set([...p.hand, ...p.known]), all = allCards(g.map.roomCount);
+  const p = g.players[i], known = new Set([...p.hand, ...p.known]), all = allCards(g.map);
   const c = { s: all.s.filter(x => !known.has(x)), w: all.w.filter(x => !known.has(x)), r: all.r.filter(x => !known.has(x)) };
   for (const e of g.log) if (e.t === 'norefute' && e.p === i) for (const k of KINDS) if (!p.hand.includes(e[k])) c[k] = [e[k]];
   return c;

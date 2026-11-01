@@ -659,3 +659,65 @@ button.sk *{visibility:hidden}
 #lobby #name::placeholder{font-size:30px}
 @media (min-width:900px){#lobby{max-width:480px;padding:44px 38px 34px}}
 #lobby .sub{word-break:keep-all;font-size:15px}
+
+/* ---------- 방 만들기 · 대기실도 첫 화면과 같은 서류 느낌: 어두운 책상 위 종이 패널 ---------- */
+body:has(#createbox:not([hidden])),body:has(#wait:not([hidden])),body:has(#skel:not([hidden])){
+  background:radial-gradient(ellipse 70% 40% at 50% 100%,#d9a35b22,#0000 70%),radial-gradient(ellipse at 50% 20%,#2e2124 0%,#150f11 65%,#0b0809 100%) fixed}
+/* 종이 위에서는 색 변수를 잉크·종이 색으로 바꿔서, 기존 규칙이 그대로 종이 색을 쓰게 한다 */
+#createbox,#wait,#skel{--panel:#ece1c8;--hall:#e0d1b0;--line:#2a1d1733;--ink:#2a1d17;--sub:#6a5646;--accent:#6b1f2b;--paper2:#d6c39c;color:var(--ink)}
+#createbox.card,#wait.card,#skel.card{--paperbg:radial-gradient(ellipse at 50% 40%,#f1e7d0 50%,var(--paper2) 130%);
+  background:var(--paperbg);border:0;border-radius:3px;box-shadow:0 1px 0 #fff8 inset,0 18px 44px #000b,0 4px 10px #0007}
+/* 넓은 화면: 바깥 상자는 투명, 패널마다 종이 한 장 */
+@media (min-width:1100px) and (min-aspect-ratio:23/20){
+  #createbox.card,#wait.card,#skel.card{background:transparent;box-shadow:none}
+  #createbox :is(.cside,.cform),:is(#wait,#skel) :is(.winfo,.wplayers,.wsettings,.wmap){background:var(--paperbg);border:0;border-radius:3px;box-shadow:0 1px 0 #fff8 inset,0 18px 44px #000b,0 4px 10px #0007}
+}
+#createbox h2,#wait h2{font:800 30px/1.15 "Nanum Myeongjo","Batang",serif;letter-spacing:-.01em;margin:0;padding-bottom:10px;border-bottom:1px solid var(--line)}
+#createbox .sub,#wait .sub,#createbox .hint,#wait .hint{color:var(--sub)}
+#wait .roomset>b,#createbox .cside>.sub:first-child{font:800 16px "Nanum Myeongjo",serif;color:var(--ink)}
+/* 입력칸: 서류 빈칸처럼 밑줄만 */
+#createbox :is(input,select),#wait select{background:transparent;border:0;border-bottom:1.5px solid var(--sub);border-radius:0;color:var(--ink);padding:4px 2px}
+#createbox :is(input,select):focus,#wait select:focus{outline:none;border-bottom-color:var(--accent);box-shadow:0 1.5px 0 var(--accent)}
+#c_title{font:700 20px "Nanum Myeongjo",serif}
+#createbox .combo,#wait .stepper{background:transparent;border:0;border-bottom:1.5px solid var(--sub);border-radius:0}
+#createbox .combo:focus-within{box-shadow:0 1.5px 0 var(--accent)}
+#createbox .combo input{border:0;box-shadow:none;font:700 22px "Nanum Gothic Coding",monospace}
+#createbox .combo .spin{border-left:1px dashed var(--line)}
+#createbox .combo .spin button:first-child{border-bottom:1px dashed var(--line)}
+#c_max_list{background:#f3ead6;box-shadow:0 10px 24px #0006}
+#createbox .tin button:hover{background:#2a1d1712}
+#createbox [aria-invalid=true]{border-bottom-color:#b3261e}
+#createbox .ferr,#wait .ferr{color:#b3261e}
+/* 버튼: 주 버튼은 밀랍색, 나머지는 잉크 테두리 */
+#createbox button,#wait button{border-radius:3px}
+#c_make,#start,#readybtn{background:#6b1f2b;color:#f3e6cc;font:800 17px "Nanum Myeongjo",serif;letter-spacing:.12em;box-shadow:inset 0 0 0 2px #6b1f2b,inset 0 0 0 3px #f3e6cc66}
+#createbox button.ghost,#wait button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+#wait .stepper button{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+#wait .stepper output{font-family:"Nanum Gothic Coding",monospace}
+#c_make.loading::after,#start.loading::after{border-color:#f3e6cc;border-right-color:transparent}
+@media (hover:hover){
+  :is(#createbox,#wait) button:hover:not(:disabled):not(.loading){filter:none;box-shadow:none}
+  :is(#c_make,#start,#readybtn):hover:not(:disabled):not(.loading){background:#80283a;box-shadow:inset 0 0 0 2px #80283a,inset 0 0 0 3px #f3e6cc66,0 3px 10px #6b1f2b55}
+  :is(#createbox,#wait) button.ghost:hover:not(:disabled):not(.loading),#wait .stepper button:hover:not(:disabled){background:var(--ink);color:#f1e7d0;border-color:var(--ink)}
+}
+/* 스위치: 종이 위 잉크색 */
+#createbox .switch i,#wait .switch i{background:#2a1d1733}
+#createbox .switch i::after,#wait .switch i::after{background:#fbf6ea}
+/* 맵 카드·미리보기는 서류에 붙인 사진처럼(어두운 그대로 + 흰 테두리) */
+#createbox .tcard{color:#efe8f2;border-radius:3px;box-shadow:0 0 0 4px #fbf6ea,0 3px 8px #0006}
+#createbox .tcard small{color:#cfc4b8}
+#createbox .tcard.on{border-color:#6b1f2b;box-shadow:0 0 0 4px #fbf6ea,0 0 0 6px #6b1f2b,0 3px 8px #0006}
+#createbox .tcard:disabled small{color:#cfc4b8}
+:is(#createbox,#wait) .mapprev{border:0;border-radius:2px;background:#17131a;box-shadow:0 0 0 6px #fbf6ea,0 4px 14px #0007}
+:is(#createbox,#wait) .chip{background:transparent;border:1px solid var(--sub);border-radius:3px;color:var(--ink)}
+/* 대기실: 참여 코드는 타자기 글씨, 참가자 명단은 장부 줄 */
+#wait .codebox{background:transparent;border:1.5px dashed var(--sub);border-radius:3px}
+#wait #bigcode,#wait .codebox b{font-family:"Nanum Gothic Coding",monospace;color:var(--ink);letter-spacing:.3em}
+#wait #seats li{background:transparent;border-radius:0;border-bottom:1px solid var(--line)}
+#wait #seats li.me{outline:0;background:linear-gradient(transparent 55%,#c9a24a55 0)}
+#wait #seats li.empty{border:0;border-bottom:1px dashed var(--line)}
+#wait #seats .tag.ok{color:#2f6b34}
+#wait .roomset{background:transparent;border:0;padding:0}
+#skel .sk{background:linear-gradient(90deg,#d9c9a6 0%,#efe3c8 40%,#d9c9a6 80%) 0 0/200% 100%}
+#createbox .tcard:not(.on){background-color:#2a2226}#createbox .tcard:disabled{opacity:.6}
+:is(#createbox,#wait) .switch input:checked + i{background:#6b1f2b}

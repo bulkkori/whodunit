@@ -791,3 +791,45 @@ body:has(#createbox:not([hidden])),body:has(#wait:not([hidden])),body:has(#skel:
 .mapstage.struct .back{opacity:1}
 .mapstage.nothumb .back{display:none}
 @media (prefers-reduced-motion:reduce){.mapstage .mapprev,.mapthumb{transition:opacity .2s}}
+
+/* ---------- 말 고르기: 서류 위 용의자 사진 대열 ---------- */
+body:has(#pickstage:not([hidden])){background:radial-gradient(ellipse 70% 40% at 50% 100%,#d9a35b22,#0000 70%),radial-gradient(ellipse at 50% 20%,#2e2124 0%,#150f11 65%,#0b0809 100%) fixed}
+#pickstage{--panel:#ece1c8;--hall:#e0d1b0;--line:#2a1d1733;--ink:#2a1d17;--sub:#6a5646;--accent:#6b1f2b;color:var(--ink);max-width:900px;
+  background:radial-gradient(ellipse at 50% 40%,#f1e7d0 50%,#d6c39c 130%);border:0;border-radius:3px;box-shadow:0 1px 0 #fff8 inset,0 18px 44px #000b,0 4px 10px #0007}
+#pickstage .pkhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)}
+#pickstage h2{margin:0;font:800 28px/1.15 "Nanum Myeongjo","Batang",serif}
+#pickstage .pickbar{flex:1;min-width:180px}
+#pbar{height:6px;background:#2a1d171f;border-radius:0}
+#pbar i{background:#6b1f2b}
+#ptime{font:700 20px "Nanum Gothic Coding",monospace;color:var(--ink)}
+#pickstage .sub{color:var(--sub)}
+#picks{grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:600px){#picks{grid-template-columns:repeat(3,1fr);gap:10px}}
+#pickstage .pick{position:relative;padding:6px 6px 8px;gap:6px;background:#fbf6ea;border:0;border-radius:2px;color:var(--ink);
+  box-shadow:0 2px 6px #0004;transition:transform .15s,box-shadow .15s}
+#pickstage .pick:nth-child(odd){transform:rotate(-1deg)}#pickstage .pick:nth-child(even){transform:rotate(.8deg)}
+#pickstage .pk-art{position:relative;width:100%;aspect-ratio:4/5;overflow:hidden;display:grid;place-items:center;
+  background:radial-gradient(ellipse at 50% 32%,color-mix(in srgb,var(--c) 38%,#4a3a34) 0%,color-mix(in srgb,var(--c) 18%,#221a1c) 55%,#0f0b0d 100%)}
+#pickstage .pk-art img{position:absolute;left:-32%;top:3%;width:164%;height:auto;filter:drop-shadow(0 2px 4px #0009)}
+#pickstage .pk-art i{width:56%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#1b1215;font:800 26px "Nanum Myeongjo",serif;font-style:normal}
+#pickstage .pk-art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--c)}
+#pickstage .pk-name{font:800 14px/1.25 "Nanum Myeongjo",serif;text-align:center;word-break:keep-all}
+#pickstage .pk-own{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);font:800 14px "Nanum Myeongjo",serif;letter-spacing:.06em;
+  padding:3px 10px;border:2.5px double currentColor;background:#fbf6eadd;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+#pickstage .pk-own:empty{display:none}
+#pickstage .pick.taken{opacity:1;cursor:not-allowed}
+#pickstage .pick.taken .pk-art{filter:grayscale(1) brightness(.6)}
+#pickstage .pick.taken .pk-own{color:#3a2c24}
+#pickstage .pick.mine{box-shadow:0 0 0 3px #6b1f2b,0 6px 16px #0006;transform:rotate(0) translateY(-3px)}
+#pickstage .pick.mine .pk-own{color:#a3272f}
+@media (hover:hover){#pickstage .pick:hover:not(:disabled){transform:rotate(0) translateY(-4px);box-shadow:0 8px 18px #0006;filter:none}}
+#pickseats{gap:0}
+#pickseats li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:transparent;border-radius:0;border-bottom:1px solid var(--line);padding:8px 4px}
+#pickseats li.me{outline:0}
+#pickseats li.me b{background:linear-gradient(transparent 58%,#c9a24a66 0);justify-self:start}
+#pickseats .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 13px/1 "Nanum Myeongjo",serif;font-style:normal;background:var(--c);color:#1b1215;box-shadow:inset 0 0 0 2px #fff6}
+#pickseats .tag{color:var(--sub)}#pickseats .tag.ok{color:#2f6b34;font-weight:700}
+#picks{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+@media (max-width:600px){#picks{grid-template-columns:repeat(3,1fr)}}
+#pickstage{max-width:1040px}
+#pickstage .pk-own{top:74%}

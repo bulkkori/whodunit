@@ -441,9 +441,11 @@ function renderPick(s: StateMsg) {
   pickDeadline = Date.now() + s.pickLeft;
   const picks = $('#picks'); picks.innerHTML = '';
   G.THEMES[s.theme].s.slice(0, Math.max(6, s.seats.length)).forEach((name, v) => {
-    const owner = s.seats.findIndex(x => x.suspect === v), b = el('button', 'pick' + (owner === s.you ? ' mine' : ''));
-    const face = el('i', '', name.split(' ').pop()![0]); face.style.background = COLORS[v];
-    b.append(face, el('span', '', name), el('small', '', owner < 0 ? '' : owner === s.you ? '내 말' : s.seats[owner].name));
+    const owner = s.seats.findIndex(x => x.suspect === v), b = el('button', 'pick' + (owner === s.you ? ' mine' : owner >= 0 ? ' taken' : ''));
+    b.style.setProperty('--c', COLORS[v]);
+    const art = el('span', 'pk-art'), u = asset(s.theme, 's' + v);
+    if (u) { const im = new Image(); im.src = u; im.alt = ''; art.append(im); } else art.append(el('i', '', name.split(' ').pop()![0]));
+    b.append(art, el('span', 'pk-name', name), el('small', 'pk-own', owner < 0 ? '' : owner === s.you ? '내 말' : s.seats[owner].name));
     b.disabled = owner >= 0 && owner !== s.you;
     b.onclick = () => send({ t: 'pick', suspect: v });
     picks.append(b);
@@ -451,8 +453,9 @@ function renderPick(s: StateMsg) {
   const ul = $('#pickseats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
     const li = el('li'); if (i === s.you) li.classList.add('me');
-    li.append(el('span', '', x.name + (i === s.you ? ' (나)' : '')));
-    li.append(el('span', 'tag', x.bot ? '🤖 시간이 지나면 무작위' : x.suspect == null ? '⏳ 고르는 중' : `✅ ${G.THEMES[s.theme].s[x.suspect]}`));
+    const av = el('i', 'av', x.bot ? '🤖' : [...x.name][0] ?? '?'); av.style.setProperty('--c', x.suspect == null ? '#d6c39c' : COLORS[x.suspect]);
+    li.append(av, el('b', '', x.name + (i === s.you ? ' (나)' : '')));
+    li.append(el('span', 'tag' + (x.suspect != null ? ' ok' : ''), x.bot ? '시간이 지나면 무작위' : x.suspect == null ? '고르는 중…' : `✔ ${G.THEMES[s.theme].s[x.suspect]}`));
     ul.append(li);
   });
 }

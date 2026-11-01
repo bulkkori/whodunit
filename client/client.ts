@@ -375,7 +375,7 @@ const myMoves = (g: G.View) => (diceBusy ? new Set<G.Pos>() : G.moves(g, g.me));
 let view = store.get<'2d' | '3d'>('wd_view', '2d'), b3: Board3D | null = null, b3loading: Promise<Board3D | null> | null = null;
 function renderView(g: G.View) {
   const is3 = view === '3d';
-  $('#board').hidden = is3; $('#board3d').hidden = !is3; $('#reset3d').hidden = !is3;
+  $('#b2vp').hidden = is3; $('#board3d').hidden = !is3;
   const mm = $('#maxmove'), moving = g.turn === g.me && g.phase === 'move' && g.roll != null && !diceBusy;
   mm.hidden = !moving; if (moving) mm.textContent = `🎲 최대 ${g.roll}칸 이동`;
   for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]')) b.classList.toggle('on', b.dataset.v === view);
@@ -394,7 +394,42 @@ function renderView(g: G.View) {
 }
 for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]'))
   b.onclick = () => { view = b.dataset.v === '3d' ? '3d' : '2d'; store.set('wd_view', view); if (S?.game) renderView(S.game); };
-$('#reset3d').onclick = () => b3?.resetView();
+$('#reset3d').onclick = () => (view === '3d' ? b3?.resetView() : pz.reset());
+
+// ---------- 2D 보드 자유 시점: 두 손가락 벌리기/휠로 확대, 확대한 채로 끌어서 이동(끌기 직후의 탭은 칸 선택으로 치지 않음) ----------
+const pz = (() => {
+  const vp = $('#b2vp'), bd = $('#board'), pts = new Map<number, [number, number]>();
+  let s = 1, tx = 0, ty = 0, dragged = false, start: { s: number; tx: number; ty: number; d: number; mx: number; my: number; x: number; y: number } | null = null;
+  const apply = () => {
+    const w = vp.clientWidth, h = vp.clientHeight;
+    s = Math.min(3, Math.max(1, s)); tx = Math.min(0, Math.max(w - w * s, tx)); ty = Math.min(0, Math.max(h - h * s, ty));
+    bd.style.transform = s === 1 ? '' : `translate(${tx}px,${ty}px) scale(${s})`; vp.classList.toggle('zoomed', s > 1);
+  };
+  const zoomAt = (ns: number, cx: number, cy: number) => { // 화면 점(cx,cy) 아래의 보드 위치를 그대로 두고 확대
+    const r = vp.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
+    ns = Math.min(3, Math.max(1, ns)); tx = x - (x - tx) * ns / s; ty = y - (y - ty) * ns / s; s = ns; apply();
+  };
+  const snap = () => { const a = [...pts.values()], m = a.length === 2 ? [(a[0][0] + a[1][0]) / 2, (a[0][1] + a[1][1]) / 2] : a[0];
+    start = { s, tx, ty, d: a.length === 2 ? Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) : 0, mx: m[0], my: m[1], x: a[0][0], y: a[0][1] }; };
+  vp.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button) return; pts.set(e.pointerId, [e.clientX, e.clientY]); dragged = false; snap(); });
+  vp.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId) || !start) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    const a = [...pts.values()];
+    if (a.length === 2 && start.d) {
+      const mx = (a[0][0] + a[1][0]) / 2, my = (a[0][1] + a[1][1]) / 2, ns = start.s * Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) / start.d;
+      s = start.s; tx = start.tx + mx - start.mx; ty = start.ty + my - start.my; zoomAt(ns, mx, my); dragged = true;
+    } else if (a.length === 1 && s > 1) {
+      const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      if (dragged || Math.hypot(dx, dy) > 8) { dragged = true; tx = start.tx + dx; ty = start.ty + dy; apply(); }
+    }
+  });
+  const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (pts.size) snap(); else start = null; };
+  for (const ev of ['pointerup', 'pointercancel'] as const) vp.addEventListener(ev, up);
+  vp.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
+  vp.addEventListener('wheel', e => { e.preventDefault(); zoomAt(s * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+  new ResizeObserver(apply).observe(vp);
+  return { reset() { s = 1; tx = ty = 0; apply(); } };
+})();
 
 function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;

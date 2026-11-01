@@ -1121,3 +1121,10 @@ html,body{background-color:#0b0809}
   #dockside button{height:52px}
 }
 @media (max-aspect-ratio:23/20) and (max-width:639px){#viewtog #maxmove{display:none!important}}
+
+/* 2D 자유 시점: 보드를 감싼 창은 넘치는 부분을 자르고, 손가락 동작은 페이지 대신 보드가 받음 */
+#b2vp{position:relative;overflow:hidden;width:var(--bs);touch-action:none;box-shadow:0 0 0 3px #3a2a20,0 0 0 5px #8f7a5866,0 18px 44px #000b}
+#b2vp #board{width:100%;transform-origin:0 0;box-shadow:none}
+#b2vp.zoomed{cursor:grab}
+#b2vp.zoomed:active{cursor:grabbing}
+@media (max-aspect-ratio:23/20) and (max-width:639px){#b2vp{grid-column:1/-1;justify-self:center}}

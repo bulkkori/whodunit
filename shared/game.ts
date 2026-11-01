@@ -31,14 +31,14 @@ export interface RoleDef {
   kind: 'instant' | 'charge';
 }
 export const ROLES: Record<RoleId, RoleDef> = {
-  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '한 명과 종류(인물·도구·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 것만)' },
-  tap:     { name: '도청 장치', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '설치해 두면 다음에 남들끼리 오가는 반박 카드 2번을 몰래 봅니다' },
-  analyst: { name: '기록 열람', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '지난 남들끼리의 반박 하나를 골라 그때 보여준 카드를 확인합니다' },
+  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '한 명과 종류(인물·도구·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 사실만 알게 됩니다)' },
+  tap:     { name: '도청 장치', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '설치해 두면 이후 남들끼리 주고받는 반박 카드를 두 번 몰래 봅니다' },
+  analyst: { name: '기록 열람', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '남들끼리 했던 지난 반박 하나를 골라 그때 보여 준 카드를 확인합니다' },
   field:   { name: '추격', icon: '🚓', group: '행동', kind: 'instant', uses: 3, desc: '주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
   scout:   { name: '원격 수색', icon: '🔦', group: '행동', kind: 'instant', uses: 1, desc: '방 하나를 골라 그 장소 카드와, 그 방에 놓인 도구 1개의 카드를 누가 가졌는지 확인합니다' },
   guide:   { name: '지름길', icon: '🗝️', group: '행동', kind: 'instant', uses: 3, desc: '사건 파일실을 뺀 아무 방으로 바로 이동해 추리할 수 있습니다' },
-  lawyer:  { name: '묵비권', icon: '⚖️', group: '방어', kind: 'charge', uses: 2, desc: '준비해 두면 다음에 내가 반박할 차례에 카드를 보여주지 않고 넘길 수 있습니다 (사용 사실은 공개)' },
-  insure:  { name: '보험', icon: '🛡️', group: '방어', kind: 'charge', uses: 1, desc: '가입해 두면 다음 최종 추리가 틀려도 탈락하지 않고 한 턴 쉽니다' },
+  lawyer:  { name: '묵비권', icon: '⚖️', group: '방어', kind: 'charge', uses: 2, desc: '준비해 두면 다음에 내가 반박할 차례에 카드를 보여 주지 않고 넘길 수 있습니다 (사용 사실은 공개)' },
+  insure:  { name: '보험', icon: '🛡️', group: '방어', kind: 'charge', uses: 1, desc: '가입해 두면 다음 최종 고발이 틀려도 탈락하지 않고 한 턴 쉽니다' },
 };
 const GROUPS: RoleId[][] = [['chief', 'tap', 'analyst'], ['field', 'scout', 'guide'], ['lawyer', 'insure']];
 
@@ -394,14 +394,14 @@ export function canAbility(g: Game, i: number): boolean {
 
 /** 행동 적용. 성공하면 null, 실패하면 에러 문자열(상태 변경 없음). a는 네트워크에서 온 값일 수 있어 내부에서 전부 검증한다. */
 export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string | null {
-  if (g.phase === 'over') return '게임이 끝났습니다';
+  if (g.phase === 'over') return '게임이 끝났어요';
   const p = g.players[i], all = allCards(g.map);
   if (!p || !a) return '잘못된 요청';
   if (a.t === 'show') {
     const sug = g.sug;
-    if (g.phase !== 'refute' || !sug || sug.refuter !== i) return '반박 차례가 아닙니다';
+    if (g.phase !== 'refute' || !sug || sug.refuter !== i) return '반박 차례가 아니에요';
     if (a.silent) { // 변호사 묵비권: 다음 사람에게 넘김
-      if (p.role !== 'lawyer' || !p.charged) return '묵비권이 준비되지 않았습니다';
+      if (p.role !== 'lawyer' || !p.charged) return '묵비권이 준비되지 않았어요';
       p.charged--; reveal(g, i); g.log.push({ t: 'silent', p: i, to: sug.p });
       const nx = nextRefuter(g, sug, i);
       if (nx) { sug.refuter = nx.j; sug.matches = nx.matches; return null; }
@@ -409,7 +409,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     }
     const card = a.card;
-    if (!card || !sug.matches.includes(card)) return '그 카드는 보여줄 수 없습니다';
+    if (!card || !sug.matches.includes(card)) return '그 카드는 보여 줄 수 없어요';
     const to = sug.p;
     g.log.push({ t: 'shown', p: i, to, card, id: g.log.length });
     g.players[to].known.push(card);
@@ -423,15 +423,15 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
     g.sug = null; g.phase = 'act';
     return null;
   }
-  if (g.turn !== i) return '내 차례가 아닙니다';
-  if (g.phase === 'refute') return '반박을 기다리는 중입니다';
+  if (g.turn !== i) return '내 차례가 아니에요';
+  if (g.phase === 'refute') return '반박을 기다리는 중이에요';
   switch (a.t) {
     case 'roll':
-      if (g.phase !== 'roll') return '이미 주사위를 굴렸습니다';
+      if (g.phase !== 'roll') return '이미 주사위를 굴렸어요';
       rollDice(g, i, r); g.phase = 'move';
       return null;
     case 'move':
-      if (!moves(g, i).has(a.to)) return '갈 수 없는 칸입니다';
+      if (!moves(g, i).has(a.to)) return '갈 수 없는 칸이에요';
       p.pos = a.to; p.fresh = false; g.phase = 'act';
       if (a.to < 0) { p.canSuggest = a.to !== centerPos(g.map); g.log.push({ t: 'enter', p: i, room: roomOf(a.to) }); return null; }
       // 복도에서 멈춤: 보너스칸이면 능력 기회, 아니면 추리할 수 없으니 턴 종료
@@ -440,13 +440,13 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     case 'passage': {
       const o = inRoom(p.pos) ? g.map.passages[roomOf(p.pos)] : undefined;
-      if (g.phase !== 'roll' || o === undefined) return '비밀 통로가 없습니다';
+      if (g.phase !== 'roll' || o === undefined) return '비밀 통로가 없어요';
       p.pos = roomPos(o); p.canSuggest = true; g.phase = 'act';
       g.log.push({ t: 'passage', p: i, room: o });
       return null;
     }
     case 'suggest': {
-      if (g.phase === 'move' || !inRoom(p.pos) || !p.canSuggest || p.pos === centerPos(g.map)) return '방에 막 들어왔을 때만 추리할 수 있습니다';
+      if (g.phase === 'move' || !inRoom(p.pos) || !p.canSuggest || p.pos === centerPos(g.map)) return '방에 막 들어왔을 때만 추리할 수 있어요';
       if (!all.s.includes(a.s) || !all.w.includes(a.w)) return '잘못된 카드';
       if (!g.opts.bluff && (p.hand.includes(a.s) || p.hand.includes(a.w))) return '블러핑 금지 방입니다 — 내 손의 카드는 지목할 수 없어요';
       const s: Triple = { s: a.s, w: a.w, r: 'r' + roomOf(p.pos) };
@@ -462,8 +462,8 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     }
     case 'accuse': {
-      if (p.pos !== centerPos(g.map) || g.phase === 'move') return '최종 추리는 중앙 사건 파일실에서만 할 수 있습니다';
-      if (p.fresh) return '출발한 뒤 다시 들어와야 최종 추리를 할 수 있습니다';
+      if (p.pos !== centerPos(g.map) || g.phase === 'move') return '최종 고발은 사건 파일실에서만 할 수 있어요';
+      if (p.fresh) return '출발한 뒤 다시 들어와야 최종 고발을 할 수 있어요';
       if (!all.s.includes(a.s) || !all.w.includes(a.w) || !all.r.includes(a.r)) return '잘못된 카드';
       const ok = a.s === g.env.s && a.w === g.env.w && a.r === g.env.r;
       const entry: LogEntry = { t: 'accuse', p: i, s: a.s, w: a.w, r: a.r, ok };
@@ -478,7 +478,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     }
     case 'ability': {
-      if (!canAbility(g, i)) return '보너스칸(!)에 멈춘 턴에만, 남은 횟수가 있을 때 쓸 수 있습니다';
+      if (!canAbility(g, i)) return '보너스칸(!)에 멈춘 턴에만, 남은 횟수가 있을 때 쓸 수 있어요';
       const role = p.role!;
       const other = (t: unknown) => typeof t === 'number' && t !== i && g.players[t] && !g.players[t].out;
       switch (role) {
@@ -535,7 +535,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     }
     case 'end':
-      if (!canEnd(g, i)) return g.phase === 'roll' ? '먼저 주사위를 굴리세요' : g.phase === 'move' ? '먼저 말을 이동하세요' : '지금은 턴을 끝낼 수 없습니다';
+      if (!canEnd(g, i)) return g.phase === 'roll' ? '먼저 주사위를 굴리세요' : g.phase === 'move' ? '먼저 말을 이동하세요' : '지금은 턴을 끝낼 수 없어요';
       endTurn(g); return null;
   }
   return '알 수 없는 행동';
@@ -578,7 +578,7 @@ export function candidates(g: Game, i: number): Record<Kind, Card[]> {
 
 function distFrom(map: GameMap, src: Pos): Map<Pos, number> { return distances(map, src); }
 
-// 봇: 모르는 카드만 후보로 두고 후보 방으로 이동해 추리, 후보가 하나씩 남으면 중앙으로 가서 최종 추리.
+// 봇: 모르는 카드만 후보로 두고 후보 방으로 이동해 추리, 후보가 하나씩 남으면 중앙으로 가서 최종 고발.
 // 직업이 있으면: 후보 방에 못 닿는 턴에 보너스칸이 닿으면 거기 멈춰 능력 사용.
 export function botAction(g: Game, r: Rng = Math.random): Action {
   const i = actor(g), p = g.players[i];
@@ -643,7 +643,7 @@ export function botAction(g: Game, r: Rng = Math.random): Action {
   return { t: 'end' };
 }
 
-// 플레이어 i에게 보낼 정보만 추린다. 다른 사람 패는 비공개, 봉투는 게임 종료 또는 본인이 최종 추리에 실패해 탈락했을 때만(봉투를 열어 봤으므로).
+// 플레이어 i에게 보낼 정보만 추린다. 다른 사람 패는 비공개, 봉투는 게임 종료 또는 본인이 최종 고발에 실패해 탈락했을 때만(봉투를 열어 봤으므로).
 export function view(g: Game, i: number): View {
   const me = g.players[i], over = g.phase === 'over', spect = !!me?.out;
   return {

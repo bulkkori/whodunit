@@ -124,8 +124,8 @@ for (let n = 3; n <= G.MAX_PLAYERS; n++) {
 }
 const listOpen = (on: boolean) => { maxList.hidden = !on; maxTxt.setAttribute('aria-expanded', String(on)); };
 // 직접 입력 검사: 숫자가 아니거나 3~8명을 벗어나면 칸 아래 인라인 오류
-const maxError = (v: string) => !v ? '' : !/^\d+$/.test(v) ? '숫자만 입력해주세요.'
-  : +v < 3 || +v > G.MAX_PLAYERS ? `3~${G.MAX_PLAYERS}명 사이로 입력해주세요.` : '';
+const maxError = (v: string) => !v ? '' : !/^\d+$/.test(v) ? '숫자만 입력해 주세요.'
+  : +v < 3 || +v > G.MAX_PLAYERS ? `3~${G.MAX_PLAYERS}명 사이로 입력해 주세요.` : '';
 // 오류가 새로 뜨거나 바뀔 때마다 흔들림(입력 중 같은 오류가 이어지면 다시 흔들지 않음, force면 무조건)
 const showMaxError = (msg: string, force = false) => {
   const e = $('#c_max_err'), c = $('#c_max'), changed = e.hidden || e.textContent !== msg;
@@ -198,7 +198,7 @@ function setThumb(st: HTMLElement, t: G.ThemeKey) {
 // 맵 미리보기(방 만들기·대기실): 길게 누르면 썸네일 ↔ 구조(2D 판)로 확대 전환. 키보드는 Enter·Space
 for (const st of [$('#c_stage'), $('#w_stage')]) {
   let t: ReturnType<typeof setTimeout> | undefined, x0 = 0, y0 = 0;
-  const flip = () => { const on = st.classList.toggle('struct'); st.setAttribute('aria-pressed', String(on)); st.setAttribute('aria-label', on ? '맵 구조 — 길게 누르면 썸네일' : '맵 썸네일 — 길게 누르면 맵 구조'); };
+  const flip = () => { const on = st.classList.toggle('struct'); st.setAttribute('aria-pressed', String(on)); st.setAttribute('aria-label', on ? '방 배치 — 길게 누르면 그림' : '맵 썸네일 — 길게 누르면 맵 구조'); };
   const cancel = () => { clearTimeout(t); st.classList.remove('pressing'); };
   st.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; st.classList.add('pressing'); t = setTimeout(() => { cancel(); navigator.vibrate?.(20); flip(); }, 450); });
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) st.addEventListener(ev, cancel);
@@ -249,7 +249,7 @@ $('#practice').onclick = () => {
 $('#join').onclick = () => {
   const c = $in('#code').value.trim().toUpperCase();
   if (!myName()) return nameErr(true);
-  if (c.length !== 5) return codeErr(c ? '참여 코드는 5자리예요.' : '참여 코드를 입력해주세요.');
+  if (c.length !== 5) return codeErr(c ? '참여 코드는 5자리예요.' : '참여 코드를 입력해 주세요.');
   codeJoining = true; startLoading($btn('#join'));
   join(c);
 };
@@ -261,7 +261,7 @@ $('#start').onclick = () => send({ t: 'start' });
 for (const b of document.querySelectorAll<HTMLButtonElement>('#wmax button')) b.onclick = () => { if (S) send({ t: 'maxp', n: S.maxPlayers + +b.dataset.d! }); };
 $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
 $('#leave').onclick = () => {
-  if (S?.game && S.game.phase !== 'over' && !S.game.players[S.game.me]?.out && !confirm('지금 나가면 탈락하고, 가진 카드는 모두에게 공개됩니다. 나갈까요?')) return;
+  if (S?.game && S.game.phase !== 'over' && !S.game.players[S.game.me]?.out && !confirm('지금 나가면 탈락하고, 가진 카드는 모두에게 공개돼요. 나갈까요?')) return;
   send({ t: 'leave' });
   S = null; code = null; history.replaceState(null, '', location.pathname); ws?.close(); render();
 };
@@ -357,13 +357,13 @@ function revealCards(g: G.View) {
   const fresh: { title: string; card: G.Card }[] = [];
   for (const e of g.log) {
     let title = '', card: G.Card | undefined;
-    if (e.t === 'shown' && e.to === g.me) { card = e.card; title = `🃏 ${nm(g, e.p)}이(가) 보여준 카드`; }
+    if (e.t === 'shown' && e.to === g.me) { card = e.card; title = `🃏 ${nm(g, e.p)}의 카드`; }
     else if (e.t === 'intel' && e.to === g.me) {
       card = e.card;
       title = e.kind === 'tap' ? `🎧 도청: ${nm(g, e.a!)} → ${nm(g, e.b!)}`
         : e.kind === 'archive' ? `🗂️ 기록 열람: ${nm(g, e.a!)} → ${nm(g, e.b!)}`
         : e.kind === 'interrogate' ? `🕵️ 심문: ${nm(g, e.from ?? -1)}의 카드`
-        : e.from == null ? '🔦 수색: 아무도 없음 → 진실!' : `🔦 수색: ${nm(g, e.from)}이(가) 가진 카드`;
+        : e.from == null ? '🔦 수색: 아무도 없음 → 봉투 속 카드!' : `🔦 수색: ${nm(g, e.from)}의 카드`;
     }
     if (!card) continue;
     const key = `${e.t}:${card}:${title}`;
@@ -386,7 +386,7 @@ function maybeIntro(g: G.View) {
   playIntro(g, () => { introOn = false; if (S?.game) render(); });
 }
 
-// 내 차례에 방에 막 들어가면 추론 창을 한 번 자동으로 열어 준다(취소 가능)
+// 내 차례에 방에 막 들어가면 추리 창을 한 번 자동으로 열어 준다(취소 가능)
 let suggestedKey = '';
 function autoSuggest(g: G.View) {
   const me = g.players[g.me], key = `${g.seed}:${g.turnNo}`;
@@ -431,7 +431,7 @@ function renderView(g: G.View) {
   if (!b3) $('#board3d').classList.add('sk3d');
   b3loading ??= import('./board3d.ts')
     .then(m => (b3 = m.createBoard3D($('#board3d'), COLORS, p => act({ t: 'move', to: p }), showTip, tapCell)))
-    .catch(e => { console.error(e); toast('3D를 불러오지 못했어요 — 2D로 표시합니다'); view = '2d'; b3loading = null; render(); return null; });
+    .catch(e => { console.error(e); toast('3D를 불러오지 못했어요 — 2D로 보여 드려요'); view = '2d'; b3loading = null; render(); return null; });
   b3loading.then(b => { $('#board3d').classList.remove('sk3d'); const cur = S?.game; if (!b || view !== '3d' || !cur) return; b.update(cur, myMoves(cur)); b.start(); });
 }
 for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]'))
@@ -852,16 +852,16 @@ function line(g: G.View, e: G.LogEntry): string {
     case 'ability': return `${G.ROLES[e.role].icon} ${nm(g, e.p)} ‘${G.ROLES[e.role].name}’ 사용` + (e.target != null ? ` → ${nm(g, e.target)}` : '') + (e.room != null ? ` → ${T.r[e.room]}` : '');
     case 'bonus': return `❗ ${nm(g, e.p)} 보너스칸 도착`;
     case 'role': return `${G.ROLES[e.role].icon} ${nm(g, e.p)}의 능력 공개: ${G.ROLES[e.role].name}`;
-    case 'silent': return `⚖️ ${nm(g, e.p)} 묵비권 — ${nm(g, e.to)}의 추론 반박을 넘김`;
-    case 'silentnone': return '⚖️ 묵비권 뒤로 반박한 사람 없음 (묵비권을 쓴 사람은 카드를 갖고 있음)';
+    case 'silent': return `⚖️ ${nm(g, e.p)} 묵비권 — ${nm(g, e.to)}의 추리에 반박하지 않고 넘김`;
+    case 'silentnone': return '⚖️ 묵비권 이후 반박한 사람 없음 (묵비권을 쓴 사람이 카드를 갖고 있음)';
     case 'rest': return `🛡️ ${nm(g, e.p)} 한 턴 쉼`;
     case 'intel':
       if (e.kind === 'tap') return `🎧 도청: ${nm(g, e.a!)} → ${nm(g, e.b!)}: ${cn(g, e.card!)}`;
       if (e.kind === 'archive') return `🗂️ 기록 열람: ${nm(g, e.a!)} → ${nm(g, e.b!)}: ${cn(g, e.card!)}`;
       if (e.kind === 'interrogate') return e.card ? `🕵️ 심문: ${nm(g, e.from ?? -1)}의 ${KIND_KO[e.cat!]} 카드 — ${cn(g, e.card)}` : `🕵️ 심문: ${nm(g, e.from ?? -1)}에게 ${KIND_KO[e.cat!]} 카드 없음`;
-      return e.from == null ? `🔦 수색: ${cn(g, e.card!)} 카드는 아무도 없음 → 진실!` : `🔦 수색: ${cn(g, e.card!)} 카드는 ${nm(g, e.from)}에게`;
+      return e.from == null ? `🔦 수색: ${cn(g, e.card!)} 카드는 아무도 없음 → 봉투 속 카드!` : `🔦 수색: ${cn(g, e.card!)} 카드는 ${nm(g, e.from)}에게`;
     case 'timeout': return `⏰ ${nm(g, e.p)} 시간 초과`;
-    case 'afk': return `🤖 ${nm(g, e.p)} 자리비움 → 봇이 대신 진행`;
+    case 'afk': return `🤖 ${nm(g, e.p)} 자리 비움 → 봇이 대신 진행`;
     case 'left': return `🚪 ${nm(g, e.p)} 퇴장 — 탈락, 가진 카드는 모두에게 공개`;
   }
 }
@@ -877,7 +877,7 @@ function sugCard(g: G.View, e: G.LogEntry & G.Triple & { p: number }, label: str
 }
 function subLine(g: G.View, e: G.LogEntry) {
   if (e.t === 'pass') return `🙅 ${nm(g, e.p)} — 없음`;
-  if (e.t === 'shown') return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)}가 ${nm(g, e.to)}에게 카드 1장을 보여 줌`;
+  if (e.t === 'shown') return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: 카드 1장 보여 줌`;
   if (e.t === 'norefute') return '❗ 아무도 반박하지 못했습니다';
   return line(g, e);
 }
@@ -909,15 +909,15 @@ function renderPanel(g: G.View) {
   $('#turnname').textContent = ph === 'over' ? '게임 종료' : ph === 'refute' ? `🃏 ${nm(g, a)} 반박 중` : `${a === g.me ? '▶ 내' : nm(g, a) + '의'} 차례`;
   $('#status').textContent =
     ph === 'over' ? '게임 종료' :
-    ph === 'refute' && sug ? (sug.refuter === g.me ? '보여줄 카드를 고르세요' : `${nm(g, sug.refuter)}의 반박을 기다리는 중…`) :
+    ph === 'refute' && sug ? (sug.refuter === g.me ? '보여 줄 카드를 고르세요' : `${nm(g, sug.refuter)}의 반박을 기다리는 중…`) :
     me.out && env ? `🕶️ 관전 중 · 봉투: ${cn(g, env.s)} · ${cn(g, env.w)} · ${cn(g, env.r)} — 반박 차례엔 계속 카드를 냅니다` :
     my && inCenter && me.fresh && ph === 'roll' ? '🗂️ 사건 파일실에서 출발 — 주사위를 굴려 나가세요 (고발은 다시 들어왔을 때)' :
     my && inCenter && ph !== 'move' ? '🗂️ 사건 파일실 — 최종 고발하거나 다시 나가세요' :
     !my ? `${nm(g, g.turn)}의 차례입니다` :
     me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
-    ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추론하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
+    ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추리하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
     ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
-    inRoom && me.canSuggest ? '추론하거나 턴을 끝내세요' : '턴을 끝내세요';
+    inRoom && me.canSuggest ? '추리하거나 턴을 끝내세요' : '턴을 끝내세요';
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',
     passage: my && ph === 'roll' && inRoom && g.map.passages[G.roomOf(me.pos!)] !== undefined,
@@ -957,7 +957,7 @@ function renderRole(g: G.View, my: boolean) {
   const archive = g.archive ?? [];
   const usable = my && me.onBonus && !me.usedBonus && g.phase === 'act' && left > 0 && !(R.kind === 'charge' && charged) && (role !== 'analyst' || archive.length > 0);
   if (!usable) {
-    box.append(el('p', 'sub', left <= 0 ? '모두 사용했습니다' : R.kind === 'charge' && charged ? '준비된 능력은 조건이 오면 쓸 수 있어요' : '❗ 보너스칸에 멈추면 사용할 수 있어요'));
+    box.append(el('p', 'sub', left <= 0 ? '모두 사용했습니다' : R.kind === 'charge' && charged ? '준비해 둔 능력은 때가 되면 쓸 수 있어요' : '❗ 보너스칸에 멈추면 사용할 수 있어요'));
   } else {
     const row = el('div', 'abil'), go = (a: G.Action) => act(a);
     const sel = (opts: [string, string][]) => { const s = el('select'); for (const [v, t] of opts) s.append(new Option(t, v)); row.append(s); return s; };
@@ -966,7 +966,7 @@ function renderRole(g: G.View, my: boolean) {
       const t = sel(others.map(x => [String(x.j), x.p.name])), c = sel([['s', '인물'], ['w', '도구'], ['r', '장소']]);
       btn('🕵️ 심문', () => go({ t: 'ability', target: +t.value, cat: c.value as G.Kind }));
     } else if (role === 'analyst') {
-      const e = sel(archive.map(x => [String(x.id), `${nm(g, x.to)}의 추리에 ${nm(g, x.p)}가 보여준 카드`]));
+      const e = sel(archive.map(x => [String(x.id), `${nm(g, x.p)} → ${nm(g, x.to)} (반박 카드)`]));
       btn('🗂️ 열람', () => go({ t: 'ability', entry: +e.value }));
     } else if (role === 'scout' || role === 'guide') {
       const rooms = G.THEMES[g.theme].r.slice(0, g.map.roomCount).map((n, k) => [String(k), n] as [string, string]);
@@ -1034,17 +1034,17 @@ function openPick(kind: 'suggest' | 'accuse') {
   const g = S?.game; if (!g) return;
   const me = g.players[g.me];
   openDlg(kind, f => {
-    f.append(el('h2', '', kind === 'suggest' ? '🔎 추론' : '⚖️ 최종 고발'));
-    f.append(el('p', 'sub', kind === 'suggest' ? `장소: ${G.THEMES[g.theme].r[G.roomOf(me.pos!)]}` : '틀리면 탈락합니다. 정답이면 즉시 승리.'));
+    f.append(el('h2', '', kind === 'suggest' ? '🔎 추리' : '⚖️ 최종 고발'));
+    f.append(el('p', 'sub', kind === 'suggest' ? `장소: ${G.THEMES[g.theme].r[G.roomOf(me.pos!)]}` : '틀리면 탈락해요. 정답이면 바로 승리!'));
     const s = selectOf(g, 's'), w = selectOf(g, 'w'), r = selectOf(g, 'r');
     f.append(s, w); if (kind === 'accuse') f.append(r);
-    if (kind === 'suggest') f.append(el('p', 'sub', '💡 이미 누가 가진 걸 아는 카드(✓)를 섞으면, 나머지 카드에 대한 정보를 얻기 쉬워요.'));
+    if (kind === 'suggest') f.append(el('p', 'sub', '💡 누가 가졌는지 이미 아는 카드(✓)를 섞어 지목하면, 나머지 카드의 정보를 얻기 쉬워요.'));
     if (kind === 'suggest' && !g.opts.bluff) {
       for (const sel of [s, w]) for (const o of sel.options) if (me.hand?.includes(o.value)) { o.disabled = true; o.text += ' (내 카드 · 블러핑 금지)'; }
       for (const sel of [s, w]) { const ok = [...sel.options].find(o => !o.disabled); if (ok) sel.value = ok.value; }
       f.append(el('p', 'sub', '🚫 블러핑 금지 방: 내 손의 카드는 지목할 수 없어요'));
     } else if (kind === 'suggest') f.append(el('p', 'sub', '🎭 내 카드를 일부러 섞어 블러핑할 수도 있어요'));
-    const row = el('div', 'row'), ok = el('button', kind === 'accuse' ? 'danger' : '', kind === 'suggest' ? '추론하기' : '고발하기'), no = el('button', 'ghost', '취소');
+    const row = el('div', 'row'), ok = el('button', kind === 'accuse' ? 'danger' : '', kind === 'suggest' ? '추리하기' : '고발하기'), no = el('button', 'ghost', '취소');
     no.value = 'cancel'; row.append(no, ok); f.append(row);
     ok.onclick = e => {
       e.preventDefault();
@@ -1062,8 +1062,8 @@ function renderDialogs(g: G.View) {
       dlgKey = key;
       openDlg('refute', f => {
         f.append(el('h2', '', '🃏 반박'));
-        f.append(el('p', 'sub', `${nm(g, sug.p)}의 추론: ${cn(g, sug.s)} · ${cn(g, sug.w)} · ${cn(g, sug.r)}`));
-        f.append(el('p', 'sub', '추론자에게만 보여줄 카드 1장을 고르세요. 시간이 끝나면 자동으로 공개됩니다.'));
+        f.append(el('p', 'sub', `${nm(g, sug.p)}의 추리: ${cn(g, sug.s)} · ${cn(g, sug.w)} · ${cn(g, sug.r)}`));
+        f.append(el('p', 'sub', '추리한 사람에게만 보여 줄 카드 1장을 고르세요. 시간이 지나면 자동으로 골라져요.'));
         const box = el('div', 'cards row-cards');
         for (const c of sug.matches ?? []) { const b = el('button', 'cardbtn'); b.append(cardEl(g.theme, c)); b.onclick = e => { e.preventDefault(); act({ t: 'show', card: c }); dlg.close(); }; box.append(b); }
         const me = g.players[g.me];

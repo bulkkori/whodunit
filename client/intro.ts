@@ -79,12 +79,12 @@ export function playIntro(g: G.View, onDone: () => void) {
     await sleep(400); if (!alive) return;
     // ④ 남는 카드는 앞면으로 공개
     if (g.open.length) {
-      step('나누고 남은 카드는 모두에게 공개 — 진실이 아닙니다');
+      step('나누고 남은 카드는 모두에게 공개 — 봉투에 없는 카드입니다');
       const box = ov.querySelector('.iopen') as HTMLElement; box.classList.add('on');
       for (const c of g.open) { const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); box.append(e); await sleep(300); }
       await sleep(700);
     }
-    step('내 카드를 확인하세요 — 메모지에 자동으로 체크됩니다');
+    step('내 카드를 확인하세요 — 추리 노트에 자동으로 표시됩니다');
     const mine = document.createElement('div'); mine.className = 'imine';
     for (const c of g.players[g.me].hand ?? []) { const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); mine.append(e); }
     ov.append(mine);

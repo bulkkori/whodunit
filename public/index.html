@@ -27,12 +27,12 @@
 <main>
   <section id="lobby" class="screen">
     <div id="lineup" aria-hidden="true"></div>
-    <span class="tab">CASE FILE · 대저택 사건</span>
+    <span class="tab">CASE FILE · 고딕 저택</span>
     <span class="stamp" aria-hidden="true">기밀 · 시험판</span>
     <h1>후더닛</h1>
     <p class="sub">사건 봉투 속 <b>범인</b> · <b>도구</b> · <b>장소</b>를 가장 먼저 밝혀내세요. 3~8명, 빈자리는 봇.</p>
-    <p id="wake" class="notice" hidden>☕ 서버를 깨우는 중입니다… (무료 서버라 최대 1분 걸릴 수 있어요)</p>
-    <label class="field blank"><span>서명</span><input id="name" maxlength="12" placeholder="닉네임" aria-describedby="name_err"><small id="name_err" class="ferr" role="alert" hidden>닉네임을 입력해주세요.</small></label>
+    <p id="wake" class="notice" hidden>☕ 서버를 깨우는 중이에요… (무료 서버라 최대 1분 걸릴 수 있어요)</p>
+    <label class="field blank"><span>서명</span><input id="name" maxlength="12" placeholder="닉네임" aria-describedby="name_err"><small id="name_err" class="ferr" role="alert" hidden>닉네임을 입력해 주세요.</small></label>
     <button id="create" class="sk">방 만들기</button>
     <button id="practice" class="ghost sk">봇 2명과 바로 연습 →</button>
     <div class="or">또는 참여 코드로 입장</div>
@@ -56,7 +56,7 @@
       <div class="cside">
         <p class="sub">맵 선택</p>
         <div id="c_themes" class="themecards" role="radiogroup" aria-label="맵"></div>
-        <div class="prevwrap"><div id="c_stage" class="mapstage" tabindex="0" role="button" aria-pressed="false" aria-label="맵 썸네일 — 길게 누르면 맵 구조"><canvas id="c_prev" class="mapprev"></canvas><figure class="mapthumb"><img alt=""><figcaption><b></b><small>길게 눌러 맵 구조 보기</small></figcaption></figure><span class="back">길게 눌러 썸네일로</span></div></div>
+        <div class="prevwrap"><div id="c_stage" class="mapstage" tabindex="0" role="button" aria-pressed="false" aria-label="맵 그림 — 길게 누르면 방 배치"><canvas id="c_prev" class="mapprev"></canvas><figure class="mapthumb"><img alt=""><figcaption><b></b><small>길게 눌러 방 배치 보기</small></figcaption></figure><span class="back">길게 눌러 그림으로</span></div></div>
         <div id="c_info" class="mapinfo"></div>
       </div>
       <div class="cform">
@@ -110,7 +110,7 @@
         </div>
       </div>
       <div class="wmap">
-        <div class="prevwrap"><div id="w_stage" class="mapstage" tabindex="0" role="button" aria-pressed="false" aria-label="맵 썸네일 — 길게 누르면 맵 구조"><canvas id="w_prev" class="mapprev"></canvas><figure class="mapthumb"><img alt=""><figcaption><b></b><small>길게 눌러 맵 구조 보기</small></figcaption></figure><span class="back">길게 눌러 썸네일로</span></div></div>
+        <div class="prevwrap"><div id="w_stage" class="mapstage" tabindex="0" role="button" aria-pressed="false" aria-label="맵 그림 — 길게 누르면 방 배치"><canvas id="w_prev" class="mapprev"></canvas><figure class="mapthumb"><img alt=""><figcaption><b></b><small>길게 눌러 방 배치 보기</small></figcaption></figure><span class="back">길게 눌러 그림으로</span></div></div>
         <div id="w_info" class="mapinfo"></div>
       </div>
       </div>
@@ -121,7 +121,7 @@
 
   <section id="pickstage" class="screen card" hidden>
     <div class="pkhead"><h2>용의자 고르기</h2><div class="pickbar"><div id="pbar"><i></i></div><b id="ptime">2:00</b></div></div>
-    <p class="sub">이번 판에 맡을 인물 말을 고르세요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.</p>
+    <p class="sub">이번 판에 맡을 용의자를 고르세요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.</p>
     <div id="picks"></div>
     <ul id="pickseats"></ul>
   </section>
@@ -140,13 +140,13 @@
       <div id="actions">
         <button data-a="roll" title="꾹 눌렀다 떼면 던집니다 (키보드 R)">🎲 꾹 눌러 던지기</button>
         <button data-a="passage">🕳️ 비밀 통로</button>
-        <button data-a="suggest">🔎 추론 <kbd>S</kbd></button>
+        <button data-a="suggest">🔎 추리 <kbd>S</kbd></button>
         <button data-a="end" class="ghost">⏭ 턴 종료</button>
         <button data-a="accuse" class="danger" title="중앙 사건 파일실에서만">⚖️ 최종 고발 (중앙에서)</button>
       </div>
       <div id="rolebox" hidden></div>
       <div id="cardsbox">
-        <div id="openrow" hidden><h3>공개 카드 · 진실이 아님</h3><div class="cards"></div></div>
+        <div id="openrow" hidden><h3>공개 카드 · 봉투에 없음</h3><div class="cards"></div></div>
         <h3>내 카드</h3>
         <div id="hand"></div>
       </div>
@@ -158,7 +158,7 @@
   <button id="handle" aria-label="추리 노트 열기/닫기">📒 추리 노트 <kbd>N</kbd></button>
   <div class="sheet">
     <i class="grab" aria-hidden="true"></i>
-    <div class="sheethead"><div class="dtabs" role="tablist"><button type="button" data-tab="memo" class="on">📒 추리 노트</button><button type="button" data-tab="log">📜 수사 일지</button></div><button type="button" id="tallmemo" class="ghost" aria-label="크게 보기" title="크게 보기">⤢</button><select id="automode" aria-label="자동 메모" title="자동 메모 방식"><option value="hint">자동: 확실한 것 + 단서(?)</option><option value="sure">자동: 확실한 것만</option><option value="off">직접 표시 (자동 없음)</option></select><button id="closememo" class="ghost" aria-label="추리 노트 닫기">✕</button></div>
+    <div class="sheethead"><div class="dtabs" role="tablist"><button type="button" data-tab="memo" class="on">📒 추리 노트</button><button type="button" data-tab="log">📜 수사 일지</button></div><button type="button" id="tallmemo" class="ghost" aria-label="크게 보기" title="크게 보기">⤢</button><select id="automode" aria-label="자동 표시" title="자동 표시 방식"><option value="hint">자동: 확실한 것 + 단서(?)</option><option value="sure">자동: 확실한 것만</option><option value="off">직접 표시 (자동 없음)</option></select><button id="closememo" class="ghost" aria-label="추리 노트 닫기">✕</button></div>
     <p class="hint t-memo">칸: 빈칸 → ✗ → ✓ → ? · 이름 누르면 줄 긋기 · 흐린 ?는 단서(남끼리 보여 준 세 장 중 하나)</p>
     <div class="memowrap t-memo"><table id="memo"></table></div>
     <input id="note" class="t-memo" maxlength="200" placeholder="자유 메모">

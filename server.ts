@@ -137,12 +137,12 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (m.t === 'join') {
     if (!validToken(m.token)) return;
     const room = rooms.get(String(m.code ?? '').toUpperCase().trim());
-    if (!room) return send(ws, { t: 'error', msg: '없는 방 코드입니다' });
-    if (room.banned?.has(m.token)) return send(ws, { t: 'error', msg: '방장이 내보낸 방에는 다시 들어갈 수 없습니다' });
+    if (!room) return send(ws, { t: 'error', msg: '없는 방 코드예요' });
+    if (room.banned?.has(m.token)) return send(ws, { t: 'error', msg: '방장이 내보낸 방에는 다시 들어갈 수 없어요' });
     let i = room.seats.findIndex(s => s.token === m.token && !s.bot);
     if (i < 0) {
-      if (room.stage !== 'lobby') return send(ws, { t: 'error', msg: '이미 시작된 방입니다' });
-      if (room.seats.length >= room.maxPlayers) return send(ws, { t: 'error', msg: `방이 꽉 찼습니다 (최대 ${room.maxPlayers}명)` });
+      if (room.stage !== 'lobby') return send(ws, { t: 'error', msg: '이미 시작된 방이에요' });
+      if (room.seats.length >= room.maxPlayers) return send(ws, { t: 'error', msg: `방이 꽉 찼어요 (최대 ${room.maxPlayers}명)` });
       room.seats.push({ token: m.token, name: clean(m.name), bot: false, suspect: null, ready: false });
       i = room.seats.length - 1;
     }
@@ -168,7 +168,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (m.t === 'pick' && room.stage === 'pick') {
     const v = m.suspect;
     if (!Number.isInteger(v) || v < 0 || v >= picksOpen(room)) return;
-    if (room.seats.some(s => s !== seat && s.suspect === v)) return send(ws, { t: 'error', msg: '이미 다른 사람이 고른 인물입니다' });
+    if (room.seats.some(s => s !== seat && s.suspect === v)) return send(ws, { t: 'error', msg: '이미 다른 사람이 고른 인물이에요' });
     seat.suspect = seat.suspect === v ? null : v; // 같은 걸 다시 누르면 취소
     if (room.seats.every(s => s.bot || s.suspect !== null)) return finishPick(room); // 사람이 모두 골랐으면 바로 시작
     return update(room);

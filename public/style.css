@@ -482,3 +482,7 @@ header #music.off{opacity:.5}
 .ferr{color:#ff8a80;font-size:12px;font-weight:600}
 .ferr::before{content:"⚠ "}
 .combo.invalid,.combo.invalid.editing{outline:2px solid var(--danger)}
+
+input.invalid{outline:2px solid var(--danger);animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){input.invalid{animation:none}}

@@ -47,6 +47,12 @@ function connect() {
 const send = (m: ClientMsg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
 const act = (a: G.Action) => send({ t: 'act', action: a });
 const myName = () => { const n = $in('#name').value.trim(); store.set('wd_name', n); return n; };
+// 닉네임 없이 방 만들기·입장을 누르면 칸 아래 인라인 오류 + 흔들림, 입력하면 사라짐
+const nameErr = (on: boolean) => {
+  const i = $in('#name'); $('#name_err').hidden = !on; i.setAttribute('aria-invalid', String(on));
+  i.classList.remove('invalid'); if (on) { void i.offsetWidth; i.classList.add('invalid'); i.focus(); }
+};
+$in('#name').addEventListener('input', () => { if ($in('#name').value.trim()) nameErr(false); });
 const theme = () => $<HTMLSelectElement>('#theme').value as G.ThemeKey;
 function join(c: string) { send({ t: 'join', code: c, name: myName(), token: TOKEN }); }
 
@@ -157,7 +163,7 @@ $('#c_reroll').onclick = () => { titleIdx++; titleIn.value = ''; titleIn.placeho
 titleIn.addEventListener('focus', () => { titleIn.placeholder = ''; });
 titleIn.addEventListener('blur', () => { if (!titleIn.value) titleIn.placeholder = autoTitle(); });
 $('#create').onclick = () => {
-  if (!myName()) return toast('닉네임을 입력하세요');
+  if (!myName()) return nameErr(true);
   titleIdx++; titleIn.value = ''; titleIn.placeholder = autoTitle();
   creating = true; render(); refreshCreatePreview();
 };
@@ -176,7 +182,7 @@ $('#practice').onclick = () => {
 };
 $('#join').onclick = () => {
   const c = $in('#code').value.trim().toUpperCase();
-  if (!myName()) return toast('닉네임을 입력하세요');
+  if (!myName()) return nameErr(true);
   if (c.length !== 5) return toast('참여 코드 5자리를 입력하세요');
   startLoading($btn('#join'));
   join(c);

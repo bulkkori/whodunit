@@ -5,7 +5,7 @@ import * as G from '../shared/game.ts';
 const seats = (n: number) => Array.from({ length: n }, (_, i) => ({ name: 'P' + i, bot: true }));
 
 test('인원별 그리드·방 개수', () => {
-  for (const [c, n, rooms] of [[3, 12, 6], [4, 14, 7], [5, 16, 8], [6, 18, 9]]) {
+  for (const [c, n, rooms] of [[3, 15, 6], [4, 18, 7], [5, 18, 8], [6, 21, 9]]) {
     const m = G.genMap(c, 1);
     assert.equal(m.n, n); assert.equal(m.roomCount, rooms); assert.equal(m.rects.length, rooms);
   }
@@ -256,5 +256,17 @@ test('이동은 상하좌우만: 대각선 칸은 이웃이 아니고, 경로도
       const a = route[k], b = route[k + 1];
       assert.equal(Math.abs(a % m.n - b % m.n) + Math.abs(Math.floor(a / m.n) - Math.floor(b / m.n)), 1);
     }
+  }
+});
+
+test('복도 폭 3칸 이상: 모든 방·사건 파일실 사이 간격 ≥ 3, 중앙 문 4개', () => {
+  for (let seed = 0; seed < 200; seed++) for (const c of [3, 4, 5, 6]) {
+    const m = G.genMap(c, seed), rects = [...m.rects, m.center];
+    for (let a = 0; a < rects.length; a++) for (let b = a + 1; b < rects.length; b++) {
+      const A = rects[a], B = rects[b];
+      const gx = Math.max(A.x0, B.x0) - Math.min(A.x1, B.x1) - 1, gy = Math.max(A.y0, B.y0) - Math.min(A.y1, B.y1) - 1;
+      assert.ok(Math.max(gx, gy) >= G.CORRIDOR, `seed ${seed} c ${c} rooms ${a},${b} gap ${Math.max(gx, gy)}`);
+    }
+    assert.equal(m.doors.filter(d => d.room === m.roomCount).length, 4);
   }
 });

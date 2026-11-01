@@ -125,8 +125,12 @@ export const THEMES: Record<ThemeKey, Theme> = {
 };
 export const isTheme = (t: unknown): t is ThemeKey => typeof t === 'string' && Object.hasOwn(THEMES, t);
 
-// 주사위 2개(평균 7칸) 기준: 방→방이 대개 2턴쯤 걸리는 크기
-export const SIZES: Record<number, { n: number; rooms: number }> = { 3: { n: 12, rooms: 6 }, 4: { n: 14, rooms: 7 }, 5: { n: 16, rooms: 8 }, 6: { n: 18, rooms: 9 } };
+/** 복도 최소 폭(칸) */
+export const CORRIDOR = 3;
+/** k×k 구역, 방 한 변 w칸, 구역 사이 복도 CORRIDOR칸 → 보드 한 변 n = k·w + (k−1)·CORRIDOR */
+const LAYOUT: Record<number, { k: number; w: number; rooms: number }> = { 3: { k: 3, w: 3, rooms: 6 }, 4: { k: 3, w: 4, rooms: 7 }, 5: { k: 3, w: 4, rooms: 8 }, 6: { k: 4, w: 3, rooms: 9 } };
+export const SIZES: Record<number, { n: number; rooms: number }> = Object.fromEntries(
+  Object.entries(LAYOUT).map(([c, l]) => [c, { n: l.k * l.w + (l.k - 1) * CORRIDOR, rooms: l.rooms }]));
 export const TURN_MS = 30000, REFUTE_MS = 15000;
 const KINDS: Kind[] = ['s', 'w', 'r'];
 
@@ -150,45 +154,41 @@ export function allCards(roomCount: number): Record<Kind, Card[]> {
   return { s: [0, 1, 2, 3, 4, 5].map(i => 's' + i), w: [0, 1, 2, 3, 4, 5].map(i => 'w' + i), r: Array.from({ length: roomCount }, (_, i) => 'r' + i) };
 }
 
-// 보드를 k×k 구역(9칸 방이면 4×4, 아니면 3×3)으로 나눈다. 바깥 고리 구역에 방(네 모서리 + 무작위),
-// 정중앙에 사건 파일실(방 번호 = roomCount, 출발점이자 최종 추리 전용). 구역 사이 복도는 항상 이어져 있다.
+// 보드를 k×k 구역으로 나누고 구역 사이에 폭 3칸 복도를 둔다. 바깥 고리 구역에 방(네 모서리 + 무작위),
+// 정중앙에 사건 파일실(방 번호 = roomCount, 출발점이자 최종 추리 전용, 네 변에 문 하나씩).
 export function genMap(count: number, seed: number): GameMap {
-  const { n, rooms: R } = SIZES[count], r = rng(seed), k = R > 8 ? 4 : 3, e = k - 1;
-  const b = Array.from({ length: k + 1 }, (_, i) => Math.round(i * n / k));
+  const { k, w, rooms: R } = LAYOUT[count], n = SIZES[count].n, r = rng(seed), e = k - 1, step = w + CORRIDOR;
+  const z0 = (z: number) => z * step, z1 = (z: number) => z * step + w - 1; // 구역 z의 방이 차지하는 첫·끝 칸
   const ringZones: [number, number][] = [];
   for (let zy = 0; zy < k; zy++) for (let zx = 0; zx < k; zx++)
     if ((zx === 0 || zx === e || zy === 0 || zy === e) && !((zx === 0 || zx === e) && (zy === 0 || zy === e))) ringZones.push([zx, zy]);
   const slots: [number, number][] = [[0, 0], [e, 0], [0, e], [e, e], ...shuffle(r, ringZones).slice(0, R - 4)];
   const cells: number[] = new Array(n * n).fill(-1);
   const fill = (q: Rect, i: number) => { for (let y = q.y0; y <= q.y1; y++) for (let x = q.x0; x <= q.x1; x++) cells[y * n + x] = i; return q; };
-  const rects = slots.map(([zx, zy], i) => {
-    let x0 = b[zx], x1 = b[zx + 1] - 1, y0 = b[zy], y1 = b[zy + 1] - 1;
-    if (zx > 0) x0++; if (zx < e) x1--; if (zy > 0) y0++; if (zy < e) y1--;
-    if (x1 - x0 >= 2 && r() < 0.5) { if (r() < 0.5) x0++; else x1--; }
-    if (y1 - y0 >= 2 && r() < 0.5) { if (r() < 0.5) y0++; else y1--; }
-    return fill({ x0, y0, x1, y1 }, i);
-  });
-  // 3×3이면 중앙 구역을 꽉 채워(둘레 복도 1칸) 4×4 이상 확보 — 전원이 여기서 출발하므로
-  const c0 = k === 3 ? b[1] : b[1] + 1, c1 = k === 3 ? b[2] - 1 : b[e] - 2;
+  const rects = slots.map(([zx, zy], i) => fill({ x0: z0(zx), y0: z0(zy), x1: z1(zx), y1: z1(zy) }, i));
+  // 중앙: 3×3 구역이면 가운데 구역 전체, 4×4면 가운데 두 구역을 합치되 둘레를 1칸씩 띄움
+  const c0 = k === 3 ? z0(1) : z0(1) + 1, c1 = k === 3 ? z1(1) : z1(2) - 1;
   const center = fill({ x0: c0, y0: c0, x1: c1, y1: c1 }, R);
   const doors: Door[] = [];
-  [...rects, center].forEach((q, i) => {
+  const mid = Math.floor((c0 + c1) / 2); // 중앙은 네 변 가운데에 문 하나씩(전원 출발 → 공평하게, 덜 막히게)
+  for (const [x, y] of [[mid, c0 - 1], [mid, c1 + 1], [c0 - 1, mid], [c1 + 1, mid]]) doors.push({ room: R, cell: y * n + x });
+  rects.forEach((q, i) => {
     const sides: [number, number][][] = [[], [], [], []]; // 위 아래 왼 오
     for (let x = q.x0; x <= q.x1; x++) { sides[0].push([x, q.y0 - 1]); sides[1].push([x, q.y1 + 1]); }
     for (let y = q.y0; y <= q.y1; y++) { sides[2].push([q.x0 - 1, y]); sides[3].push([q.x1 + 1, y]); }
     const ok = shuffle(r, sides.map(s => s.filter(([x, y]) => x >= 0 && y >= 0 && x < n && y < n && cells[y * n + x] === -1)).filter(s => s.length));
-    ok.slice(0, i === R || r() < 0.5 ? 2 : 1).forEach(s => { const [x, y] = pick(r, s); doors.push({ room: i, cell: y * n + x }); });
+    ok.slice(0, r() < 0.5 ? 2 : 1).forEach(s => { const [x, y] = pick(r, s); doors.push({ room: i, cell: y * n + x }); });
   });
   const map: GameMap = { n, cells, rects, center, doors, passages: { 0: 3, 3: 0, 1: 2, 2: 1 }, roomCount: R, bonus: [] };
   map.bonus = placeBonus(map, count <= 4 ? 4 : 6, r);
   return map;
 }
 
-// 보너스칸: 문·문 옆이 아닌 복도 중 중앙에서 4~10걸음 거리에서, 서로 최대한 멀리 떨어지게(가장 먼 점 고르기)
+// 보너스칸: 문·문 옆이 아닌 복도 중 중앙에서 4걸음 ~ 보드 한 변의 60% 거리에서, 서로 최대한 멀리 떨어지게(가장 먼 점 고르기)
 function placeBonus(map: GameMap, count: number, r: Rng): Pos[] {
   const { n } = map, dc = distances(map, roomPos(map.roomCount));
   const doorish = new Set(map.doors.flatMap(d => [d.cell, ...neighbors(map, d.cell).filter(x => x >= 0)]));
-  const cand = map.cells.flatMap((c, i) => (c === -1 && !doorish.has(i) && (dc.get(i) ?? 0) >= 4 && (dc.get(i) ?? 99) <= 10 ? [i] : []));
+  const cand = map.cells.flatMap((c, i) => (c === -1 && !doorish.has(i) && (dc.get(i) ?? 0) >= 4 && (dc.get(i) ?? 99) <= Math.ceil(n * 0.6) ? [i] : []));
   const out: Pos[] = [];
   const md = (a: Pos, b: Pos) => Math.abs((a % n) - (b % n)) + Math.abs(Math.floor(a / n) - Math.floor(b / n));
   if (cand.length) out.push(pick(r, cand));

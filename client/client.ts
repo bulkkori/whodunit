@@ -37,6 +37,7 @@ function connect() {
   sock.onmessage = e => {
     const m = JSON.parse(e.data) as ServerMsg;
     stopLoading(); linkJoining = false; const wasCode = codeJoining; codeJoining = false;
+    if (m.t === 'kicked') { S = null; code = null; history.replaceState(null, '', location.pathname); render(); return toast('방장이 이 방에서 내보냈어요'); }
     if (m.t === 'error') { if (!S) { code = null; history.replaceState(null, '', location.pathname); render(); } return wasCode ? codeErr(m.msg) : toast(m.msg); }
     S = m; code = m.code; creating = false;
     if (location.search !== '?room=' + m.code) history.replaceState(null, '', '?room=' + m.code);
@@ -223,6 +224,48 @@ $('#leave').onclick = () => {
   S = null; code = null; history.replaceState(null, '', location.pathname); ws?.close(); render();
 };
 
+// ---------- 대기실: 방 설정·맵 드로어(폰·세로 화면) ----------
+const drawer = (open: boolean) => { $('#wdrawer').classList.toggle('open', open); $('#wdrawer_bg').hidden = !open; };
+$('#wdrawer_open').onclick = () => drawer(true);
+$('#wdrawer_close').onclick = $('#wdrawer_bg').onclick = () => drawer(false);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#wdrawer').classList.contains('open')) drawer(false); });
+{ // 손잡이를 아래로 끌면 닫힘
+  let y0 = -1; const h = $('#wdrawer .dhead');
+  h.onpointerdown = e => { y0 = e.clientY; };
+  h.onpointerup = e => { if (y0 >= 0 && e.clientY - y0 > 50) drawer(false); y0 = -1; };
+}
+// ---------- 대기실: 방장이 참가자를 길게 누르면(PC는 오른쪽 클릭도) 내보내기·방장 넘기기 ----------
+{
+  const menu = $<HTMLDialogElement>('#seatmenu'); let target: { i: number; name: string; bot: boolean } | null = null;
+  const open = (li: HTMLElement) => {
+    const i = +li.dataset.i!, x = S?.seats[i]; if (!x || !S?.host) return;
+    target = { i, name: x.name, bot: x.bot };
+    $('#seatmenu_name').textContent = x.name;
+    menu.querySelector<HTMLButtonElement>('[data-a=host]')!.hidden = x.bot;
+    menu.showModal();
+  };
+  let t: ReturnType<typeof setTimeout> | undefined, x0 = 0, y0 = 0;
+  const ul = $('#seats');
+  ul.addEventListener('pointerdown', e => {
+    const li = (e.target as HTMLElement).closest<HTMLElement>('li.manage'); if (!li) return;
+    x0 = e.clientX; y0 = e.clientY; li.classList.add('pressing');
+    t = setTimeout(() => { li.classList.remove('pressing'); navigator.vibrate?.(30); open(li); }, 550);
+  });
+  const cancel = () => { clearTimeout(t); ul.querySelector('.pressing')?.classList.remove('pressing'); };
+  ul.addEventListener('pointerup', cancel); ul.addEventListener('pointerleave', cancel); ul.addEventListener('pointercancel', cancel);
+  ul.addEventListener('pointermove', e => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); }); // 스크롤이면 취소
+  ul.addEventListener('contextmenu', e => { const li = (e.target as HTMLElement).closest<HTMLElement>('li.manage'); if (li) { e.preventDefault(); cancel(); open(li); } });
+  menu.onclick = e => {
+    const a = (e.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.a;
+    if (e.target === menu) return menu.close(); // 바깥 누르면 닫기
+    if (a === undefined) return;
+    menu.close(); if (!a || !target) return;
+    if (a === 'kick' && !target.bot && !confirm(`${target.name} 님을 내보낼까요? 이 방에는 다시 들어올 수 없어요.`)) return;
+    if (a === 'host' && !confirm(`${target.name} 님에게 방장을 넘길까요?`)) return;
+    send({ t: a as 'kick' | 'host', i: target.i, name: target.name });
+  };
+}
+
 // ---------- 렌더 ----------
 type Screen = 'lobby' | 'skel' | 'createbox' | 'wait' | 'pickstage' | 'game';
 let curScreen: Screen | null = null;
@@ -231,6 +274,7 @@ function show(id: Screen) {
   if (curScreen !== id) { const n = $('#' + id); n.classList.remove('enter'); void n.offsetWidth; n.classList.add('enter'); curScreen = id; }
   $('#drawer').hidden = $('#turnbox').hidden = id !== 'game';
   $('#leave').hidden = id === 'lobby' || id === 'createbox' || id === 'skel';
+  if (id !== 'wait') { $('#wdrawer').classList.remove('open'); $('#wdrawer_bg').hidden = true; $<HTMLDialogElement>('#seatmenu').close(); }
 }
 
 function render() {
@@ -340,12 +384,18 @@ function renderWait(s: StateMsg) {
     chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
-    const li = el('li'); if (i === s.you) li.classList.add('me');
-    li.append(el('span', '', x.name + (i === s.you ? ' (나)' : '')));
-    li.append(el('span', 'tag ' + (x.ready ? 'ok' : ''), x.bot ? '🤖 봇 · 준비됨' : !x.online ? '📴 오프라인' : x.host ? '👑 방장' : x.ready ? '✅ 준비 완료' : '⏳ 준비 중'));
+    const li = el('li'); li.classList.toggle('me', i === s.you); li.classList.toggle('off', !x.online);
+    const av = el('i', 'av', x.bot ? '🤖' : [...x.name][0] ?? '?'); av.style.setProperty('--c', COLORS[i % COLORS.length]);
+    const who = el('span', 'who'); who.append(el('b', '', x.name + (i === s.you ? ' (나)' : '')),
+      el('small', '', x.bot ? '봇 · 준비됨' : !x.online ? '연결 끊김 · 1분 안에 돌아오면 유지' : x.host ? '방장' : x.ready ? '준비 완료' : '준비 중…'));
+    li.append(el('span', 'no', String(i + 1).padStart(2, '0')), av, who);
+    li.append(el('span', 'st ' + (x.host ? 'host' : x.ready ? 'ok' : 'wait'), x.host ? '👑' : x.ready ? '✔' : '…'));
+    if (s.host && i !== s.you) { li.classList.add('manage'); li.dataset.i = String(i); li.title = '길게 누르거나 오른쪽 클릭: 내보내기 · 방장 넘기기'; }
     ul.append(li);
   });
-  for (let k = s.seats.length; k < s.maxPlayers; k++) ul.append(el('li', 'empty', '빈 자리 · 시작하면 🤖 봇'));
+  for (let k = s.seats.length; k < s.maxPlayers; k++) { const li = el('li', 'empty'); li.append(el('span', 'no', String(k + 1).padStart(2, '0')), el('i', 'av', '+'), el('span', 'who', '빈 자리 · 시작하면 봇')); ul.append(li); }
+  $('#seathint').hidden = !s.host || s.seats.length < 2;
+  $('#wdrawer_open').textContent = s.host ? '⚙️ 방 설정 · 맵' : '🗺 방 정보 · 맵';
   $('#wcount').textContent = `참가 ${s.seats.length} / ${s.maxPlayers}명`;
   const pc = s.maxPlayers, pkey = `${s.theme}:${pc}`, wp = $<HTMLCanvasElement>('#w_prev');
   if (wp.dataset.k !== pkey) { wp.dataset.k = pkey; drawMapPreview(wp, s.theme, pc); $('#w_info').replaceChildren(...mapSummary(s.theme, pc)); }

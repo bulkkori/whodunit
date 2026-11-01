@@ -31,6 +31,8 @@ interface Room {
   /** lobby = 대기실(준비), pick = 말 고르기(2분), game = 게임 중 */
   stage: 'lobby' | 'pick' | 'game'; pickUntil?: number;
   game: G.Game | null; last: number; opts: G.GameOpts;
+  /** 방장이 내보낸 사람(토큰) — 같은 방에 다시 못 들어옴 */
+  banned?: Set<string>;
   key?: string | null; deadline?: number | null; timer?: NodeJS.Timeout; botTimer?: NodeJS.Timeout; introUntil?: number;
 }
 interface Conn { room?: Room; seat?: Seat; alive: boolean }
@@ -105,6 +107,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     if (!validToken(m.token)) return;
     const room = rooms.get(String(m.code ?? '').toUpperCase().trim());
     if (!room) return send(ws, { t: 'error', msg: '없는 방 코드입니다' });
+    if (room.banned?.has(m.token)) return send(ws, { t: 'error', msg: '방장이 내보낸 방에는 다시 들어갈 수 없습니다' });
     let i = room.seats.findIndex(s => s.token === m.token && !s.bot);
     if (i < 0) {
       if (room.stage !== 'lobby') return send(ws, { t: 'error', msg: '이미 시작된 방입니다' });
@@ -150,6 +153,16 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
   if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n)); // 이미 들어온 사람보다 적게는 못 줄임
   if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
+  if ((m.t === 'kick' || m.t === 'host') && Number.isInteger(m.i)) {
+    const t = room.seats[m.i];
+    if (!t || t === seat || t.name !== m.name) return;
+    if (m.t === 'host') { if (t.bot || !t.token) return; room.host = t.token; seat.ready = false; }
+    else {
+      room.seats.splice(m.i, 1);
+      if (t.token) { (room.banned ??= new Set()).add(t.token); clearTimeout(t.drop); }
+      if (t.ws) { send(t.ws, { t: 'kicked' }); const c = conns.get(t.ws); if (c) c.room = c.seat = undefined; }
+    }
+  }
   if (m.t === 'removeBot') { const k = room.seats.findLastIndex(s => s.bot); if (k >= 0) room.seats.splice(k, 1); }
   if (m.t === 'start') {
     const waiting = room.seats.filter(s => !s.bot && s.token !== room.host && !s.ready);

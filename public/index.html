@@ -78,19 +78,22 @@
     <div class="wgrid">
       <div class="winfo">
         <h2 id="wtitle"></h2>
+        <div class="chips" id="wopts"></div>
         <div class="codebox"><span class="sub">참여 코드</span><b id="bigcode"></b><button id="copy" class="ghost">🔗 초대 링크 복사</button></div>
       </div>
       <div class="wplayers">
-        <p class="sub" id="wcount"></p>
+        <div class="whead"><p class="sub" id="wcount"></p><button type="button" id="wdrawer_open" class="ghost">⚙️ 방 설정 · 맵</button></div>
         <ul id="seats"></ul>
+        <p id="seathint" class="hint" hidden>참가자를 길게 누르면 내보내기 · 방장 넘기기</p>
         <div class="wcta">
           <button id="readybtn" hidden>✋ 준비 완료</button>
           <button id="start" hidden>▶ 게임 시작</button>
           <p id="waitmsg" class="sub"></p>
         </div>
       </div>
+      <div id="wdrawer" role="dialog" aria-modal="true" aria-label="방 설정 · 맵">
+      <div class="dhead"><i class="grip" aria-hidden="true"></i><b>방 설정 · 맵</b><button type="button" id="wdrawer_close" class="ghost" aria-label="닫기">✕</button></div>
       <div class="wsettings">
-        <div class="chips" id="wopts"></div>
         <div id="hostctl">
           <div class="roomset"><b>⚙️ 방 설정</b>
             <label class="field">맵 <select id="theme2"></select></label>
@@ -105,8 +108,11 @@
         <div class="prevwrap"><canvas id="w_prev" class="mapprev"></canvas></div>
         <div id="w_info" class="mapinfo"></div>
       </div>
+      </div>
+      <div id="wdrawer_bg" hidden></div>
     </div>
   </section>
+  <dialog id="seatmenu"><p id="seatmenu_name"></p><button type="button" data-a="host">👑 방장 넘기기</button><button type="button" data-a="kick" class="danger">🚪 내보내기</button><button type="button" data-a="" class="ghost">취소</button></dialog>
 
   <section id="pickstage" class="screen card" hidden>
     <h2>🎭 말 고르기</h2>

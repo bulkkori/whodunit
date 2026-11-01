@@ -45,8 +45,29 @@ function connect() {
     total = m.game?.phase === 'refute' ? G.REFUTE_MS : G.TURN_MS;
     render();
   };
-  sock.onclose = () => { if (!everConnected) $('#wake').hidden = false; setTimeout(connect, 1500); };
+  sock.onclose = () => {
+    if (ws !== sock) return; // 이미 새 연결로 바꿈
+    if (!everConnected) $('#wake').hidden = false;
+    netBar(!!S);
+    clearTimeout(retryT); retryT = setTimeout(connect, fastRetry ? 0 : 1500); fastRetry = false;
+  };
+  sock.addEventListener('open', () => netBar(false));
+  sock.addEventListener('message', () => { clearTimeout(probeT); netBar(false); });
 }
+let retryT: ReturnType<typeof setTimeout> | undefined, probeT: ReturnType<typeof setTimeout> | undefined, fastRetry = false;
+const netBar = (on: boolean) => { $('#netbar').hidden = !on; };
+/** 아이폰은 사파리를 내렸다 오면 연결이 조용히 끊겨 있곤 함 → 돌아오는 순간 확인. 방에 있으면 재입장 요청을 보내 2.5초 안에 답이 없으면 새로 연결 */
+function checkConn() {
+  if (document.hidden) return;
+  if (!ws || ws.readyState >= 2) { clearTimeout(retryT); netBar(!!S); connect(); return; }
+  if (ws.readyState !== 1 || !S || !code) return;
+  join(code);
+  clearTimeout(probeT);
+  probeT = setTimeout(() => { netBar(true); fastRetry = true; const old = ws; ws = null; old?.close(); connect(); }, 2500);
+}
+document.addEventListener('visibilitychange', checkConn);
+addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) checkConn(); });
+addEventListener('online', checkConn);
 const send = (m: ClientMsg) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
 const act = (a: G.Action) => send({ t: 'act', action: a });
 const myName = () => { const n = $in('#name').value.trim(); store.set('wd_name', n); return n; };
@@ -308,6 +329,25 @@ function render() {
   maybeIntro(g);
   watchRoll(g);
   renderView(g); renderPanel(g); renderMemo(g); renderDialogs(g); autoSuggest(g); revealCards(g);
+  notifyMe(g);
+}
+
+// 내가 할 차례가 새로 오면 알림. 첫 화면(입장 직후)에는 울리지 않고, 다른 화면을 보다 돌아왔을 때 이미 내 차례면 울림
+let alertKey: string | null = null;
+function notifyMe(g: G.View) {
+  const me = g.players[g.me];
+  const kind = g.phase === 'over' || me.out && g.phase !== 'refute' ? null
+    : g.phase === 'refute' && g.sug?.refuter === g.me ? 'refute'
+    : g.turn === g.me && g.phase === 'roll' ? 'turn' : null;
+  const key = kind ? `${kind}:${g.seed}:${g.turnNo}:${g.sug?.p ?? ''}` : '';
+  document.title = kind === 'refute' ? '🃏 반박할 차례 · 후더닛' : kind === 'turn' || (g.turn === g.me && g.phase !== 'over' && g.phase !== 'refute') ? '▶ 내 차례 · 후더닛' : '후더닛';
+  if (introOn) return; // 시작 연출이 끝나고 다시 그릴 때 울림
+  const first = alertKey === null; if (key === alertKey) return; alertKey = key;
+  if (!kind || first) return;
+  Sound.chime(kind);
+  navigator.vibrate?.(kind === 'refute' ? [60, 80, 60] : 80);
+  const h = $('header'); h.classList.remove('ping', 'ping-ref'); void h.offsetWidth; h.classList.add(kind === 'refute' ? 'ping-ref' : 'ping');
+  toast(kind === 'refute' ? '🃏 반박할 차례예요 — 보여 줄 카드를 고르세요' : '▶ 내 차례예요');
 }
 
 // 나에게 새로 보인 카드(반박·능력)를 화면 가운데에 잠깐 크게 보여 준다. 입장·재접속 때 이미 지난 것은 생략.
@@ -338,10 +378,11 @@ function revealCards(g: G.View) {
 
 // 게임 시작 연출: 서버가 연출 시간(intro)을 주는 동안 한 번만. 재접속·새로고침 땐 생략.
 let introDone = new Set<number>();
+let introOn = false;
 function maybeIntro(g: G.View) {
   if (introDone.has(g.seed) || !S || S.intro < 1500) { introDone.add(g.seed); return; }
-  introDone.add(g.seed);
-  playIntro(g, () => { if (S?.game) render(); });
+  introDone.add(g.seed); introOn = true;
+  playIntro(g, () => { introOn = false; if (S?.game) render(); });
 }
 
 // 내 차례에 방에 막 들어가면 추론 창을 한 번 자동으로 열어 준다(취소 가능)

@@ -129,3 +129,18 @@ export function land(impacts: number[]) {
   const end = impacts[impacts.length - 1];
   for (let i = 0; i < 5; i++) click(now + end - 0.25 + i * 0.05 + Math.random() * 0.02, 0.12, 2800 + Math.random() * 1500);
 }
+
+/** 알림 종소리. turn = 내 차례(도-솔 올라감), refute = 반박 차례(같은 음 두 번, 조금 더 급하게) */
+export function chime(kind: 'turn' | 'refute') {
+  if (ctx && ctx.state !== 'running') void ctx.resume();
+  if (!ctx || !master || ctx.state !== 'running') return;
+  const notes = kind === 'turn' ? [[0, 659.3], [0.14, 987.8]] : [[0, 880], [0.16, 880]];
+  for (const [at, f] of notes) {
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2.01; // 배음 하나 → 종소리 느낌
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.28, t + 0.012); g.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+    const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    o.connect(g); o2.connect(g2).connect(g); g.connect(master);
+    o.start(t); o2.start(t); o.stop(t + 0.95); o2.stop(t + 0.95);
+  }
+}

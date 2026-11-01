@@ -1156,3 +1156,10 @@ html,body{background-color:#0b0809}
   .sheet .grab:active::before{background:#6b1f2b}
 }
 body:has(#drawer.tall.open) #dockside{display:none!important}
+
+/* 노트 바텀 시트: 자리 바꿈은 감속 곡선으로 부드럽게, 손가락으로 끄는 동안은 전환 없이 바로 따라옴 */
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  #drawer{transition:transform .32s cubic-bezier(.2,.85,.25,1),top .32s cubic-bezier(.2,.85,.25,1),visibility 0s .32s}
+  #drawer.open{transition:transform .32s cubic-bezier(.2,.85,.25,1),top .32s cubic-bezier(.2,.85,.25,1)}
+  #drawer.sdrag{transition:none!important}
+}

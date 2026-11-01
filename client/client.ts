@@ -397,37 +397,45 @@ for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]'))
 $('#reset3d').onclick = () => (view === '3d' ? b3?.resetView() : pz.reset());
 
 // ---------- 2D 보드 자유 시점: 두 손가락 벌리기/휠로 확대, 확대한 채로 끌어서 이동(끌기 직후의 탭은 칸 선택으로 치지 않음) ----------
+let tokDragOn = false; // 내 말을 끄는 중이면 한 손가락 끌기는 보드 이동이 아님
 const pz = (() => {
   const vp = $('#b2vp'), bd = $('#board'), pts = new Map<number, [number, number]>();
   let s = 1, tx = 0, ty = 0, dragged = false, start: { s: number; tx: number; ty: number; d: number; mx: number; my: number; x: number; y: number } | null = null;
+  let rect = vp.getBoundingClientRect(), raf = 0;
   const apply = () => {
-    const w = vp.clientWidth, h = vp.clientHeight;
+    const w = rect.width, h = rect.height;
     s = Math.min(3, Math.max(1, s)); tx = Math.min(0, Math.max(w - w * s, tx)); ty = Math.min(0, Math.max(h - h * s, ty));
-    bd.style.transform = s === 1 ? '' : `translate(${tx}px,${ty}px) scale(${s})`; vp.classList.toggle('zoomed', s > 1);
+    if (!raf) raf = requestAnimationFrame(() => {
+      raf = 0; bd.style.transform = s === 1 ? '' : `translate3d(${tx}px,${ty}px,0) scale(${s})`; vp.classList.toggle('zoomed', s > 1);
+    });
   };
   const zoomAt = (ns: number, cx: number, cy: number) => { // 화면 점(cx,cy) 아래의 보드 위치를 그대로 두고 확대
-    const r = vp.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
+    const r = rect, x = cx - r.left, y = cy - r.top;
     ns = Math.min(3, Math.max(1, ns)); tx = x - (x - tx) * ns / s; ty = y - (y - ty) * ns / s; s = ns; apply();
   };
   const snap = () => { const a = [...pts.values()], m = a.length === 2 ? [(a[0][0] + a[1][0]) / 2, (a[0][1] + a[1][1]) / 2] : a[0];
     start = { s, tx, ty, d: a.length === 2 ? Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) : 0, mx: m[0], my: m[1], x: a[0][0], y: a[0][1] }; };
-  vp.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button) return; pts.set(e.pointerId, [e.clientX, e.clientY]); dragged = false; snap(); });
+  vp.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button) return;
+    if (!pts.size) { rect = vp.getBoundingClientRect(); bd.style.willChange = 'transform'; }
+    pts.set(e.pointerId, [e.clientX, e.clientY]); dragged = false; snap();
+  });
   vp.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId) || !start) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
     const a = [...pts.values()];
     if (a.length === 2 && start.d) {
       const mx = (a[0][0] + a[1][0]) / 2, my = (a[0][1] + a[1][1]) / 2, ns = start.s * Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) / start.d;
       s = start.s; tx = start.tx + mx - start.mx; ty = start.ty + my - start.my; zoomAt(ns, mx, my); dragged = true;
-    } else if (a.length === 1 && s > 1) {
+    } else if (a.length === 1 && s > 1 && !tokDragOn) {
       const dx = e.clientX - start.x, dy = e.clientY - start.y;
       if (dragged || Math.hypot(dx, dy) > 8) { dragged = true; tx = start.tx + dx; ty = start.ty + dy; apply(); }
     }
   });
-  const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (pts.size) snap(); else start = null; };
+  const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (pts.size) snap(); else { start = null; bd.style.willChange = ''; } };
   for (const ev of ['pointerup', 'pointercancel'] as const) vp.addEventListener(ev, up);
   vp.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
-  vp.addEventListener('wheel', e => { e.preventDefault(); zoomAt(s * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
-  new ResizeObserver(apply).observe(vp);
+  vp.addEventListener('wheel', e => { e.preventDefault(); rect = vp.getBoundingClientRect(); zoomAt(s * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+  new ResizeObserver(() => { rect = vp.getBoundingClientRect(); apply(); }).observe(vp);
   return { reset() { s = 1; tx = ty = 0; apply(); } };
 })();
 
@@ -615,19 +623,21 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
 }
 // 내 말 끌어서 놓기(터치·마우스): 말을 누른 채 끌면 손가락 위에 말이 떠서 따라오고 길이 보임 → 놓으면 이동
 {
-  const bd = $('#board'); let tdrag: { ghost: HTMLElement; p: G.Pos | null } | null = null, swallow = false;
+  const bd = $('#board'); let tdrag: { ghost: HTMLElement; p: G.Pos | null; id: number } | null = null, swallow = false;
   const LIFT = 46; // 손가락에 가리지 않게 말을 손가락보다 위에 띄움
   bd.addEventListener('pointerdown', e => {
     const g = S?.game; if (!g || g.turn !== g.me || g.phase !== 'move' || diceBusy) return;
     const tok = bd.querySelector<HTMLElement>(`.tok[data-k="p${g.me}"]`); if (!tok) return;
     const r = tok.getBoundingClientRect();
     if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > Math.max(26, r.width)) return;
-    e.stopPropagation(); bd.setPointerCapture(e.pointerId); lastPointer = e.pointerType;
+    if (tdrag) { end(false); return; } // 두 번째 손가락 = 핀치로 전환
+    bd.setPointerCapture(e.pointerId); lastPointer = e.pointerType;
     const ghost = tok.cloneNode(true) as HTMLElement; ghost.classList.add('tokghost'); document.body.append(ghost);
-    tdrag = { ghost, p: null }; armed = null;
+    tdrag = { ghost, p: null, id: e.pointerId }; armed = null; tokDragOn = true;
   });
+  $('#b2vp').addEventListener('pointerdown', e => { if (tdrag && e.pointerId !== tdrag.id) end(false); }, true);
   bd.addEventListener('pointermove', e => {
-    if (!tdrag) return; const g = S?.game; if (!g) return;
+    if (!tdrag || e.pointerId !== tdrag.id) return; const g = S?.game; if (!g) return;
     const y = e.clientY - (e.pointerType === 'mouse' ? 0 : LIFT);
     tdrag.ghost.style.transform = `translate(${e.clientX}px,${y}px) translate(-50%,-50%) scale(1.6)`;
     const c = document.elementFromPoint(e.clientX, y)?.closest<HTMLElement>('#board [data-p]');
@@ -636,11 +646,11 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
     if (p !== tdrag.p) { tdrag.p = p; showTip(p, e.clientX, y - 80); }
   });
   const end = (ok: boolean) => {
-    if (!tdrag) return; const { ghost, p } = tdrag; tdrag = null; ghost.remove(); swallow = true; setTimeout(() => (swallow = false), 60);
+    if (!tdrag) return; const { ghost, p } = tdrag; tdrag = null; tokDragOn = false; ghost.remove(); swallow = true; setTimeout(() => (swallow = false), 60);
     const g = S?.game; $('#hovertip').hidden = true; previewPath(null);
     if (ok && g && p != null && myMoves(g).has(p)) act({ t: 'move', to: p });
   };
-  bd.addEventListener('pointerup', () => end(true)); bd.addEventListener('pointercancel', () => end(false));
+  bd.addEventListener('pointerup', e => { if (tdrag && e.pointerId === tdrag.id) end(true); }); bd.addEventListener('pointercancel', () => end(false));
   bd.addEventListener('click', e => { if (swallow) { e.stopImmediatePropagation(); swallow = false; } }, true);
 }
 $('#board').onmousemove = e => {
@@ -1096,22 +1106,38 @@ for (const b of document.querySelectorAll<HTMLElement>('.dtabs [data-tab]')) b.o
 {
   const sheet = dr.querySelector<HTMLElement>('.sheet')!, TABS = ['memo', 'log'];
   const phone = () => matchMedia('(max-aspect-ratio:23/20) and (max-width:639px)').matches;
-  let sw: { x: number; y: number; head: boolean } | null = null;
+  let sw: { x: number; y: number; head: boolean; top: number; t: number; vy: number; ly: number; lt: number } | null = null;
+  const minTop = () => $('header').getBoundingClientRect().bottom + 6;
   sheet.addEventListener('pointerdown', e => {
     if (!phone() || (e.target as HTMLElement).closest('button,select,input,textarea')) return;
-    sw = { x: e.clientX, y: e.clientY, head: !!(e.target as HTMLElement).closest('.grab,.sheethead') };
+    const head = !!(e.target as HTMLElement).closest('.grab,.sheethead');
+    sw = { x: e.clientX, y: e.clientY, head, top: dr.getBoundingClientRect().top, t: performance.now(), vy: 0, ly: e.clientY, lt: performance.now() };
+    if (head) { sheet.setPointerCapture(e.pointerId); dr.classList.add('sdrag'); }
+  });
+  sheet.addEventListener('pointermove', e => {
+    if (!sw?.head) return;
+    const now = performance.now(), dy = e.clientY - sw.y;
+    sw.vy = (e.clientY - sw.ly) / Math.max(1, now - sw.lt); sw.ly = e.clientY; sw.lt = now; // 손을 떼기 직전 속도(px/ms)
+    if (dy < 0) { dr.style.top = Math.max(minTop(), sw.top + dy) + 'px'; dr.style.transform = 'none'; } // 위로: 시트가 커짐
+    else { dr.style.top = sw.top + 'px'; dr.style.transform = `translateY(${dy}px)`; }              // 아래로: 시트가 내려감
   });
   sheet.addEventListener('pointerup', e => {
-    if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y, head = sw.head; sw = null;
-    if (head && Math.abs(dy) > 36 && Math.abs(dy) > Math.abs(dx)) {
-      if (dy < 0) dr.classList.add('tall'); else if (dr.classList.contains('tall')) dr.classList.remove('tall'); else dr.classList.remove('open');
+    if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y, head = sw.head, vy = sw.vy; sw = null;
+    if (head) {
+      dr.classList.remove('sdrag');
+      const flick = Math.abs(vy) > 0.5;
+      if (dy < -40 || (flick && vy < 0)) dr.classList.add('tall');
+      else if (dy > 40 || (flick && vy > 0)) { if (dr.classList.contains('tall') && dy < 260) dr.classList.remove('tall'); else { dr.classList.remove('open', 'tall'); } }
       store.set('wd_tallmemo', dr.classList.contains('tall'));
-    } else if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
+      dr.style.top = ''; dr.style.transform = ''; // 손가락 위치에서 정해진 자리로 CSS 전환이 부드럽게 이어짐
+      return;
+    }
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
       const i = TABS.indexOf(dr.dataset.tab ?? 'memo'), j = Math.min(TABS.length - 1, Math.max(0, i + (dx < 0 ? 1 : -1)));
       dr.dataset.tab = TABS[j];
     }
   });
-  sheet.addEventListener('pointercancel', () => (sw = null));
+  sheet.addEventListener('pointercancel', () => { sw = null; dr.classList.remove('sdrag'); dr.style.top = ''; dr.style.transform = ''; });
 }
 // 폰: 아래 독의 메모·기록 버튼 — 같은 탭을 다시 누르면 닫힘
 for (const b of document.querySelectorAll<HTMLElement>('#dockside [data-tab]')) b.onclick = () => {

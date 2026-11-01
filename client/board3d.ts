@@ -29,7 +29,8 @@ function label(text: string, color: string, w: number) {
   g.fillStyle = color; g.fillText(text, 256, 64);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 4), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-  m.rotation.x = -Math.PI / 2; noPick(m); // 라벨은 클릭 대상 아님
+  m.rotation.order = 'YXZ'; m.rotation.x = -Math.PI / 2; noPick(m); // 라벨은 클릭 대상 아님. y 회전은 카메라 방향에 맞춰 매 프레임
+  m.userData.label = true;
   return m;
 }
 
@@ -94,6 +95,9 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   let pawns: THREE.Group[] = [], npcPawns: (THREE.Group | null)[] = [], env: THREE.Group | null = null, weaponSprites: THREE.Sprite[] = [];
   const wx = (x: number) => x - n / 2 + 0.5; // 칸 좌표 → 월드 좌표
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  // 벽(심즈식 컷어웨이): 카메라 쪽을 향한 벽은 걸레받이 높이로 내려가 방 안이 보인다
+  const WALL_H = 0.9, WALL_LOW = 0.08;
+  let wallMesh: THREE.InstancedMesh | null = null, walls: { x: number; z: number; vert: boolean; nx: number; nz: number; h: number }[] = [];
 
   function build(g: G.View) {
     if (board) {
@@ -135,7 +139,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     });
 
     // 벽: 방 칸 둘레를 따라, 문 자리는 비움. InstancedMesh 1개
-    const segs: [number, number, boolean][] = [];
+    walls = [];
     for (let i = 0; i < n * n; i++) {
       const r = M.cells[i]; if (r === -1) continue;
       const x = i % n, y = Math.floor(i / n);
@@ -143,14 +147,11 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
         const X = x + dx, Y = y + dy, inside = X >= 0 && Y >= 0 && X < n && Y < n, nb = inside ? Y * n + X : -1;
         if (inside && M.cells[nb] === r) continue;
         if (M.doors.some(d => d.room === r && d.cell === nb)) continue;
-        segs.push([wx(x) + dx / 2, wx(y) + dy / 2, dx !== 0]);
+        walls.push({ x: wx(x) + dx / 2, z: wx(y) + dy / 2, vert: dx !== 0, nx: dx, nz: dy, h: WALL_H }); // n = 방 밖을 향한 방향
       }
     }
-    const wm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat(P.wall, { roughness: 0.6 }), segs.length);
-    segs.forEach(([x, z, vert], k) => {
-      m4.compose(new THREE.Vector3(x, 0.3, z), new THREE.Quaternion(), vert ? new THREE.Vector3(0.08, 0.5, 1.04) : new THREE.Vector3(1.04, 0.5, 0.08));
-      wm.setMatrixAt(k, m4);
-    });
+    const wm = (wallMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat(P.wall, { roughness: 0.6 }), walls.length));
+    walls.forEach((w, k) => setWall(k, w));
     wm.castShadow = wm.receiveShadow = true; noPick(wm); B.add(wm);
 
     const c = roomMeshes[roomMeshes.length - 1].userData;
@@ -195,6 +196,28 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     });
     sun.position.set(n * 0.4, n * 1.1, n * 0.6);
     fit();
+  }
+
+  const q0 = new THREE.Quaternion(), v3 = new THREE.Vector3(), s3 = new THREE.Vector3();
+  function setWall(k: number, w: (typeof walls)[number]) {
+    s3.set(w.vert ? 0.08 : 1.04, w.h, w.vert ? 1.04 : 0.08);
+    m4.compose(v3.set(w.x, 0.05 + w.h / 2, w.z), q0, s3); wallMesh!.setMatrixAt(k, m4);
+  }
+  /** 카메라가 바라보는 방향(수평)으로 바깥을 향한 벽 = 시야를 가리는 벽 → 낮춤. 높이는 부드럽게 바뀜 */
+  function updateWalls(dt: number) {
+    if (!wallMesh || !walls.length) return;
+    const cx = camera.position.x - controls.target.x, cz = camera.position.z - controls.target.z, l = Math.hypot(cx, cz) || 1;
+    let changed = false;
+    walls.forEach((w, k) => {
+      const goal = (w.nx * cx + w.nz * cz) / l > 0.3 ? WALL_LOW : WALL_H;
+      if (Math.abs(w.h - goal) < 0.002) return;
+      w.h += (goal - w.h) * Math.min(1, dt * 10); if (Math.abs(w.h - goal) < 0.002) w.h = goal;
+      setWall(k, w); changed = true;
+    });
+    if (changed) wallMesh.instanceMatrix.needsUpdate = true;
+    // 방 이름이 카메라를 돌려도 거꾸로 보이지 않게, 바닥에 누운 채 카메라 쪽으로 돌림
+    const az = Math.atan2(cx, cz);
+    board?.children.forEach(o => { if (o.userData.label) o.rotation.y = az; });
   }
 
   function fit() {
@@ -350,6 +373,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     ring.visible = !!cur?.visible;
     if (cur && ring.visible) ring.position.set(cur.position.x, 0.12, cur.position.z);
     controls.update();
+    updateWalls(dt);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }

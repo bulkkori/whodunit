@@ -183,6 +183,30 @@ test('블러핑 금지 방: 내 손의 카드는 지목 불가', () => {
   assert.ok(G.act(g, 0, { t: 'suggest', s, w }));
 });
 
+test('같은 방 연속 추론 불가: 끌려왔을 때만 다음 차례 바로 추론, 원래 그 방에 있었으면 불가', () => {
+  const g = G.newGame('mansion', seats(4), 5);
+  const sus = (j: number) => 's' + g.players[j].suspect;
+  g.players[0].pos = G.roomPos(1); g.players[0].canSuggest = true;
+  g.players[1].pos = G.roomPos(1); g.players[1].canSuggest = false; // 1번은 이미 이 방에 머무는 중
+  g.players[2].pos = G.roomPos(3); g.players[2].canSuggest = false;
+  assert.equal(G.act(g, 0, { t: 'suggest', s: sus(1), w: g.env.w }), null);
+  assert.equal(g.players[1].canSuggest, false);                    // 안 움직였으니 연속 추론 불가
+  const g2 = G.newGame('mansion', seats(4), 5);
+  g2.players[0].pos = G.roomPos(1); g2.players[0].canSuggest = true; g2.players[2].pos = G.roomPos(3); g2.players[2].canSuggest = false;
+  assert.equal(G.act(g2, 0, { t: 'suggest', s: 's' + g2.players[2].suspect, w: g2.env.w }), null);
+  assert.equal(g2.players[2].pos, G.roomPos(1)); assert.equal(g2.players[2].canSuggest, true); // 끌려옴 → 바로 추론 가능
+  // 추론한 사람은 다음 차례에 같은 방에서 다시 추론할 수 없다(방에 막 들어왔을 때만)
+  g.players[0].canSuggest = false; g.phase = 'roll'; g.turn = 0; g.sug = null;
+  assert.match(G.act(g, 0, { t: 'suggest', s: sus(2), w: g.env.w }) ?? '', /방에 막 들어왔을 때만/);
+});
+
+test('수석 형사 심문: 고른 종류 카드 중 1장만 본다', () => {
+  const { g, i } = withRole(4, 'chief'); onBonus(g, i);
+  const t = (i + 1) % 4; g.players[t].hand = ['s0', 's1', 's2', 'w0'];
+  assert.equal(G.act(g, i, { t: 'ability', target: t, cat: 's' }), null);
+  assert.equal(G.view(g, i).log.filter(e => e.t === 'intel' && e.kind === 'interrogate' && e.card).length, 1);
+});
+
 test('직업: 보너스칸 능력 — 심문·수색·지름길·추격·도청·묵비권·보험', () => {
   { const { g, i } = withRole(4, 'chief'); onBonus(g, i);
     const t = (i + 1) % 4; assert.equal(G.act(g, i, { t: 'ability', target: t, cat: 's' }), null);

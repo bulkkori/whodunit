@@ -31,7 +31,7 @@ export interface RoleDef {
   kind: 'instant' | 'charge';
 }
 export const ROLES: Record<RoleId, RoleDef> = {
-  chief:   { name: '수석 형사', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '지정 심문: 한 명과 종류(인물·흉기·장소)를 고르면 그 사람이 가진 그 종류 카드를 전부 봅니다' },
+  chief:   { name: '수석 형사', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '지정 심문: 한 명과 종류(인물·흉기·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 것만)' },
   tap:     { name: '정보원', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '도청 장치: 설치해 두면 다음에 남들끼리 오가는 반박 카드 2번을 몰래 봅니다' },
   analyst: { name: '기록 분석가', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '기록 열람: 지난 남들끼리의 반박 하나를 골라 그때 보여준 카드를 확인합니다' },
   field:   { name: '현장 조사관', icon: '🚓', group: '행동', kind: 'instant', uses: 3, desc: '추격: 주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
@@ -431,7 +431,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       const s: Triple = { s: a.s, w: a.w, r: 'r' + roomOf(p.pos) };
       p.canSuggest = false; g.phase = 'act';
       const sv = +s.s.slice(1), q = g.players.find((x, j) => j !== i && !x.out && x.suspect === sv);
-      if (q) { q.pos = p.pos; q.canSuggest = true; }               // 지목된 인물 말을 이 방으로
+      if (q) { if (q.pos !== p.pos) q.canSuggest = true; q.pos = p.pos; } // 지목된 인물 말을 이 방으로 — 실제로 끌려왔을 때만 다음 차례에 바로 추리 가능(원래 이 방에 있었으면 연속 추리 불가)
       else if (g.npc[sv] !== null) g.npc[sv] = p.pos;              // 아무도 안 맡은 인물 말도
       g.weapons[+s.w.slice(1)] = roomOf(p.pos);                    // 지목한 흉기 말도
       g.log.push({ t: 'suggest', p: i, ...s });
@@ -464,9 +464,10 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
         case 'chief': {
           if (!other(a.target) || !a.cat || !KINDS.includes(a.cat)) return '심문할 사람과 종류를 고르세요';
           const t = a.target!, cards = g.players[t].hand.filter(c => c[0] === a.cat);
+          const fresh = cards.filter(c => !p.known.includes(c)), card = cards.length ? pick(r, fresh.length ? fresh : cards) : undefined; // 1장만(모르는 카드 우선)
           g.log.push({ t: 'ability', p: i, role, target: t });
-          for (const card of cards) { p.known.push(card); g.log.push({ t: 'intel', to: i, kind: 'interrogate', card, from: t, cat: a.cat }); }
-          if (!cards.length) g.log.push({ t: 'intel', to: i, kind: 'interrogate', from: t, cat: a.cat });
+          if (card) p.known.push(card);
+          g.log.push({ t: 'intel', to: i, kind: 'interrogate', card, from: t, cat: a.cat });
           break;
         }
         case 'analyst': {

@@ -34,13 +34,13 @@
     <h2>방 만들기</h2>
     <label class="field">방 제목 <input id="c_title" maxlength="20" placeholder="예: 금요일 밤의 사건"></label>
     <label class="field">맵 <select id="theme"></select></label>
-    <div class="field">최대 인원
-      <div class="seg" id="maxmode" role="tablist" aria-label="인원수 입력 방식 시안">
-        <button data-m="select" class="on">셀렉트</button><button data-m="text">텍스트 필드</button><button data-m="stepper">수량 스테퍼</button>
+    <div class="field">최대 인원 <small class="hint">한 번 누르면 목록 · 두 번 누르면 직접 입력 · ▲▼로 한 명씩</small>
+      <div class="combo" id="c_max">
+        <input id="c_max_txt" inputmode="numeric" readonly role="combobox" aria-expanded="false" aria-controls="c_max_list" aria-label="최대 인원">
+        <span class="unit">명</span>
+        <div class="spin"><button type="button" data-d="1" aria-label="한 명 늘리기">▲</button><button type="button" data-d="-1" aria-label="한 명 줄이기">▼</button></div>
+        <ul id="c_max_list" role="listbox" hidden></ul>
       </div>
-      <select id="c_max_sel"></select>
-      <input id="c_max_txt" type="number" inputmode="numeric" min="3" max="8" hidden>
-      <div id="c_max_step" class="stepper" hidden><button type="button" data-d="-1" aria-label="한 명 줄이기">−</button><output id="c_max_val">6</output><span>명</span><button type="button" data-d="1" aria-label="한 명 늘리기">＋</button></div>
     </div>
     <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
     <label class="switch"><span>🕵️ 탐정 직업<small>보너스칸(!)에서 쓰는 특수 능력</small></span><input type="checkbox" id="c_roles" checked><i></i></label>

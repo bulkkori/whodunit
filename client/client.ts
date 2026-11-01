@@ -67,27 +67,43 @@ function stopLoading() { clearTimeout(loadingT); if (loadingBtn) { loadingBtn.cl
 
 // ---------- 방 만들기 화면 ----------
 let creating = false;
-const maxSel = $<HTMLSelectElement>('#c_max_sel'), maxTxt = $in('#c_max_txt');
-for (let n = 3; n <= G.MAX_PLAYERS; n++) maxSel.append(new Option(`${n}명`, String(n)));
+// 최대 인원: 한 칸에 셀렉트·텍스트 필드·스테퍼를 합침
+//  한 번 누르면 목록(셀렉트처럼) · 빠르게 두 번 누르면 직접 입력 · ▲▼ 또는 화살표 키로 한 명씩
+const maxTxt = $in('#c_max_txt'), maxList = $('#c_max_list');
 let maxPlayers = 6;
 function setMax(n: number) {
-  maxPlayers = Math.min(G.MAX_PLAYERS, Math.max(3, Math.round(n) || 6));
-  maxSel.value = String(maxPlayers); maxTxt.value = String(maxPlayers); $('#c_max_val').textContent = String(maxPlayers);
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max_step button')) b.disabled = maxPlayers + +b.dataset.d! < 3 || maxPlayers + +b.dataset.d! > G.MAX_PLAYERS;
+  maxPlayers = Math.min(G.MAX_PLAYERS, Math.max(3, Math.round(n) || maxPlayers));
+  maxTxt.value = String(maxPlayers);
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.disabled = maxPlayers + +b.dataset.d! < 3 || maxPlayers + +b.dataset.d! > G.MAX_PLAYERS;
+  for (const li of maxList.children) li.setAttribute('aria-selected', String((li as HTMLElement).dataset.v === String(maxPlayers)));
 }
-setMax(6);
-maxSel.onchange = () => setMax(+maxSel.value);
-maxTxt.onchange = () => setMax(+maxTxt.value);
-for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max_step button')) b.onclick = () => setMax(maxPlayers + +b.dataset.d!);
-// 인원수 입력 방식 시안: 셀렉트 / 텍스트 필드 / 수량 스테퍼를 탭으로 바꿔 보기
-for (const b of document.querySelectorAll<HTMLElement>('#maxmode button')) b.onclick = e => {
-  e.preventDefault();
-  const m = b.dataset.m;
-  document.querySelectorAll('#maxmode button').forEach(x => x.classList.toggle('on', x === b));
-  maxSel.hidden = m !== 'select'; maxTxt.hidden = m !== 'text'; $('#c_max_step').hidden = m !== 'stepper';
-  store.set('wd_maxmode', m);
+for (let n = 3; n <= G.MAX_PLAYERS; n++) {
+  const li = el('li', '', `${n}명`); li.dataset.v = String(n); li.setAttribute('role', 'option');
+  li.onclick = () => { setMax(n); listOpen(false); };
+  maxList.append(li);
+}
+const listOpen = (on: boolean) => { maxList.hidden = !on; maxTxt.setAttribute('aria-expanded', String(on)); };
+const editMode = (on: boolean) => {
+  maxTxt.readOnly = !on; $('#c_max').classList.toggle('editing', on);
+  if (on) { listOpen(false); maxTxt.focus(); maxTxt.select(); } else setMax(parseInt(maxTxt.value, 10));
 };
-(document.querySelector<HTMLElement>(`#maxmode [data-m="${store.get('wd_maxmode', 'select')}"]`) ?? document.querySelector<HTMLElement>('#maxmode button'))!.click();
+setMax(6);
+let tapT: ReturnType<typeof setTimeout> | undefined, lastTap = 0;
+maxTxt.addEventListener('click', () => {
+  if (!maxTxt.readOnly) return; // 입력 중엔 커서 이동만
+  const now = Date.now();
+  if (now - lastTap < 320) { clearTimeout(tapT); lastTap = 0; editMode(true); return; } // 두 번 → 직접 입력
+  lastTap = now;
+  tapT = setTimeout(() => listOpen(maxList.hidden === true), 320);                                  // 한 번 → 목록 열고 닫기
+});
+maxTxt.addEventListener('blur', () => { if (!maxTxt.readOnly) editMode(false); });
+maxTxt.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); if (!maxTxt.readOnly) editMode(false); else listOpen(maxList.hidden === true); }
+  else if (e.key === 'Escape') { listOpen(false); if (!maxTxt.readOnly) { maxTxt.value = String(maxPlayers); editMode(false); } }
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); setMax(maxPlayers + (e.key === 'ArrowUp' ? 1 : -1)); }
+});
+for (const b of document.querySelectorAll<HTMLButtonElement>('#c_max .spin button')) b.onclick = () => { setMax(maxPlayers + +b.dataset.d!); listOpen(false); };
+addEventListener('pointerdown', e => { if (!(e.target as HTMLElement).closest('#c_max')) listOpen(false); });
 
 const roomOpts = () => ({ roles: $in('#c_roles').checked, bluff: $in('#c_bluff').checked });
 $('#create').onclick = () => {

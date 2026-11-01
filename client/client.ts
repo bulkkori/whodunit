@@ -24,7 +24,7 @@ let token = store.get<string | null>('wd_token', null);
 if (!token) { token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); store.set('wd_token', token); }
 const TOKEN = token;
 /** 피드백 받는 곳(구글 폼 등). 비어 있으면 링크를 숨김 */
-export const FEEDBACK_URL = '';
+export const FEEDBACK_URL = 'https://naver.me/xzHBWAvk';
 for (const a of document.querySelectorAll<HTMLAnchorElement>('a.feedback')) { a.hidden = !FEEDBACK_URL; a.href = FEEDBACK_URL; }
 
 let S: StateMsg | null = null, ws: WebSocket | null = null, deadline = 0, total = G.TURN_MS, everConnected = false;

@@ -54,15 +54,16 @@ vCellXZ = position.xz;`).replace('void main() {', 'varying vec2 vCellXZ;\nvoid m
   return m;
 }
 
-/** 새긴 "!" 텍스처: 테두리 홈 + 글자 홈(위·왼쪽은 그림자, 아래·오른쪽은 빛) + 금 상감 */
+/** 새긴 "!" 텍스처: 테두리 홈 + 글자 홈(조명 방향에 맞춘 빛·그림자) + 금 상감 */
 let engraved: THREE.CanvasTexture | null = null;
 function engraveTex() {
   if (engraved) return engraved;
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const x = c.getContext('2d')!;
   const carve = (draw: (dx: number, dy: number) => void) => {
-    x.fillStyle = x.strokeStyle = 'rgba(255,236,205,.35)'; draw(2, 2);   // 아래·오른쪽 가장자리 빛
-    x.fillStyle = x.strokeStyle = 'rgba(0,0,0,.8)'; draw(-2, -2);        // 위·왼쪽 가장자리 그림자
+    // 해는 보드 오른쪽 아래(+x,+z)에서 비춤 → 홈의 오른쪽 아래는 턱에 가려 그림자, 왼쪽 위 안벽은 빛을 받음
+    x.fillStyle = x.strokeStyle = 'rgba(255,236,205,.35)'; draw(-2, -2);
+    x.fillStyle = x.strokeStyle = 'rgba(0,0,0,.8)'; draw(2, 2);
   };
   x.lineWidth = 5;
   carve((dx, dy) => { x.beginPath(); x.roundRect(10 + dx, 10 + dy, 108, 108, 12); x.stroke(); });
@@ -251,11 +252,11 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     };
     pawns = g.players.map(p => makePawn(p.suspect));
     npcPawns = g.npc.map((pos, v) => (pos == null ? null : makePawn(v, true)));
-    // 보너스칸 "!": 바닥에 새긴 모양(음각 + 금 상감) — 칸 위에 붙인 얇은 판, 글자는 카메라 쪽으로 돎
+    // 보너스칸 "!": 바닥에 새긴 모양(음각 + 금 상감) — 칸 위에 붙인 얇은 판. 새긴 것이므로 카메라를 따라 돌지 않음
     const engr = engraveTex();
     for (const b of M.bonus) {
       const d = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshStandardMaterial({ map: engr, transparent: true, depthWrite: false, roughness: 0.5, metalness: 0.3 }));
-      d.rotation.order = 'YXZ'; d.rotation.x = -Math.PI / 2; d.userData.label = true;
+      d.rotation.x = -Math.PI / 2;
       d.position.set(wx(b % n), 0.045, wx(Math.floor(b / n))); noPick(d); B.add(d);
     }
     // 흉기 말: 이모지 스프라이트(항상 카메라를 향함)

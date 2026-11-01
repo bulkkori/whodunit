@@ -647,7 +647,7 @@ function renderBoard(g: G.View) {
     d.append(el('span', 'rname', '🗂️ 사건 파일'), el('span', 'env', '✉️'), el('span', 'toks')); doorGaps(m.roomCount, q, d); b.append(d);
   }
   const gen = ++gen2D; // 다시 그려지면 이전 이동 애니메이션 타이머는 무시
-  const before = new Map<string, DOMRect>(); // 추리로 끌려오는 말·흉기 연출용 이전 위치
+  const before = new Map<string, DOMRect>(); // 추리로 끌려오는 말·도구 연출용 이전 위치
   b.querySelectorAll<HTMLElement>('.tok[data-k]').forEach(t => before.set(t.dataset.k!, t.getBoundingClientRect()));
   b.querySelectorAll('.tok').forEach(t => t.remove());
   b.querySelectorAll('.can').forEach(t => t.classList.remove('can'));
@@ -696,11 +696,12 @@ function renderBoard(g: G.View) {
     t.style.background = COLORS[v]; t.title = `${T.s[v]} (플레이어 없음)`;
     b.querySelector(`[data-p="${pos}"] .toks`)?.append(t);
   });
-  g.weapons.forEach((room, k) => { // 흉기 말
-    const w = el('span', 'tok wtok', WEAPON_ICON[g.theme][k]); w.title = '흉기: ' + T.w[k]; w.dataset.k = 'w' + k;
+  g.weapons.forEach((room, k) => { // 도구 말
+    const w = el('span', 'tok wtok', WEAPON_ICON[g.theme][k]); w.title = '도구: ' + T.w[k]; w.dataset.k = 'w' + k;
+    const wu = asset(g.theme, 'w' + k); if (wu) { const im = new Image(); im.src = wu; im.alt = T.w[k]; w.replaceChildren(im); w.classList.add('wimg'); } // 도구 그림이 있으면 종이 메달 안에 그림
     b.querySelector(`[data-p="${G.roomPos(room)}"] .toks`)?.append(w);
   });
-  // 위치가 바뀐 말·흉기는 이전 자리에서 날아오게(자기 이동은 위에서 한 칸씩 걷기로 처리)
+  // 위치가 바뀐 말·도구는 이전 자리에서 날아오게(자기 이동은 위에서 한 칸씩 걷기로 처리)
   b.querySelectorAll<HTMLElement>('.tok[data-k]').forEach(t => {
     const old = before.get(t.dataset.k!); if (!old || ownMove.has(t.dataset.k!)) return;
     const now = t.getBoundingClientRect(), dx = old.left - now.left, dy = old.top - now.top;
@@ -834,7 +835,7 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
 }
 
 const nm = (g: G.View, j: number) => g.players[j]?.name ?? '?';
-const KIND_KO: Record<G.Kind, string> = { s: '인물', w: '흉기', r: '장소' };
+const KIND_KO: Record<G.Kind, string> = { s: '인물', w: '도구', r: '장소' };
 const cn = (g: G.View, id: G.Card) => G.cardName(g.theme, id);
 function line(g: G.View, e: G.LogEntry): string {
   const T = G.THEMES[g.theme];
@@ -962,7 +963,7 @@ function renderRole(g: G.View, my: boolean) {
     const sel = (opts: [string, string][]) => { const s = el('select'); for (const [v, t] of opts) s.append(new Option(t, v)); row.append(s); return s; };
     const btn = (label: string, fn: () => void) => { const b = el('button', '', label); b.onclick = fn; row.append(b); };
     if (role === 'chief') {
-      const t = sel(others.map(x => [String(x.j), x.p.name])), c = sel([['s', '인물'], ['w', '흉기'], ['r', '장소']]);
+      const t = sel(others.map(x => [String(x.j), x.p.name])), c = sel([['s', '인물'], ['w', '도구'], ['r', '장소']]);
       btn('🕵️ 심문', () => go({ t: 'ability', target: +t.value, cat: c.value as G.Kind }));
     } else if (role === 'analyst') {
       const e = sel(archive.map(x => [String(x.id), `${nm(g, x.to)}의 추리에 ${nm(g, x.p)}가 보여준 카드`]));
@@ -1089,7 +1090,7 @@ function renderDialogs(g: G.View) {
         box.classList.add('row-cards', 'ocards');
         (['s', 'w', 'r'] as const).forEach((k, n) => { const c = cardEl(g.theme, env[k]); c.style.animationDelay = `${0.35 + n * 0.45}s`; box.append(c); });
         f.append(box);
-        f.append(el('p', 'ofact', `범인은 ${G.cardName(g.theme, env.s)}, 흉기는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
+        f.append(el('p', 'ofact', `범인은 ${G.cardName(g.theme, env.s)}, 도구는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
         const row = el('div', 'row');
         if (S?.host) { const again = el('button', '', '대기실로'); again.onclick = e => { e.preventDefault(); send({ t: 'again' }); dlg.close(); }; row.append(again); }
         row.append(el('button', 'ghost', '보드 보기')); f.append(row);
@@ -1156,7 +1157,7 @@ function buildMemo(g: G.View) {
   for (const _ of FREE) { const th = el('th', 'free', '·'); th.title = '자유 칸'; hr.append(th); }
   head.append(hr); t.append(head);
   const body = el('tbody'), all = G.allCards(g.map);
-  for (const [k, label] of [['s', '범인은?'], ['w', '흉기는?'], ['r', '장소는?']] as const) {
+  for (const [k, label] of [['s', '범인은?'], ['w', '도구는?'], ['r', '장소는?']] as const) {
     const sec = el('tr', 'sec'), th = el('th', '', label); th.colSpan = g.players.length + 1 + FREE.length; sec.append(th); body.append(sec);
     for (const c of all[k]) {
       const tr = el('tr'); tr.dataset.card = c; tr.append(el('th', 'rowname', cn(g, c)));

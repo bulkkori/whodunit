@@ -1254,3 +1254,50 @@ button.fsel:focus-visible{outline:2px solid #c9a24a;outline-offset:2px}
 .dtabs button{white-space:nowrap}
 .sheethead{min-width:0}
 #automode+button.fsel{flex:0 1 190px;min-width:0}
+
+/* ========== 가독성: 본문 글꼴 Pretendard, 작은 글자 최소 12~13px, 종이 위 회색 글자는 더 진하게 ========== */
+body{font-family:"Pretendard Variable","Pretendard",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+.gc-band,.gc-name{font-family:"Pretendard Variable","Pretendard",system-ui,"Malgun Gothic",sans-serif}
+/* 종이 위 보조 글자 */
+#panel,#drawer .sheet,#dlg,#reveal,#createbox,#wait,#skel,#pickstage{--sub:#5a4738}
+.hint{font-size:12.5px;line-height:1.45}
+.sub{line-height:1.5}
+.tag,small,.no,#waitmsg,.chip{font-size:13px}
+#wait #waitmsg{font-size:13px;color:#4a3a2f}
+#lobby .tab{font-size:12px}
+#lobby .or{font-size:13px}
+/* 보드 방 이름: 어두운 이름표 위 밝은 굵은 글자(텍스처 바닥 위에서도 또렷하게) */
+#board .rname{font-size:clamp(11px,calc(100cqw / var(--n) * .4),15px);font-weight:700;color:#f6eedd;background:#0b0809b3;padding:1px 6px 2px;border-radius:3px;
+  width:max-content;max-width:calc(100% - 4px);line-height:1.25;text-shadow:none!important;align-self:flex-start}
+#board .room.center .rname{color:#f1c86a}
+/* 카드 글자 */
+.gc-name{font-size:max(9px,13.5cqw);min-height:24cqw;line-height:1.1}
+.gc-band{font-size:max(8px,10cqw);letter-spacing:.18em}
+.gc-band i{font-size:max(8px,10cqw)}
+/* 추리 노트 */
+#memo{font-size:14px}
+#memo thead th{font-size:12.5px;font-weight:800;max-width:64px}
+#memo .rowname{font-size:14px}
+#drawer .sheet>.hint{font-size:12.5px}
+/* 수사 일지 */
+.sg-h,.sg-r{font-size:13.5px}
+.t-log .ev{font-size:13px}
+/* 시작 연출 */
+#intro .ititle span{font-size:15px;color:#e6dac4}
+#intro .iseat{font-size:14px}
+/* 폰 */
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  #plist li{font-size:13px;max-width:100px}
+  #plast{font-size:12.5px;color:#c9bfb3}
+  #memo .rowname{font-size:13.5px;max-width:120px}
+  #memo thead th{font-size:12px}
+  #dockside button{font-family:"Pretendard Variable","Pretendard",sans-serif;font-weight:800}
+  #dockside button span{font-size:12px}
+  #status{font-size:15px}
+  .hint{font-size:12.5px}
+}
+
+/* 2D 흉기 표시: 종이 메달(금테) 안에 흉기 그림 */
+#board .tok.wtok.wimg{background:radial-gradient(circle at 40% 35%,#f6eedb,#d6c39c)!important;width:calc(100cqw / var(--n) * .8);box-shadow:0 0 0 1.5px #b8924a,0 1px 3px #0009;overflow:hidden;padding:0;font-size:0}
+#board .tok.wtok.wimg img{display:block;width:90%;height:90%;object-fit:contain;filter:drop-shadow(0 1px 1px #0006)}
+.field .hint{font-size:12.5px}

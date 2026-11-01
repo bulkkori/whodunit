@@ -2,7 +2,7 @@
 
 export type ThemeKey = 'mansion' | 'atlantis' | 'station';
 export type Kind = 's' | 'w' | 'r';
-/** 카드 id: 's0'~(인물), 'w0'~(흉기), 'r0'~(장소). 인물·흉기는 6~8장(인원에 따라), 장소는 방 개수만큼 */
+/** 카드 id: 's0'~(인물), 'w0'~(도구), 'r0'~(장소). 인물·도구는 6~8장(인원에 따라), 장소는 방 개수만큼 */
 export type Card = string;
 /** 0 이상 = 복도 칸 인덱스(y*n+x), 음수 = 방 -(방번호+1). null = 탈락해 보드에 없음 */
 export type Pos = number;
@@ -14,7 +14,7 @@ export interface Door { room: number; cell: number }
 export interface GameMap {
   n: number; cells: number[]; rects: Rect[]; center: Rect; doors: Door[];
   passages: Record<number, number>; roomCount: number;
-  /** 이 판의 인물·흉기 카드 수 = max(6, 인원) */
+  /** 이 판의 인물·도구 카드 수 = max(6, 인원) */
   people: number;
   /** 보너스칸(!) — 이동을 이 칸에서 멈추면 특수 능력을 쓸 수 있다 */
   bonus: Pos[];
@@ -31,11 +31,11 @@ export interface RoleDef {
   kind: 'instant' | 'charge';
 }
 export const ROLES: Record<RoleId, RoleDef> = {
-  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '한 명과 종류(인물·흉기·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 것만)' },
+  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '한 명과 종류(인물·도구·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 것만)' },
   tap:     { name: '도청 장치', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '설치해 두면 다음에 남들끼리 오가는 반박 카드 2번을 몰래 봅니다' },
   analyst: { name: '기록 열람', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '지난 남들끼리의 반박 하나를 골라 그때 보여준 카드를 확인합니다' },
   field:   { name: '추격', icon: '🚓', group: '행동', kind: 'instant', uses: 3, desc: '주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
-  scout:   { name: '원격 수색', icon: '🔦', group: '행동', kind: 'instant', uses: 1, desc: '방 하나를 골라 그 장소 카드와, 그 방에 놓인 흉기 1개의 카드를 누가 가졌는지 확인합니다' },
+  scout:   { name: '원격 수색', icon: '🔦', group: '행동', kind: 'instant', uses: 1, desc: '방 하나를 골라 그 장소 카드와, 그 방에 놓인 도구 1개의 카드를 누가 가졌는지 확인합니다' },
   guide:   { name: '지름길', icon: '🗝️', group: '행동', kind: 'instant', uses: 3, desc: '사건 파일실을 뺀 아무 방으로 바로 이동해 추리할 수 있습니다' },
   lawyer:  { name: '묵비권', icon: '⚖️', group: '방어', kind: 'charge', uses: 2, desc: '준비해 두면 다음에 내가 반박할 차례에 카드를 보여주지 않고 넘길 수 있습니다 (사용 사실은 공개)' },
   insure:  { name: '보험', icon: '🛡️', group: '방어', kind: 'charge', uses: 1, desc: '가입해 두면 다음 최종 추리가 틀려도 탈락하지 않고 한 턴 쉽니다' },
@@ -80,7 +80,7 @@ export interface Game {
   theme: ThemeKey; seed: number; map: GameMap; players: Player[]; env: Triple;
   turn: number; phase: Phase; roll: number | null; sug: Suggestion | null;
   log: LogEntry[]; winner: number | null; turnNo: number; rolls: number; opts: GameOpts;
-  /** 흉기 말 위치: weapons[k] = 흉기 k가 놓인 방 번호. 추리하면 그 방으로 옮겨진다 */
+  /** 도구 말 위치: weapons[k] = 도구 k가 놓인 방 번호. 추리하면 그 방으로 옮겨진다 */
   weapons: number[];
   /** 아무도 고르지 않은 인물 말 위치(npc[인물 번호]). 플레이어가 맡은 인물은 null */
   npc: (Pos | null)[];
@@ -301,7 +301,7 @@ export function moves(g: BoardState, i: number): Set<Pos> {
 export interface SeatIn { name: string; bot?: boolean; suspect?: number | null }
 
 /**
- * 준비: ① 인물은 자리마다 고른 것(겹치거나 없으면 남은 것 중 무작위) ② 인물·흉기·장소에서 1장씩 봉투로
+ * 준비: ① 인물은 자리마다 고른 것(겹치거나 없으면 남은 것 중 무작위) ② 인물·도구·장소에서 1장씩 봉투로
  * ③ 나머지를 섞어 모두에게 같은 장수로 ④ 남는 카드는 공개(진실이 아님)
  */
 export function newGame(theme: ThemeKey, seats: SeatIn[], seed: number, opts: GameOpts = { roles: false, bluff: true }): Game {
@@ -321,7 +321,7 @@ export function newGame(theme: ThemeKey, seats: SeatIn[], seed: number, opts: Ga
     role: null, uses: 0, revealed: false, charged: 0, skip: false, onBonus: false, usedBonus: false,
   }));
   const npc = ids.map(v => (suspects.includes(v) ? null : C));
-  const weapons = shuffle(r, Array.from({ length: R }, (_, k) => k)).slice(0, S); // 흉기 말을 서로 다른 방에 하나씩
+  const weapons = shuffle(r, Array.from({ length: R }, (_, k) => k)).slice(0, S); // 도구 말을 서로 다른 방에 하나씩
   const g: Game = { theme, seed, map, players, env, turn: 0, phase: 'roll', roll: null, sug: null, log: [{ t: 'start' }], winner: null, turnNo: 1, rolls: 0, opts, weapons, npc, open };
   if (opts.roles) assignRoles(g, r);
   return g;
@@ -452,7 +452,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       const sv = +s.s.slice(1), q = g.players.find((x, j) => j !== i && !x.out && x.suspect === sv);
       if (q) { if (q.pos !== p.pos) q.canSuggest = true; q.pos = p.pos; } // 지목된 인물 말을 이 방으로 — 실제로 끌려왔을 때만 다음 차례에 바로 추리 가능(원래 이 방에 있었으면 연속 추리 불가)
       else if (g.npc[sv] !== null) g.npc[sv] = p.pos;              // 아무도 안 맡은 인물 말도
-      g.weapons[+s.w.slice(1)] = roomOf(p.pos);                    // 지목한 흉기 말도
+      g.weapons[+s.w.slice(1)] = roomOf(p.pos);                    // 지목한 도구 말도
       g.log.push({ t: 'suggest', p: i, ...s });
       const nx = nextRefuter(g, { ...s, p: i }, i);
       if (nx) { g.sug = { p: i, ...s, refuter: nx.j, matches: nx.matches }; g.phase = 'refute'; return null; }
@@ -500,7 +500,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
           const room = a.room;
           if (typeof room !== 'number' || room < 0 || room >= g.map.roomCount) return '수색할 방을 고르세요';
           g.log.push({ t: 'ability', p: i, role, room });
-          const found = ['r' + room, ...g.weapons.flatMap((wr, k) => (wr === room ? ['w' + k] : [])).slice(0, 1)]; // 방 카드 + 그 방 흉기 1개까지
+          const found = ['r' + room, ...g.weapons.flatMap((wr, k) => (wr === room ? ['w' + k] : [])).slice(0, 1)]; // 방 카드 + 그 방 도구 1개까지
           for (const card of found) {
             if (p.hand.includes(card) || g.open.includes(card)) continue; // 이미 아는 카드
             const owner = g.players.findIndex(q => q.hand.includes(card));

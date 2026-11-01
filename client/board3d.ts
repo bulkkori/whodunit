@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as G from '../shared/game.ts';
 import * as Sound from './sound.ts';
 import { faceValues } from './dice.ts';
-import { WEAPON_ICON, ROOM_TINTS, floorTex, wallTex, TEX_CELLS } from './art.ts';
+import { WEAPON_ICON, ROOM_TINTS, floorTex, wallTex, TEX_CELLS, asset } from './art.ts';
 import { land } from './sound.ts';
 
 interface Palette { bg: number; base: number; hall: number; door: number; room: number; wall: number; center: number; label: string }
@@ -265,16 +265,25 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       d.rotation.x = -Math.PI / 2;
       d.position.set(wx(b % n), 0.045, wx(Math.floor(b / n))); noPick(d); B.add(d);
     }
-    // 흉기 말: 이모지 스프라이트(항상 카메라를 향함)
-    weaponSprites = WEAPON_ICON[g.theme].map(icon => {
-      const c = document.createElement('canvas'); c.width = c.height = 128;
+    // 도구 말: 종이 메달(금테) 안에 도구 그림(그림이 없으면 이모지). 항상 카메라를 향함
+    weaponSprites = WEAPON_ICON[g.theme].map((icon, k) => {
+      const c = document.createElement('canvas'); c.width = c.height = 192;
       const x = c.getContext('2d')!;
-      x.fillStyle = '#000a'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
-      x.font = '84px system-ui, "Segoe UI Emoji", "Apple Color Emoji", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText(icon, 64, 70);
+      const medal = () => {
+        x.clearRect(0, 0, 192, 192);
+        x.fillStyle = '#0006'; x.beginPath(); x.arc(96, 100, 84, 0, Math.PI * 2); x.fill();        // 그림자
+        const gr = x.createRadialGradient(80, 70, 10, 96, 96, 86); gr.addColorStop(0, '#f6eedb'); gr.addColorStop(1, '#d6c39c');
+        x.fillStyle = gr; x.beginPath(); x.arc(96, 94, 82, 0, Math.PI * 2); x.fill();
+        x.lineWidth = 7; x.strokeStyle = '#b8924a'; x.stroke(); x.lineWidth = 2; x.strokeStyle = '#6b1f2b'; x.beginPath(); x.arc(96, 94, 72, 0, Math.PI * 2); x.stroke();
+      };
+      medal();
+      x.font = '96px system-ui, "Segoe UI Emoji", "Apple Color Emoji", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(icon, 96, 100);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      const url = asset(g.theme, 'w' + k);
+      if (url) { const im = new Image(); im.onload = () => { medal(); x.save(); x.beginPath(); x.arc(96, 94, 70, 0, Math.PI * 2); x.clip(); x.drawImage(im, 26, 24, 140, 140); x.restore(); tex.needsUpdate = true; }; im.src = url; }
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
-      sp.scale.set(0.75, 0.75, 0.75); sp.userData.target = null; noPick(sp); B.add(sp);
+      sp.scale.set(0.95, 0.95, 0.95); sp.userData.target = null; noPick(sp); B.add(sp);
       return sp;
     });
     sun.position.set(n * 0.4, n * 1.1, n * 0.6);

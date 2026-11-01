@@ -18,7 +18,7 @@ test('시드 1000개: 중앙 출발점에서 모든 방에 도달 가능, 모두
   }
   const g = G.newGame('mansion', seats(5), 1);
   assert.ok(g.players.every(p => p.pos === G.centerPos(g.map)));
-  assert.equal(new Set(g.weapons).size, 6); // 흉기 6개가 서로 다른 방에
+  assert.equal(new Set(g.weapons).size, 6); // 도구 6개가 서로 다른 방에
   assert.ok(G.act(g, 0, { t: 'accuse', ...g.env }));   // 출발 직후엔 고발 불가
 });
 
@@ -61,7 +61,7 @@ test('추론: 지목된 용의자 소환, 시계방향 첫 보유자가 반박',
   g.players[2].hand.push('s' + target.suspect); // 2번이 지목될 인물 카드를 확실히 갖게
   assert.equal(G.act(g, 0, { t: 'suggest', s: 's' + target.suspect, w: g.env.w }), null);
   assert.equal(target.pos, G.roomPos(0));
-  assert.equal(g.weapons[+g.env.w.slice(1)], 0); // 지목한 흉기 말이 이 방으로
+  assert.equal(g.weapons[+g.env.w.slice(1)], 0); // 지목한 도구 말이 이 방으로
   assert.equal(g.phase, 'refute');
   assert.equal(g.sug?.refuter, 2);
   assert.ok(g.log.some(e => e.t === 'pass' && e.p === 1));        // 카드 없는 1번은 '반박할 카드 없음'으로 공개 기록

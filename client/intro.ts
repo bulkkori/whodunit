@@ -1,4 +1,4 @@
-// 게임 시작 연출: ① 인물·흉기·장소 더미를 뒷면으로 섞기 ② 한 장씩 뽑아 사건 봉투에 봉인
+// 게임 시작 연출: ① 인물·도구·장소 더미를 뒷면으로 섞기 ② 한 장씩 뽑아 사건 봉투에 봉인
 // ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개. 약 8.5초, 건너뛰기 가능.
 import * as G from '../shared/game.ts';
 import { COLORS, cardEl, backEl } from './art.ts';
@@ -42,7 +42,7 @@ export function playIntro(g: G.View, onDone: () => void) {
     ov.style.setProperty('--icw', CW + 'px');
     const px = [W() * 0.25, W() * 0.5, W() * 0.75], py = H() * 0.42;
     (['s', 'w', 'r'] as const).forEach((k, n) => {
-      const lab = document.createElement('div'); lab.className = 'ilab'; lab.textContent = ({ s: '인물', w: '흉기', r: '장소' })[k];
+      const lab = document.createElement('div'); lab.className = 'ilab'; lab.textContent = ({ s: '인물', w: '도구', r: '장소' })[k];
       put(lab, px[n] - CW / 2, py + CH / 2 + 14);
       piles.push(all[k].slice(0, 6).map((_, m) => put(backEl(g.theme), px[n] - CW / 2 + m, py - CH / 2 - m)));
     });
@@ -55,7 +55,7 @@ export function playIntro(g: G.View, onDone: () => void) {
     }
     if (!alive) return;
     // ② 봉투로
-    step('인물 · 흉기 · 장소 한 장씩 사건 봉투에 봉인');
+    step('인물 · 도구 · 장소 한 장씩 사건 봉투에 봉인');
     const env = ov.querySelector('.ienv') as HTMLElement, er = env.getBoundingClientRect(), orr = ov.getBoundingClientRect();
     const ex = er.left - orr.left + er.width / 2 - CW / 2, ey = er.top - orr.top + er.height / 2 - CH / 2; // 작아지며(.4배) 봉투 가운데로
     for (const pile of piles) { const c = pile.pop()!; await fly(c, ex, ey, 420, { transform: `translate(${ex - parseFloat(c.style.left)}px, ${ey - parseFloat(c.style.top)}px) scale(.4)` }); c.remove(); if (!alive) return; }

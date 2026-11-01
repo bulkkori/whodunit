@@ -90,6 +90,17 @@ function update(room: Room) {
   broadcast(room);
 }
 
+/** 사람이 나감(스스로 또는 60초 넘게 끊김): 대기실이면 자리 빼고 방장 넘김, 게임 중이면 탈락(봇이 대신하지 않음) */
+function dropSeat(room: Room, seat: Seat) {
+  const i = room.seats.indexOf(seat);
+  if (i < 0) return;
+  if (room.game) { G.leave(room.game, i); return; }
+  if (room.stage !== 'lobby') return;
+  room.seats.splice(i, 1);
+  const next = room.seats.find(s => !s.bot);
+  if (room.host === seat.token && next?.token) room.host = next.token;
+}
+
 // m은 신뢰할 수 없는 네트워크 입력 — 형식은 ClientMsg로 가정하되 값은 하나하나 검증한다
 function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   if (m.t === 'create') {
@@ -98,7 +109,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     const room: Room = {
       code: newCode(), title: clean(m.title, 20, `${clean(m.name)}의 사건`), maxPlayers: clampPlayers(m.maxPlayers),
       theme: m.theme, host: m.token, seats: [], stage: 'lobby', game: null, last: Date.now(),
-      opts: { roles: true, bluff: m.opts?.bluff !== false }, // 탐정 직업(특수 능력)은 기본 규칙 — 끌 수 없음
+      opts: { roles: true, bluff: m.opts?.bluff !== false, voice: m.opts?.voice === true }, // 특수 능력은 기본 규칙 — 끌 수 없음
     };
     rooms.set(room.code, room);
     m = { t: 'join', code: room.code, name: m.name, token: m.token };
@@ -132,6 +143,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
     const p = room.game.players[i]; p.timeouts = 0; p.afk = false;
     return update(room);
   }
+  if (m.t === 'leave') { dropSeat(room, seat); conn.room = conn.seat = undefined; seat.ws = null; clearTimeout(seat.drop); return update(room); }
   if (m.t === 'ready' && room.stage === 'lobby') { seat.ready = m.on === true; return update(room); }
   if (m.t === 'pick' && room.stage === 'pick') {
     const v = m.suspect;
@@ -150,7 +162,7 @@ function handle(ws: WebSocket, conn: Conn, m: ClientMsg) {
   }
   if (room.stage !== 'lobby') return;
   if (m.t === 'theme' && G.isTheme(m.theme)) room.theme = m.theme;
-  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff };
+  if (m.t === 'opt') room.opts = { roles: true, bluff: typeof m.bluff === 'boolean' ? m.bluff : room.opts.bluff, voice: typeof m.voice === 'boolean' ? m.voice : room.opts.voice };
   if (m.t === 'maxp') room.maxPlayers = Math.max(room.seats.length, clampPlayers(m.n)); // 이미 들어온 사람보다 적게는 못 줄임
   if (m.t === 'addBot' && room.seats.length < room.maxPlayers) room.seats.push({ token: null, name: '봇 ' + (room.seats.filter(s => s.bot).length + 1), bot: true, suspect: null, ready: true });
   if ((m.t === 'kick' || m.t === 'host') && Number.isInteger(m.i)) {
@@ -193,12 +205,7 @@ wss.on('connection', ws => {
       const i = room.seats.indexOf(seat);
       if (i < 0) return;
       if (room.stage === 'pick') return; // 말 고르기 중 끊기면 시간이 지나 무작위로
-      if (!room.game) {
-        room.seats.splice(i, 1);
-        const next = room.seats.find(s => !s.bot);
-        if (room.host === seat.token && next?.token) room.host = next.token;
-      } else room.game.players[i].afk = true;
-      update(room);
+      dropSeat(room, seat); update(room);
     }, 60000);
     broadcast(room);
   });

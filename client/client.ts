@@ -195,7 +195,7 @@ for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
 // 창 크기가 바뀌면 미리보기 다시 그림
 new ResizeObserver(() => { if (!$('#createbox').hidden) refreshCreatePreview(); }).observe($('#c_prev'));
 new ResizeObserver(() => { const c = $('#w_prev'); if (!$('#wait').hidden) { c.dataset.k = ''; if (S) renderWait(S); } }).observe($('#w_prev'));
-const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked });
+const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked, voice: $in('#c_voice').checked });
 // 방 제목: 방 만들기 창을 열 때마다 다음 추리물 제목이 기본값으로 보이고, 비워 두면 그 제목으로 방을 만든다. 누르면 빈 칸에서 바로 입력.
 const TITLES = ['자정의 마지막 손님', '사라진 유언장', '잠긴 서재의 비밀', '폭풍우 치는 밤', '누가 불을 껐는가', '거짓말쟁이의 만찬',
   '열세 번째 초대장', '멈춰 버린 괘종시계', '깨진 찻잔의 증언', '안개 속 발자국', '독이 든 와인 한 잔', '마지막 기차의 승객'];
@@ -234,11 +234,13 @@ $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast('초대 링크를 복사했어요'); } catch { toast(location.href); } };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
+$('#optvoice').onchange = e => send({ t: 'opt', voice: (e.target as HTMLInputElement).checked });
 $('#start').onclick = () => send({ t: 'start' });
 for (const b of document.querySelectorAll<HTMLButtonElement>('#wmax button')) b.onclick = () => { if (S) send({ t: 'maxp', n: S.maxPlayers + +b.dataset.d! }); };
 $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
 $('#leave').onclick = () => {
-  if (S?.game && S.game.phase !== 'over' && !confirm('나가면 봇이 대신 플레이합니다. 나갈까요?')) return;
+  if (S?.game && S.game.phase !== 'over' && !S.game.players[S.game.me]?.out && !confirm('지금 나가면 탈락하고, 가진 카드는 모두에게 공개됩니다. 나갈까요?')) return;
+  send({ t: 'leave' });
   S = null; code = null; history.replaceState(null, '', location.pathname); ws?.close(); render();
 };
 
@@ -378,8 +380,8 @@ function renderView(g: G.View) {
   mm.hidden = !moving; if (moving) mm.textContent = `🎲 최대 ${g.roll}칸 이동`;
   for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]')) b.classList.toggle('on', b.dataset.v === view);
   const orow = $('#openrow'); orow.hidden = !g.open.length;
-  if (g.open.length && orow.dataset.seed !== String(g.seed)) {
-    orow.dataset.seed = String(g.seed); const cards = orow.querySelector('.cards')!; cards.innerHTML = '';
+  if (g.open.length && orow.dataset.seed !== `${g.seed}:${g.open.length}`) { // 나간 사람 카드가 더해지면 다시 그림
+    orow.dataset.seed = `${g.seed}:${g.open.length}`; const cards = orow.querySelector('.cards')!; cards.innerHTML = '';
     for (const c of g.open) cards.append(cardEl(g.theme, c, 'small'));
   }
   if (!is3) { b3?.stop(); return renderBoard(g); }
@@ -398,7 +400,7 @@ function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
   $('#bigcode').textContent = s.code;
   const chips = $('#wopts'); chips.innerHTML = '';
-  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지'])
+  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', ...(s.opts.voice ? ['🎙️ 보이스 모드'] : [])])
     chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
@@ -422,6 +424,7 @@ function renderWait(s: StateMsg) {
   $('#start').hidden = !s.host;
   $<HTMLSelectElement>('#theme2').value = s.theme;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
+  const ov = $in('#optvoice'); ov.checked = !!s.opts.voice; ov.disabled = !s.host;
   const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
   const rb = $btn('#readybtn'); rb.hidden = s.host;
   rb.textContent = me?.ready ? '✅ 준비 완료 (누르면 취소)' : '✋ 준비 완료';
@@ -551,9 +554,22 @@ let lastPointer = 'mouse', armed: G.Pos | null = null;
 const touchLike = () => lastPointer !== 'mouse' || matchMedia('(hover: none)').matches;
 $('#board').onpointerdown = e => { lastPointer = e.pointerType; };
 $('#board').onclick = e => {
-  const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]');
-  if (c) tapCell(+c.dataset.p!, e.clientX, e.clientY, touchLike());
+  const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]'), g = S?.game;
+  let p = c ? +c.dataset.p! : null;
+  // 터치: 손가락이 칸을 살짝 빗나가도 가장 가까운 갈 수 있는 칸(방 포함)으로 맞춤
+  if (g && touchLike() && (p == null || !myMoves(g).has(p))) p = nearestMove(g, e.clientX, e.clientY) ?? p;
+  if (p != null) tapCell(p, e.clientX, e.clientY, touchLike());
 };
+function nearestMove(g: G.View, x: number, y: number): G.Pos | null {
+  const b = $('#board'), cw = b.querySelector('.cell')?.getBoundingClientRect().width ?? 16, lim = Math.max(24, cw * 1.6);
+  let best: G.Pos | null = null, bd = Infinity;
+  for (const p of myMoves(g)) {
+    const r = b.querySelector(`[data-p="${p}"]`)?.getBoundingClientRect(); if (!r) continue;
+    const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+    if (d < bd) { bd = d; best = p; }
+  }
+  return bd <= lim ? best : null;
+}
 function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   const g = S?.game; if (!g) return;
   const ok = myMoves(g).has(p);
@@ -631,11 +647,11 @@ function line(g: G.View, e: G.LogEntry): string {
     case 'pass': return `🙅 ${nm(g, e.p)}: 반박할 카드 없음`;
     case 'norefute': return '❗ 아무도 반박하지 못했습니다';
     case 'accuse': return `⚖️ ${nm(g, e.p)} 고발: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)} → ${e.ok ? '정답!' : e.saved ? '오답, 🛡️ 보험으로 생존' : '오답, 탈락'}`;
-    case 'ability': return `${G.ROLES[e.role].icon} ${nm(g, e.p)} ${G.ROLES[e.role].name} 능력 사용` + (e.target != null ? ` → ${nm(g, e.target)}` : '') + (e.room != null ? ` → ${T.r[e.room]}` : '');
+    case 'ability': return `${G.ROLES[e.role].icon} ${nm(g, e.p)} ‘${G.ROLES[e.role].name}’ 사용` + (e.target != null ? ` → ${nm(g, e.target)}` : '') + (e.room != null ? ` → ${T.r[e.room]}` : '');
     case 'bonus': return `❗ ${nm(g, e.p)} 보너스칸 도착`;
-    case 'role': return `${G.ROLES[e.role].icon} ${nm(g, e.p)}의 정체: ${G.ROLES[e.role].name}`;
+    case 'role': return `${G.ROLES[e.role].icon} ${nm(g, e.p)}의 능력 공개: ${G.ROLES[e.role].name}`;
     case 'silent': return `⚖️ ${nm(g, e.p)} 묵비권 — ${nm(g, e.to)}의 추론 반박을 넘김`;
-    case 'silentnone': return '⚖️ 묵비권 뒤로 반박한 사람 없음 (변호사는 카드를 갖고 있음)';
+    case 'silentnone': return '⚖️ 묵비권 뒤로 반박한 사람 없음 (묵비권을 쓴 사람은 카드를 갖고 있음)';
     case 'rest': return `🛡️ ${nm(g, e.p)} 한 턴 쉼`;
     case 'intel':
       if (e.kind === 'tap') return `🎧 도청: ${nm(g, e.a!)} → ${nm(g, e.b!)}: ${cn(g, e.card!)}`;
@@ -644,7 +660,44 @@ function line(g: G.View, e: G.LogEntry): string {
       return e.from == null ? `🔦 수색: ${cn(g, e.card!)} 카드는 아무도 없음 → 진실!` : `🔦 수색: ${cn(g, e.card!)} 카드는 ${nm(g, e.from)}에게`;
     case 'timeout': return `⏰ ${nm(g, e.p)} 시간 초과`;
     case 'afk': return `🤖 ${nm(g, e.p)} 자리비움 → 봇이 대신 진행`;
+    case 'left': return `🚪 ${nm(g, e.p)} 퇴장 — 탈락, 가진 카드는 모두에게 공개`;
   }
+}
+
+// ---------- 추리 기록: 추리 한 건 = 한 장(누가 · 세 장 · 반박 결과). 지금 진행 중인 추리는 패널 위에 크게 ----------
+const SUBLOG = new Set(['pass', 'shown', 'norefute', 'silent', 'silentnone']);
+function sugCard(g: G.View, e: G.LogEntry & G.Triple & { p: number }, label: string) {
+  const box = el('div', 'sg'), h = el('div', 'sg-h'), dot = el('i', 'dot');
+  dot.style.background = COLORS[g.players[e.p].suspect];
+  h.append(dot, el('b', '', nm(g, e.p)), el('span', '', label));
+  const c = el('div', 'sg-c'); for (const k of ['s', 'w', 'r'] as const) c.append(el('span', 'k-' + k, cn(g, e[k])));
+  box.append(h, c, el('ol', 'sg-r')); return box;
+}
+function subLine(g: G.View, e: G.LogEntry) {
+  if (e.t === 'pass') return `🙅 ${nm(g, e.p)} — 없음`;
+  if (e.t === 'shown') return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)}가 ${nm(g, e.to)}에게 카드 1장을 보여 줌`;
+  if (e.t === 'norefute') return '❗ 아무도 반박하지 못했습니다';
+  return line(g, e);
+}
+function renderLog(g: G.View) {
+  const items: HTMLElement[] = []; let cur: HTMLElement | null = null, lastSug: HTMLElement | null = null, lastP = -1;
+  for (const e of g.log) {
+    if (e.t === 'roll' || e.t === 'start') continue;
+    if (e.t === 'suggest' || e.t === 'accuse') {
+      cur = sugCard(g, e, e.t === 'suggest' ? '추리' : '최종 고발'); items.push(cur);
+      if (e.t === 'accuse') { cur.classList.add('acc'); cur.querySelector('ol')!.append(el('li', '', e.ok ? '✅ 정답!' : e.saved ? '❌ 오답 — 🛡️ 보험으로 생존' : '❌ 오답 — 탈락')); cur = null; }
+      else { lastSug = cur; lastP = e.p; }
+      continue;
+    }
+    if (SUBLOG.has(e.t) && cur) { cur.querySelector('ol')!.append(el('li', 'r-' + e.t, subLine(g, e))); continue; }
+    cur = null; items.push(el('div', 'ev', line(g, e)));
+  }
+  const now = g.sug != null || (lastP === g.turn && g.phase !== 'roll'); // 이번 차례의 추리
+  const cs = $('#cursug'); cs.hidden = !(lastSug && now);
+  if (lastSug && now) { const k = lastSug.cloneNode(true) as HTMLElement; if (g.sug) k.querySelector('ol')!.append(el('li', 'wait', `⏳ ${nm(g, g.sug.refuter ?? g.turn)} 반박 차례…`)); cs.replaceChildren(k); }
+  items.reverse();
+  $('#log').replaceChildren(...(items.length ? items : [el('p', 'sub', '아직 추리가 없습니다')]));
+  $('#logmode').textContent = g.opts.voice ? '🎙️ 보이스 모드: 지금 진행 중인 추리만 보입니다. 지난 기록은 각자 듣고 메모하세요.' : '';
 }
 
 type ButtonAction = 'roll' | 'passage' | 'suggest' | 'end' | 'accuse';
@@ -674,8 +727,7 @@ function renderPanel(g: G.View) {
   for (const b of document.querySelectorAll<HTMLButtonElement>('#actions button')) b.disabled = !en[b.dataset.a as ButtonAction];
   const hand = $('#hand'); hand.innerHTML = '';
   for (const c of me.hand ?? []) hand.append(cardEl(g.theme, c));
-  const log = $('#log'); log.innerHTML = '';
-  for (const e of g.log) if (e.t !== 'roll' && e.t !== 'start') log.prepend(el('li', '', line(g, e)));
+  renderLog(g);
   $('#last').textContent = g.log.filter(e => e.t !== 'roll').slice(-2).map(e => line(g, e)).join(' / ');
   renderRole(g, my);
 }
@@ -691,7 +743,7 @@ function renderRole(g: G.View, my: boolean) {
   head.append(el('b', '', `${R.icon} ${R.name}`), el('span', 'tag', `남은 ${left}회` + (charged ? ' · ✅ 준비됨' : '')));
   box.append(head, el('p', 'sub', R.desc));
   const others = g.players.map((p, j) => ({ p, j })).filter(x => x.j !== g.me && !x.p.out);
-  const archive = g.log.flatMap(e => (e.t === 'shown' && e.p !== g.me && e.to !== g.me ? [e] : []));
+  const archive = g.archive ?? [];
   const usable = my && me.onBonus && !me.usedBonus && g.phase === 'act' && left > 0 && !(R.kind === 'charge' && charged) && (role !== 'analyst' || archive.length > 0);
   if (!usable) {
     box.append(el('p', 'sub', left <= 0 ? '모두 사용했습니다' : R.kind === 'charge' && charged ? '준비된 능력은 조건이 오면 쓸 수 있어요' : '❗ 보너스칸에 멈추면 사용할 수 있어요'));
@@ -713,8 +765,8 @@ function renderRole(g: G.View, my: boolean) {
     else btn(`${R.icon} 준비하기`, () => go({ t: 'ability' }));
     box.append(row, el('p', 'sub', '쓰지 않으려면 ⏭ 턴 종료'));
   }
-  const known = g.players.map((p, j) => (j !== g.me && p.role ? `${G.ROLES[p.role].icon} ${p.name}` : '')).filter(Boolean);
-  if (known.length) box.append(el('p', 'sub', '정체 공개: ' + known.join(' · ')));
+  const known = g.players.map((p, j) => (j !== g.me && p.role ? `${G.ROLES[p.role].icon} ${p.name}(${G.ROLES[p.role].name})` : '')).filter(Boolean);
+  if (known.length) box.append(el('p', 'sub', '공개된 능력: ' + known.join(' · ')));
 }
 
 for (const b of document.querySelectorAll<HTMLButtonElement>('#actions button')) b.onclick = () => {
@@ -852,7 +904,10 @@ function renderMemo(g: G.View) {
     buildMemo(g);
   }
   const M = memo!;
-  if (M.auto === 'off') return;
+  voiceOn = !!g.opts.voice;
+  const am = $<HTMLSelectElement>('#automode'); am.disabled = voiceOn; am.title = voiceOn ? '보이스 모드: 메모는 모두 직접' : '자동 메모 방식';
+  if (voiceOn) am.value = 'off';
+  if (voiceOn || M.auto === 'off') return;
   let ch = false;
   const mark = (card: G.Card, owner: number) => { g.players.forEach((_, j) => (M.cells[`${card}|${j}`] = j === owner ? '✓' : '✗')); ch = true; };
   for (const c of g.players[g.me].hand ?? []) if (!M.applied['h' + c]) { mark(c, g.me); M.strike[c] = true; M.applied['h' + c] = 1; }
@@ -900,9 +955,10 @@ function buildMemo(g: G.View) {
   }
   t.append(body); paintMemo();
 }
+let voiceOn = false;
 function paintMemo() {
   if (!memo) return;
-  const hints = memo.auto === 'hint' ? memo.hint ?? {} : {};
+  const hints = memo.auto === 'hint' && !voiceOn ? memo.hint ?? {} : {};
   for (const td of document.querySelectorAll<HTMLElement>('#memo td')) {
     const v = memo.cells[td.dataset.k!] || '', h = !v && !!hints[td.dataset.k!];
     td.textContent = v || (h ? '?' : ''); td.dataset.m = v; td.classList.toggle('hintq', h);
@@ -948,6 +1004,22 @@ hd.onpointerup = hd.onpointercancel = () => {
 };
 hd.onclick = e => { if (e.detail === 0) dr.classList.toggle('open'); }; // 키보드 Enter/Space
 $('#closememo').onclick = () => dr.classList.remove('open');
+const syncTabs = () => {
+  const t = dr.dataset.tab ?? 'memo', open = dr.classList.contains('open');
+  for (const b of document.querySelectorAll<HTMLElement>('.dtabs [data-tab]')) b.classList.toggle('on', b.dataset.tab === t);
+  for (const b of document.querySelectorAll<HTMLElement>('#dockside [data-tab]')) b.classList.toggle('on', open && b.dataset.tab === t);
+};
+new MutationObserver(syncTabs).observe(dr, { attributes: true, attributeFilter: ['class', 'data-tab'] });
+for (const b of document.querySelectorAll<HTMLElement>('.dtabs [data-tab]')) b.onclick = () => { dr.dataset.tab = b.dataset.tab; };
+// 폰: 아래 독의 메모·기록 버튼 — 같은 탭을 다시 누르면 닫힘
+for (const b of document.querySelectorAll<HTMLElement>('#dockside [data-tab]')) b.onclick = () => {
+  const same = dr.classList.contains('open') && (dr.dataset.tab ?? 'memo') === b.dataset.tab;
+  dr.dataset.tab = b.dataset.tab; dr.classList.toggle('open', !same);
+};
+$('#tallmemo').onclick = () => { const on = dr.classList.toggle('tall'); store.set('wd_tallmemo', on); };
+dr.classList.toggle('tall', store.get('wd_tallmemo', false));
+// 폰 세로: 메모 서랍은 보드 아래(패널 자리)만 덮는다 → 보드를 보면서 메모·이동 가능
+new ResizeObserver(() => document.documentElement.style.setProperty('--paneltop', $('#panel').getBoundingClientRect().top + 'px')).observe($('#boardwrap'));
 
 // ---------- 단축키 ----------
 addEventListener('keydown', e => {

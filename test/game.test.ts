@@ -211,7 +211,7 @@ test('같은 방 연속 추론 불가: 끌려왔을 때만 다음 차례 바로 
   assert.match(G.act(g, 0, { t: 'suggest', s: sus(2), w: g.env.w }) ?? '', /방에 막 들어왔을 때만/);
 });
 
-test('수석 형사 심문: 고른 종류 카드 중 1장만 본다', () => {
+test('지정 심문: 고른 종류 카드 중 1장만 본다', () => {
   const { g, i } = withRole(4, 'chief'); onBonus(g, i);
   const t = (i + 1) % 4; g.players[t].hand = ['s0', 's1', 's2', 'w0'];
   assert.equal(G.act(g, i, { t: 'ability', target: t, cat: 's' }), null);
@@ -303,4 +303,36 @@ test('복도 폭 3칸 이상: 모든 방·사건 파일실 사이 간격 ≥ 3, 
     }
     assert.equal(m.doors.filter(d => d.room === m.roomCount).length, 4);
   }
+});
+
+test('게임 중 나감 → 탈락: 카드는 공개, 차례 넘김, 반박 차례에서도 빠짐', () => {
+  const g = G.newGame('mansion', seats(4), 7);
+  const c1 = [...g.players[1].hand], open0 = g.open.length;
+  G.leave(g, 1);
+  assert.ok(g.players[1].out && g.players[1].left);
+  assert.deepEqual(g.open.slice(open0), c1); assert.equal(g.players[1].hand.length, 0);
+  assert.equal(g.turn, 0);
+  G.leave(g, 0); // 자기 차례에 나가면 다음 사람으로
+  assert.equal(g.turn, 2); assert.equal(g.phase, 'roll');
+  assert.ok(!G.view(g, 2).log.some(e => e.t === 'pass' && e.p === 1)); // 나간 사람은 반박 확인에서 빠짐(아직 추리 없음)
+  G.leave(g, 2); G.leave(g, 3);
+  assert.equal(g.phase, 'over');
+});
+
+test('보이스 모드: 지난 추리 기록은 안 보이고 마지막 추리부터만', () => {
+  const g = G.newGame('mansion', seats(3), 3, { roles: false, bluff: true, voice: true });
+  g.log.push({ t: 'suggest', p: 0, s: 's0', w: 'w0', r: 'r0' }, { t: 'pass', p: 1, to: 0, s: 's0', w: 'w0', r: 'r0' },
+    { t: 'suggest', p: 1, s: 's1', w: 'w1', r: 'r1' }, { t: 'norefute', p: 1, s: 's1', w: 'w1', r: 'r1' });
+  const v = G.view(g, 2).log;
+  assert.equal(v.filter(e => e.t === 'suggest').length, 1);
+  assert.equal(v[0].t, 'suggest');
+  g.opts.voice = false;
+  assert.equal(G.view(g, 2).log.filter(e => e.t === 'suggest').length, 2);
+});
+
+test('보이스 모드에서도 남끼리 보여 준 카드 내용은 숨김', () => {
+  const g = G.newGame('mansion', seats(3), 3, { roles: false, bluff: true, voice: true });
+  g.log.push({ t: 'suggest', p: 0, s: 's0', w: 'w0', r: 'r0' }, { t: 'shown', p: 1, to: 0, card: 's0', id: 99 });
+  const e = G.view(g, 2).log.find(x => x.t === 'shown');
+  assert.ok(e && e.t === 'shown' && e.card === undefined);
 });

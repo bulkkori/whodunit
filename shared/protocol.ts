@@ -6,12 +6,14 @@ export type ClientMsg =
   | { t: 'join'; code: string; name: string; token: string }
   | { t: 'act'; action: Action }
   | { t: 'theme'; theme: ThemeKey }
-  | { t: 'opt'; roles?: boolean; bluff?: boolean }
+  | { t: 'opt'; roles?: boolean; bluff?: boolean; voice?: boolean }
   /** 말 고르기 단계에서 내 인물 말 고르기 */
   | { t: 'pick'; suspect: number }
   /** 대기실: 준비 완료 / 방장: 최대 인원 변경 */
   | { t: 'ready'; on: boolean } | { t: 'maxp'; n: number }
   | { t: 'addBot' } | { t: 'removeBot' } | { t: 'start' } | { t: 'again' }
+  /** 스스로 나가기: 게임 중이면 탈락(카드 공개), 대기실이면 자리 비움 */
+  | { t: 'leave' }
   /** 방장(대기실): 자리 i 사람 내보내기 / 방장 넘기기. name은 그 사이 자리가 바뀌었는지 확인용 */
   | { t: 'kick'; i: number; name: string } | { t: 'host'; i: number; name: string };
 

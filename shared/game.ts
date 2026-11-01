@@ -31,14 +31,14 @@ export interface RoleDef {
   kind: 'instant' | 'charge';
 }
 export const ROLES: Record<RoleId, RoleDef> = {
-  chief:   { name: '수석 형사', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '지정 심문: 한 명과 종류(인물·흉기·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 것만)' },
-  tap:     { name: '정보원', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '도청 장치: 설치해 두면 다음에 남들끼리 오가는 반박 카드 2번을 몰래 봅니다' },
-  analyst: { name: '기록 분석가', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '기록 열람: 지난 남들끼리의 반박 하나를 골라 그때 보여준 카드를 확인합니다' },
-  field:   { name: '현장 조사관', icon: '🚓', group: '행동', kind: 'instant', uses: 3, desc: '추격: 주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
-  scout:   { name: '정찰병', icon: '🔦', group: '행동', kind: 'instant', uses: 1, desc: '원격 수색: 방 하나를 골라 그 장소 카드와, 그 방에 놓인 흉기 1개의 카드를 누가 가졌는지 확인합니다' },
-  guide:   { name: '길잡이', icon: '🗝️', group: '행동', kind: 'instant', uses: 3, desc: '지름길: 사건 파일실을 뺀 아무 방으로 바로 이동해 추리할 수 있습니다' },
-  lawyer:  { name: '변호사', icon: '⚖️', group: '방어', kind: 'charge', uses: 2, desc: '묵비권 준비: 다음에 내가 반박할 차례에 카드를 보여주지 않고 넘길 수 있습니다 (사용 사실은 공개)' },
-  insure:  { name: '보험 수사관', icon: '🛡️', group: '방어', kind: 'charge', uses: 1, desc: '보험 가입: 다음 최종 추리가 틀려도 탈락하지 않고 한 턴 쉽니다' },
+  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '한 명과 종류(인물·흉기·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 것만)' },
+  tap:     { name: '도청 장치', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '설치해 두면 다음에 남들끼리 오가는 반박 카드 2번을 몰래 봅니다' },
+  analyst: { name: '기록 열람', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '지난 남들끼리의 반박 하나를 골라 그때 보여준 카드를 확인합니다' },
+  field:   { name: '추격', icon: '🚓', group: '행동', kind: 'instant', uses: 3, desc: '주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
+  scout:   { name: '원격 수색', icon: '🔦', group: '행동', kind: 'instant', uses: 1, desc: '방 하나를 골라 그 장소 카드와, 그 방에 놓인 흉기 1개의 카드를 누가 가졌는지 확인합니다' },
+  guide:   { name: '지름길', icon: '🗝️', group: '행동', kind: 'instant', uses: 3, desc: '사건 파일실을 뺀 아무 방으로 바로 이동해 추리할 수 있습니다' },
+  lawyer:  { name: '묵비권', icon: '⚖️', group: '방어', kind: 'charge', uses: 2, desc: '준비해 두면 다음에 내가 반박할 차례에 카드를 보여주지 않고 넘길 수 있습니다 (사용 사실은 공개)' },
+  insure:  { name: '보험', icon: '🛡️', group: '방어', kind: 'charge', uses: 1, desc: '가입해 두면 다음 최종 추리가 틀려도 탈락하지 않고 한 턴 쉽니다' },
 };
 const GROUPS: RoleId[][] = [['chief', 'tap', 'analyst'], ['field', 'scout', 'guide'], ['lawyer', 'insure']];
 
@@ -49,6 +49,8 @@ export interface Player {
   role: RoleId | null; uses: number; revealed: boolean; charged: number; skip: boolean;
   /** 이번 턴에 보너스칸에서 멈췄는지 / 이미 능력을 썼는지 */
   onBonus: boolean; usedBonus: boolean;
+  /** 게임 중 나가서 탈락(반박 차례에서도 빠짐) */
+  left?: boolean;
 }
 export type Phase = 'roll' | 'move' | 'act' | 'refute' | 'over';
 export interface Suggestion extends Triple { p: number; refuter: number; matches: Card[] }
@@ -64,6 +66,8 @@ export type LogEntry =
   | { t: 'shown'; p: number; to: number; card?: Card; id: number }
   | ({ t: 'accuse'; p: number; ok: boolean; saved?: boolean } & Triple)
   | { t: 'timeout' | 'afk'; p: number }
+  /** 게임 중 나감 → 탈락, 가진 카드는 모두에게 공개 */
+  | { t: 'left'; p: number }
   | { t: 'role'; p: number; role: RoleId }
   /** 공개되는 능력 사용 기록(대상만, 결과는 비공개) */
   | { t: 'ability'; p: number; role: RoleId; target?: number; room?: number }
@@ -71,7 +75,8 @@ export type LogEntry =
   | { t: 'intel'; to: number; kind: 'interrogate' | 'tap' | 'archive' | 'search'; card?: Card; from?: number | null; a?: number; b?: number; cat?: Kind }
   | { t: 'silent'; p: number; to: number }
   | { t: 'silentnone' | 'rest' | 'bonus'; p: number };
-export interface GameOpts { roles: boolean; bluff: boolean }
+/** voice = 보이스 채팅 모드: 지난 추리 기록을 보여 주지 않음(지금 진행 중인 추리만). 메모는 모두 직접 */
+export interface GameOpts { roles: boolean; bluff: boolean; voice?: boolean }
 export interface Game {
   theme: ThemeKey; seed: number; map: GameMap; players: Player[]; env: Triple;
   turn: number; phase: Phase; roll: number | null; sug: Suggestion | null;
@@ -94,7 +99,7 @@ export type Action =
 
 export interface PlayerView {
   name: string; suspect: number; pos: Pos | null; out: boolean; bot: boolean; afk: boolean; handCount: number;
-  canSuggest?: boolean; fresh: boolean; hand?: Card[];
+  canSuggest?: boolean; fresh: boolean; hand?: Card[]; left?: boolean;
   /** 직업: 본인 것은 항상, 남의 것은 공개됐거나 게임이 끝났을 때만 */
   role?: RoleId | null; uses?: number; charged?: number; onBonus?: boolean; usedBonus?: boolean;
 }
@@ -103,6 +108,8 @@ export interface View {
   turnNo: number; winner: number | null; me: number; players: PlayerView[];
   sug: (Omit<Suggestion, 'matches'> & { matches?: Card[] }) | null;
   log: LogEntry[]; env?: Triple; opts: GameOpts; weapons: number[]; npc: (Pos | null)[]; open: Card[];
+  /** 기록 열람 능력용: 남들끼리 카드를 보여 준 반박 목록(카드는 빼고). 기록이 잘려도 남아 있게 따로 보냄 */
+  archive: { id: number; p: number; to: number }[];
 }
 /** moves()가 필요로 하는 최소 상태 — 서버의 Game과 브라우저의 View 둘 다 만족 */
 type BoardState = Pick<Game, 'phase' | 'turn' | 'map' | 'roll'> & { players: { pos: Pos | null; out: boolean }[] };
@@ -352,6 +359,7 @@ function nextRefuter(g: Game, sug: Triple & { p: number }, from: number) {
   for (let k = 1; k < g.players.length; k++) {
     const j = (from + k) % g.players.length;
     if (j === sug.p) return null;
+    if (g.players[j].left) continue; // 나간 사람은 카드를 공개했으므로 반박 차례 없음
     const matches = g.players[j].hand.filter(c => c === sug.s || c === sug.w || c === sug.r);
     if (matches.length) return { j, matches };
     g.log.push({ t: 'pass', p: j, to: sug.p, s: sug.s, w: sug.w, r: sug.r }); // 클루처럼 "없습니다"를 모두가 앎
@@ -526,6 +534,23 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
   return '알 수 없는 행동';
 }
 
+/** 게임 중 나감: 봇이 대신하지 않고 탈락. 가진 카드는 모두에게 공개(반박할 사람이 사라지므로), 그 사람 차례·반박 중이었으면 넘김 */
+export function leave(g: Game, i: number): void {
+  const p = g.players[i];
+  if (!p || p.left || g.phase === 'over') return;
+  Object.assign(p, { left: true, out: true, pos: null, afk: false });
+  g.open.push(...p.hand); p.hand = [];
+  g.log.push({ t: 'left', p: i });
+  const sug = g.sug;
+  if (g.phase === 'refute' && sug && sug.refuter === i && sug.p !== i) {
+    const nx = nextRefuter(g, sug, i);
+    if (nx) { sug.refuter = nx.j; sug.matches = nx.matches; }
+    else { g.log.push({ t: 'norefute', p: sug.p, s: sug.s, w: sug.w, r: sug.r }); g.sug = null; g.phase = 'act'; }
+  }
+  if (g.players.every(x => x.out)) { g.phase = 'over'; g.winner = null; return; }
+  if (g.turn === i) { g.sug = null; endTurn(g); }
+}
+
 // 제한 시간 초과 처리. 반박은 맞는 카드 중 하나 자동 공개, 턴은 넘김. 2연속이면 자리비움(봇).
 export function timeout(g: Game, r: Rng = Math.random): void {
   if (g.phase === 'over') return;
@@ -617,15 +642,19 @@ export function view(g: Game, i: number): View {
   return {
     theme: g.theme, seed: g.seed, map: g.map, turn: g.turn, phase: g.phase, roll: g.roll, turnNo: g.turnNo, winner: g.winner, me: i,
     players: g.players.map((p, j) => ({
-      name: p.name, suspect: p.suspect, pos: p.pos, out: p.out, bot: p.bot, afk: p.afk, handCount: p.hand.length,
+      name: p.name, suspect: p.suspect, pos: p.pos, out: p.out, bot: p.bot, afk: p.afk, handCount: p.hand.length, left: p.left,
       canSuggest: j === i ? p.canSuggest : undefined, fresh: p.fresh, hand: j === i || over ? p.hand : undefined,
       ...(j === i ? { role: p.role, uses: p.uses, charged: p.charged, onBonus: p.onBonus, usedBonus: p.usedBonus }
         : { role: p.revealed || over ? p.role : undefined }),
     })),
     sug: g.sug && { p: g.sug.p, s: g.sug.s, w: g.sug.w, r: g.sug.r, refuter: g.sug.refuter, matches: g.sug.refuter === i ? g.sug.matches : undefined },
-    // 비공개 정보(intel)는 받는 사람(또는 게임 종료 후)만 보고, 오래돼도 잘리지 않게 40개 제한과 별개로 유지
-    log: g.log.filter((e, k) => (e.t === 'intel' ? e.to === i || over : k >= g.log.length - 40))
+    // 비공개 정보(intel)는 받는 사람(또는 게임 종료 후)만 보고, 오래돼도 잘리지 않게 40개 제한과 별개로 유지.
+    // 보이스 모드: 마지막 추리부터만(지난 기록은 각자 기억·메모) — 서버에서 잘라야 공정
+    log: (g.opts.voice && !over
+      ? g.log.filter((e, k) => k >= Math.max(0, g.log.findLastIndex(x => x.t === 'suggest')) && (e.t !== 'intel' || e.to === i))
+      : g.log.filter((e, k) => (e.t === 'intel' ? e.to === i || over : k >= g.log.length - 40)))
       .map(e => (e.t === 'shown' && !(over || spect || e.p === i || e.to === i) ? { t: 'shown', p: e.p, to: e.to, id: e.id } : e)),
     env: over || spect ? g.env : undefined, opts: g.opts, weapons: g.weapons, npc: g.npc, open: g.open,
+    archive: g.log.flatMap(e => (e.t === 'shown' && e.p !== i && e.to !== i ? [{ id: e.id, p: e.p, to: e.to }] : [])),
   };
 }

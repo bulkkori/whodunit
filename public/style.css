@@ -968,3 +968,60 @@ dialog#dlg{border-radius:3px}
   #createbox .cform .cta{position:sticky;bottom:0;z-index:5;margin:0 -18px;padding:10px 18px calc(12px + var(--sb));background:linear-gradient(#0000,#ece1c8 18px)}
   #createbox .mapprev,#createbox .mapthumb{max-width:300px}
 }
+
+/* ---------- 메모지 탭(메모 / 추리 기록) ---------- */
+.dtabs{display:flex;gap:2px;margin-right:auto}
+.dtabs button{background:transparent;color:var(--sub);border:0;border-bottom:2px solid transparent;border-radius:0;padding:6px 8px;font:800 15px "Nanum Myeongjo",serif;box-shadow:none}
+.dtabs button.on{color:var(--ink);border-bottom-color:#6b1f2b}
+#drawer[data-tab=log] .t-memo,#drawer[data-tab=log] #automode{display:none}
+#drawer:not([data-tab=log]) .t-log{display:none}
+.t-log{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px}
+#tallmemo{display:none}
+#automode:disabled{opacity:.6}
+/* 추리 기록: 추리 한 건 = 카드 한 장 */
+#log{display:flex;flex-direction:column;gap:8px;max-height:none;padding:0;margin:0;overflow:visible;font-size:13px;color:var(--ink)}
+.sg{background:#fbf6ea;border:1px solid var(--line);border-left:4px solid #6b1f2b;border-radius:2px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;color:#2a1d17}
+.sg.acc{border-left-color:#a3272f;background:#f7e9e2}
+.sg-h{display:flex;align-items:center;gap:6px;font-size:13px}
+.sg-h .dot{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #0003}
+.sg-h span{color:#6a5646}
+.sg-c{display:flex;flex-wrap:wrap;gap:4px}
+.sg-c span{padding:2px 8px;border-radius:2px;font:800 13px "Nanum Myeongjo",serif;color:#fff}
+.sg-c .k-s{background:#8a2a2a}.sg-c .k-w{background:#2c4a7a}.sg-c .k-r{background:#2f6b45}
+.sg-r{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:#4a3a30}
+.sg-r li.r-shown{font-weight:700;color:#2a1d17}
+.sg-r li.r-norefute{font-weight:800;color:#a3272f}
+.sg-r li.wait{color:#9a6a12;font-weight:700}
+.sg-r:empty{display:none}
+.t-log .ev{font-size:12px;color:#6a5646;padding:0 4px}
+/* 지금 진행 중인 추리: 패널 위에 크게 */
+#cursug .sg{border-left-width:6px;box-shadow:0 2px 8px #0002}
+#cursug .sg-c span{font-size:14px;padding:3px 10px}
+#dockside{display:none}
+
+/* ---------- 폰 세로: 보드는 고정, 아래 패널만 스크롤, 메모·기록은 패널 자리만 덮음(보드를 보며 메모·이동) ---------- */
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  body:has(#game:not([hidden])) main{height:calc(100dvh - var(--hdr) - var(--st));box-sizing:border-box;overflow:hidden;padding-bottom:calc(var(--dockh) + var(--sb) + 8px)}
+  #game{height:100%;grid-template-rows:auto minmax(0,1fr);gap:8px}
+  #panel{min-height:0;overflow:auto;max-height:none}
+  #handle{display:none}
+  body:has(#game:not([hidden])) #dockside{display:flex;flex-direction:column;gap:6px;position:fixed;right:10px;bottom:calc(8px + var(--sb));z-index:22;width:62px;height:calc(var(--dockh) - 16px)}
+  #dockside button{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:0;border-radius:3px;font:800 12px "Nanum Myeongjo",serif;
+    background:#6b1f2b;color:#f3e6cc;box-shadow:inset 0 0 0 2px #6b1f2b,inset 0 0 0 3px #f3e6cc55}
+  #dockside button.on{background:#2a1d17;box-shadow:inset 0 0 0 2px #c9a24a}
+  #drawer{top:var(--paneltop,50dvh);bottom:calc(var(--dockh) + var(--sb));height:auto;left:0;width:100%;z-index:20;
+    transform:translateY(calc(100% + var(--dockh) + 40px));visibility:hidden;transition:transform .25s ease,visibility 0s .25s}
+  #drawer.open{transform:none;visibility:visible;transition:transform .25s ease}
+  #drawer.tall{top:calc(var(--hdr) + var(--st) + 6px)}
+  #drawer .sheet{border-radius:6px 6px 0 0;padding:8px 10px;gap:6px;box-shadow:0 -8px 24px #000a}
+  #drawer .sheet>.hint{display:none}
+  #tallmemo{display:inline-block;padding:2px 8px;font-size:16px}
+  #drawer.tall #tallmemo{transform:rotate(180deg)}
+  #closememo{padding:2px 8px}
+  .dtabs button{font-size:14px;padding:4px 6px}
+  #automode{max-width:118px;font-size:11px}
+  #memo th,#memo td{height:30px}
+  #memo .rowname{font-size:12.5px;max-width:112px;overflow:hidden;text-overflow:ellipsis}
+  #memo td{min-width:26px;font-size:24px}
+}
+@media (max-aspect-ratio:23/20) and (max-width:639px){#drawer:not(.tall) #note{display:none}}

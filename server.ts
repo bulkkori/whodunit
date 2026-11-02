@@ -7,7 +7,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import * as G from './shared/game.ts';
 import type { ClientMsg, ServerMsg } from './shared/protocol.ts';
 
-const PORT = Number(process.env.PORT) || 3000, BOT_MS = Number(process.env.BOT_MS) || 1800, INTRO_MS = Number(process.env.INTRO_MS ?? 15000); // 화면 시작 연출(약 14초: 섞기·봉인·분배·내 카드·특수 능력)과 맞춤
+const PORT = Number(process.env.PORT) || 3000, BOT_MS = Number(process.env.BOT_MS) || 1800, INTRO_MS = Number(process.env.INTRO_MS ?? 13500); // 화면 시작 연출(약 12.5초: 섞기·봉인·분배·특수 능력)과 맞춤
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',

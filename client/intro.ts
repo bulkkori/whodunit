@@ -1,6 +1,6 @@
 // 게임 시작 연출: ① 인물·도구·장소 더미를 뒷면으로 섞기 ② 한 장씩 뽑아 사건 봉투에 봉인
-// ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개 ⑤ 내 카드 ⑥ 내 특수 능력 공개.
-// 약 14초(서버 INTRO_MS와 맞춤), 건너뛰기 가능. 섞기·나눠 주기·뒤집기·봉인에 효과음.
+// ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개 ⑤ 내 특수 능력 공개.
+// (내 카드는 연출에서 따로 보여 주지 않음 — 게임 화면에서 바로 보임) 약 12.5초(서버 INTRO_MS와 맞춤), 건너뛰기 가능. 섞기·나눠 주기·뒤집기·봉인에 효과음.
 import * as G from '../shared/game.ts';
 import { COLORS, cardEl, backEl } from './art.ts';
 import { riffle, flick, step as tap } from './sound.ts';
@@ -89,17 +89,13 @@ export function playIntro(g: G.View, onDone: () => void) {
       for (const c of g.open) { flick(); const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); box.append(e); await sleep(300); }
       await sleep(700);
     }
-    step('내 카드를 확인하세요 — 추리 노트에 자동으로 표시됩니다');
-    const mine = document.createElement('div'); mine.className = 'imine';
-    for (const c of g.players[g.me].hand ?? []) { const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); mine.append(e); }
-    ov.append(mine); flick();
-    await sleep(1600); if (!alive) return;
-    // ⑥ 내 특수 능력: 수사 임명장이 뒤집히며 도장 '쿵'
+    // ⑤ 내 특수 능력: 수사 임명장이 뒤집히며 도장 '쿵'
     const me = g.players[g.me];
     if (g.opts.roles && me.role) {
       const R = G.ROLES[me.role];
       step('이번 사건에서 내가 맡은 특수 능력');
-      await mine.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(.9)' }], { duration: 300, fill: 'forwards' }).finished; mine.remove();
+      const open = ov.querySelector('.iopen') as HTMLElement; // 공개 카드는 접고 임명장만
+      if (open.childElementCount) await open.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished;
       const card = document.createElement('div'); card.className = 'irole';
       card.innerHTML = '<small></small><i></i><b></b><p></p><span></span><em>임명</em>';
       const [sm, ic, nm, ds, us] = ['small', 'i', 'b', 'p', 'span'].map(t => card.querySelector(t) as HTMLElement);

@@ -976,3 +976,25 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
 #actions #mvpad button:disabled{display:block;opacity:.45}
 @media (max-width:639px){#hcopy{display:none}} /* 폰 헤더는 자리가 없어 대기실 코드 복사만 */
 #board .mvcur.bad{outline-color:#e05a4f;background:color-mix(in srgb,#e05a4f 55%,var(--hall));animation:none} /* 칸 수를 넘은 길의 끝 칸도 빨갛게 */
+/* 사건 결말 장면(종결 보고서): 방 배경 + 인물 전신 + 도구, 결말 문장 */
+#dlg .oscene{position:relative;width:min(100%,46dvh,420px);aspect-ratio:4/5;overflow:hidden;border-radius:3px;background:#000;box-shadow:0 0 0 2px #3a2a20,0 10px 30px #0008;text-align:left;color:#f3e6cc}
+#dlg .osc-bg{position:absolute;inset:0;background-size:cover;background-position:50% 0;transform:scale(1.22);transform-origin:50% 0;filter:brightness(.78) saturate(.85) blur(.6px)}
+#dlg .osc-shade{position:absolute;inset:0;background:radial-gradient(ellipse 80% 70% at 60% 40%,#0000 40%,#0009 90%),linear-gradient(#0008,#0000 22%,#0000 58%,#000d 86%)}
+#dlg .osc-s{position:absolute;right:-4%;bottom:12%;height:86%;filter:drop-shadow(0 0 18px #000) drop-shadow(-6px 0 10px #d9a35b33);animation:oscRise .9s cubic-bezier(.2,.8,.2,1) both .3s}
+#dlg .osc-w{position:absolute;left:5%;bottom:22%;width:36%;transform:rotate(-10deg);filter:drop-shadow(0 6px 10px #000) drop-shadow(0 0 14px #a3272f66);animation:oscDrop .7s cubic-bezier(.2,.8,.2,1) both .8s}
+#dlg .osc-title{position:absolute;left:6%;top:5%;right:40%;font:800 clamp(18px,4.6vw,24px)/1.2 "Nanum Myeongjo",serif;text-shadow:0 2px 8px #000}
+#dlg .osc-story{position:absolute;left:6%;right:6%;bottom:4.5%;margin:0;font:800 clamp(15px,4.2vw,19px)/1.45 "Nanum Myeongjo",serif;text-shadow:0 2px 6px #000;word-break:keep-all;animation:oscFade .8s ease both 1.2s}
+#dlg .osc-story i{font-style:normal;color:#d9a35b}
+@keyframes oscRise{from{opacity:0;transform:translateY(6%)}}
+@keyframes oscDrop{from{opacity:0;transform:translateY(-20%) rotate(-30deg)}}
+@keyframes oscFade{from{opacity:0}}
+/* 시작 연출 ⑥: 내 특수 능력 임명장 */
+#intro .irole{position:absolute;top:52%;left:50%;transform:translate(-50%,-50%);width:min(320px,84vw);padding:22px 22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;color:#2a1d17;background:radial-gradient(ellipse at 50% 30%,#f1e7d0 50%,#d6c39c 140%);border-radius:3px;box-shadow:0 18px 44px #000c,inset 0 0 0 2px #6b1f2b,inset 0 0 0 5px #f1e7d0,inset 0 0 0 6px #6b1f2b66}
+#intro .irole small{font:700 11px "Nanum Gothic Coding",monospace;letter-spacing:.2em;color:#6a5646}
+#intro .irole i{font-style:normal;font-size:44px;line-height:1.1;margin-top:4px}
+#intro .irole i svg{width:52px;height:52px}
+#intro .irole b{font:800 26px "Nanum Myeongjo",serif;color:#6b1f2b}
+#intro .irole p{margin:2px 0;font-size:14.5px;line-height:1.55;word-break:keep-all}
+#intro .irole span{margin-top:4px;font-size:13px;font-weight:700;color:#9a6a12}
+#intro .irole em{position:absolute;top:12px;right:12px;font:800 15px "Nanum Myeongjo",serif;font-style:normal;letter-spacing:.2em;color:#a3272f;border:2.5px double #a3272f;padding:1px 8px;transform:rotate(10deg);opacity:0;mix-blend-mode:multiply}
+#intro .irole.stamped em{animation:stamp .35s cubic-bezier(.3,1.6,.5,1) both}

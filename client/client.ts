@@ -1219,11 +1219,15 @@ function renderDialogs(g: G.View) {
         f.append(el('small', 'ocase', `CASE CLOSED · ${T.name}`), el('span', 'ostamp' + (g.winner === null ? ' cold' : ''), g.winner === null ? '미제' : '해결'));
         f.append(el('h2', '', '사건 종결 보고서'));
         f.append(el('p', 'owin', g.winner === null ? '아무도 진실에 닿지 못했습니다.' : g.winner === g.me ? '당신이 사건을 해결했습니다!' : `${nm(g, g.winner)} 님이 사건을 해결했습니다.`));
-        const box = el('div', 'cards');
-        box.classList.add('row-cards', 'ocards');
-        (['s', 'w', 'r'] as const).forEach((k, n) => { const c = cardEl(g.theme, env[k]); c.style.animationDelay = `${0.35 + n * 0.45}s`; box.append(c); });
-        f.append(box);
-        f.append(el('p', 'ofact', `인물은 ${G.cardName(g.theme, env.s)}, 도구는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
+        const scene = endingScene(g.theme, env);
+        if (scene) f.append(scene); // 그림이 있는 테마: 방·인물·도구를 겹친 결말 장면
+        else { // 그림이 없는 테마: 봉투 속 세 장을 차례로 뒤집어 공개
+          const box = el('div', 'cards');
+          box.classList.add('row-cards', 'ocards');
+          (['s', 'w', 'r'] as const).forEach((k, n) => { const c = cardEl(g.theme, env[k]); c.style.animationDelay = `${0.35 + n * 0.45}s`; box.append(c); });
+          f.append(box);
+          f.append(el('p', 'ofact', `인물은 ${G.cardName(g.theme, env.s)}, 도구는 ${G.cardName(g.theme, env.w)}, 장소는 ${G.cardName(g.theme, env.r)}.`));
+        }
         const row = el('div', 'row');
         if (S?.host) { const again = el('button', '', '대기실로'); again.onclick = e => { e.preventDefault(); send({ t: 'again' }); dlg.close(); }; row.append(again); }
         if (FEEDBACK_URL) { const fb = el('a', 'ofb', '이 판은 어땠나요? 피드백 남기기 →'); fb.href = FEEDBACK_URL; fb.target = '_blank'; fb.rel = 'noopener'; f.append(fb); }
@@ -1234,6 +1238,20 @@ function renderDialogs(g: G.View) {
   }
   if (dlg.open && (dlg.dataset.kind === 'refute' || dlg.dataset.kind === 'over')) dlg.close();
   if (dlg.open && g.turn !== g.me) dlg.close();
+}
+
+// ---------- 사건 결말 장면: 새 그림 없이 방 그림(배경)·인물 전신(투명)·도구 그림을 겹쳐 모든 조합을 만든다 ----------
+const jong = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 ? c % 28 : 0; }; // 마지막 글자 받침(0 = 없음, 8 = ㄹ)
+function endingScene(theme: G.ThemeKey, env: G.Triple): HTMLElement | null {
+  const [su, wu, ru] = [asset(theme, env.s), asset(theme, env.w), asset(theme, env.r)];
+  if (!su || !wu || !ru) return null;
+  const [S, W, R] = [env.s, env.w, env.r].map(c => G.cardName(theme, c));
+  const box = el('div', 'oscene'), bg = el('div', 'osc-bg'), sImg = new Image(), wImg = new Image();
+  bg.style.backgroundImage = `url(${ru})`; sImg.src = su; sImg.className = 'osc-s'; sImg.alt = S; wImg.src = wu; wImg.className = 'osc-w'; wImg.alt = W;
+  const story = el('p', 'osc-story'), hi = (t: string) => el('i', '', t);
+  story.append('그날 밤 ', hi(R), '에서,', el('br'), hi(W), (jong(W) === 0 || jong(W) === 8 ? '로' : '으로') + ' 일을 저지른 것은', el('br'), hi(S), (jong(S) ? '이었다.' : '였다.'));
+  box.append(bg, el('div', 'osc-shade'), sImg, wImg, el('b', 'osc-title', `${R}의 밤`), story);
+  return box;
 }
 
 // ---------- 메모지 ----------

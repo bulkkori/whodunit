@@ -1,7 +1,9 @@
 // 게임 시작 연출: ① 인물·도구·장소 더미를 뒷면으로 섞기 ② 한 장씩 뽑아 사건 봉투에 봉인
-// ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개. 약 8.5초, 건너뛰기 가능.
+// ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개 ⑤ 내 카드 ⑥ 내 특수 능력 공개.
+// 약 14초(서버 INTRO_MS와 맞춤), 건너뛰기 가능. 섞기·나눠 주기·뒤집기·봉인에 효과음.
 import * as G from '../shared/game.ts';
 import { COLORS, cardEl, backEl } from './art.ts';
+import { riffle, flick, step as tap } from './sound.ts';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -48,6 +50,7 @@ export function playIntro(g: G.View, onDone: () => void) {
     });
     // ① 섞기
     for (let round = 0; round < 3 && alive; round++) {
+      riffle(0.4);
       await Promise.all(piles.flat().map((c, m) => c.animate([
         { transform: 'translate(0,0) rotate(0)' },
         { transform: `translate(${(m % 2 ? 1 : -1) * (14 + Math.random() * 10)}px, ${-6 + Math.random() * 12}px) rotate(${(m % 2 ? 1 : -1) * 8}deg)` },
@@ -59,19 +62,21 @@ export function playIntro(g: G.View, onDone: () => void) {
     const env = ov.querySelector('.ienv') as HTMLElement, er = env.getBoundingClientRect(), orr = ov.getBoundingClientRect();
     const ex = er.left - orr.left + er.width / 2 - CW / 2, ey = er.top - orr.top + er.height / 2 - CH / 2; // 작아지며(.4배) 봉투 가운데로
     for (const pile of piles) { const c = pile.pop()!; await fly(c, ex, ey, 420, { transform: `translate(${ex - parseFloat(c.style.left)}px, ${ey - parseFloat(c.style.top)}px) scale(.4)` }); c.remove(); if (!alive) return; }
-    env.classList.add('sealed');
+    env.classList.add('sealed'); tap(true); // 봉인 '쿵'
     await sleep(500); if (!alive) return;
     // ③ 모아서 섞고 나눠 주기
     step('남은 카드를 모아 섞어서 나눠 줍니다');
     ov.querySelectorAll('.ilab').forEach(l => l.remove());
     const rest = piles.flat(), cx = W() / 2 - CW / 2, cy = py - CH / 2;
     await Promise.all(rest.map((c, m) => fly(c, cx + (m % 4), cy - (m % 6), 450)));
+    riffle(0.48);
     await Promise.all(rest.map((c, m) => c.animate([{ transform: 'rotate(0)' }, { transform: `rotate(${m % 2 ? 10 : -10}deg)` }, { transform: 'rotate(0)' }], { duration: 500 }).finished));
     if (!alive) return;
     const per = g.players[0].handCount, n = g.players.length, total = per * n, gap = Math.min(120, 2600 / Math.max(total, 1));
     const seatEls = [...seatsBox.children] as HTMLElement[];
     for (let k = 0; k < total && alive; k++) {
       const j = k % n, sr = seatEls[j].getBoundingClientRect(), c = put(backEl(g.theme, 'mini'), cx + CW / 4, cy + CH / 4);
+      flick();
       void fly(c, sr.left - orr.left + sr.width / 2 - CW / 4, sr.top - orr.top - CH / 2, 380).then(() => { c.remove(); counts[j].textContent = String(+counts[j].textContent! + 1); });
       await sleep(gap);
     }
@@ -81,14 +86,31 @@ export function playIntro(g: G.View, onDone: () => void) {
     if (g.open.length) {
       step('나누고 남은 카드는 모두에게 공개 — 봉투에 없는 카드입니다');
       const box = ov.querySelector('.iopen') as HTMLElement; box.classList.add('on');
-      for (const c of g.open) { const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); box.append(e); await sleep(300); }
+      for (const c of g.open) { flick(); const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); box.append(e); await sleep(300); }
       await sleep(700);
     }
     step('내 카드를 확인하세요 — 추리 노트에 자동으로 표시됩니다');
     const mine = document.createElement('div'); mine.className = 'imine';
     for (const c of g.players[g.me].hand ?? []) { const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); mine.append(e); }
-    ov.append(mine);
-    await sleep(1600);
+    ov.append(mine); flick();
+    await sleep(1600); if (!alive) return;
+    // ⑥ 내 특수 능력: 수사 임명장이 뒤집히며 도장 '쿵'
+    const me = g.players[g.me];
+    if (g.opts.roles && me.role) {
+      const R = G.ROLES[me.role];
+      step('이번 사건에서 내가 맡은 특수 능력');
+      await mine.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(.9)' }], { duration: 300, fill: 'forwards' }).finished; mine.remove();
+      const card = document.createElement('div'); card.className = 'irole';
+      card.innerHTML = '<small></small><i></i><b></b><p></p><span></span><em>임명</em>';
+      const [sm, ic, nm, ds, us] = ['small', 'i', 'b', 'p', 'span'].map(t => card.querySelector(t) as HTMLElement);
+      sm.textContent = `${R.group} · 특수 능력`; ic.textContent = R.icon; nm.textContent = R.name; ds.textContent = R.desc;
+      us.textContent = `❗ 보너스칸에 멈추면 사용 · ${me.uses ?? 0}회`;
+      ov.append(card); flick();
+      await card.animate([{ transform: 'translate(-50%,-50%) rotateY(90deg) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-50%)', opacity: 1 }], { duration: 450, easing: 'cubic-bezier(.3,1.3,.5,1)' }).finished;
+      await sleep(350); if (!alive) return;
+      card.classList.add('stamped'); tap(true);
+      await sleep(4200); // 임명장은 약 5초 보여 줌
+    }
     finish();
   })();
 }

@@ -153,3 +153,24 @@ export function step(last = false) {
   click(t, last ? 0.32 : 0.2, (last ? 900 : 1300) + Math.random() * 350);
   thud(t, last ? 0.32 : 0.14);
 }
+
+/** 카드 섞기(리플): 종이가 촤라락 — 짧은 잡음 딸깍을 빽빽하게 깔고 가운데가 가장 촘촘·크게, 끝에 모아서 '탁' */
+export function riffle(dur = 0.42) {
+  if (ctx && ctx.state !== 'running') void ctx.resume();
+  if (!ctx || ctx.state !== 'running') return;
+  const now = ctx.currentTime, n = Math.round(dur * 75);
+  for (let i = 0; i < n; i++) {
+    const x = i / n, env = Math.sin(Math.PI * x);
+    click(now + x * dur + Math.random() * 0.006, 0.04 + 0.14 * env, 3000 + Math.random() * 3000);
+  }
+  click(now + dur + 0.02, 0.22, 1100 + Math.random() * 300);
+}
+
+/** 카드 한 장 휙(나눠 주기·뒤집기) */
+export function flick() {
+  if (ctx && ctx.state !== 'running') void ctx.resume();
+  if (!ctx || ctx.state !== 'running') return;
+  const t = ctx.currentTime;
+  click(t, 0.1, 4200 + Math.random() * 1500);
+  click(t + 0.014, 0.06, 2400 + Math.random() * 800);
+}

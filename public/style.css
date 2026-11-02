@@ -975,3 +975,4 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
 @keyframes mvcur{50%{outline-color:#fff}}
 #actions #mvpad button:disabled{display:block;opacity:.45}
 @media (max-width:639px){#hcopy{display:none}} /* 폰 헤더는 자리가 없어 대기실 코드 복사만 */
+#board .mvcur.bad{outline-color:#e05a4f;background:color-mix(in srgb,#e05a4f 55%,var(--hall));animation:none} /* 칸 수를 넘은 길의 끝 칸도 빨갛게 */

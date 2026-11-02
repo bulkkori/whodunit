@@ -86,6 +86,8 @@ export interface Game {
   pub?: number;
   turn: number; phase: Phase; roll: number | null; sug: Suggestion | null;
   log: LogEntry[]; winner: number | null; turnNo: number; rolls: number; opts: GameOpts;
+  /** 마지막 이동에서 플레이어가 직접 고른 길([출발, …, 도착]). 화면이 이 길로 걷게 함. 없으면 최단 경로로 걸음 */
+  walk?: Walk | null;
   /** 도구 말 위치: weapons[k] = 도구 k가 놓인 방 번호. 추리하면 그 방으로 옮겨진다 */
   weapons: number[];
   /** 아무도 고르지 않은 인물 말 위치(npc[인물 번호]). 플레이어가 맡은 인물은 null */
@@ -93,9 +95,11 @@ export interface Game {
   /** 똑같이 나누고 남아 모두에게 공개된 카드(진실이 아님) */
   open: Card[];
 }
+export interface Walk { p: number; route: Pos[] }
 export type Action =
   | { t: 'roll' } | { t: 'passage' } | { t: 'end' }
-  | { t: 'move'; to: Pos }
+  /** via: 직접 고른 길(출발 다음 칸 ~ 도착). 규칙에 안 맞으면 무시하고 최단 경로로 걷는 것처럼 보여 줌(도착 칸만 규칙에 영향) */
+  | { t: 'move'; to: Pos; via?: Pos[] }
   | { t: 'suggest'; s: Card; w: Card }
   | ({ t: 'accuse' } & Triple)
   | { t: 'show'; card?: Card; silent?: boolean }
@@ -115,6 +119,7 @@ export interface View {
   log: LogEntry[]; env?: Triple; opts: GameOpts; weapons: number[]; npc: (Pos | null)[]; open: Card[];
   /** 기록 열람 능력용: 남들끼리 카드를 보여 준 반박 목록(카드는 빼고). 기록이 잘려도 남아 있게 따로 보냄 */
   archive: { id: number; p: number; to: number }[];
+  walk?: Walk | null;
 }
 /** moves()가 필요로 하는 최소 상태 — 서버의 Game과 브라우저의 View 둘 다 만족 */
 type BoardState = Pick<Game, 'phase' | 'turn' | 'map' | 'roll'> & { players: { pos: Pos | null; out: boolean }[] };
@@ -304,6 +309,28 @@ export function moves(g: BoardState, i: number): Set<Pos> {
   return reachable(g.map, pos, g.roll, blocked);
 }
 
+/**
+ * 플레이어가 고른 길(via = 출발 다음 칸 ~ to)이 이번 이동 규칙에 맞으면 [출발, ...via], 아니면 null.
+ * 규칙: 주사위 눈 이하, 상하좌우 이웃으로만, 같은 칸 두 번 안 됨, 다른 말 칸 통과 불가, 방은 도착으로만(출발 방은 예외)
+ */
+export function chosenRoute(g: BoardState, i: number, to: Pos, via: unknown): Pos[] | null {
+  const from = g.players[i]?.pos;
+  if (from == null || g.roll == null || !Array.isArray(via) || !via.length || via.length > g.roll || via.at(-1) !== to) return null;
+  const blocked = new Set(g.players.filter((p, j) => j !== i && !p.out && p.pos != null && p.pos >= 0).map(p => p.pos));
+  const route: Pos[] = [from];
+  for (const x of via) {
+    const cur = route.at(-1)!;
+    if (!Number.isInteger(x) || route.includes(x) || blocked.has(x) || (cur < 0 && cur !== from) || !neighbors(g.map, cur).includes(x)) return null;
+    route.push(x);
+  }
+  return route;
+}
+
+/** 화면이 말을 걷게 할 길: 이 이동에서 고른 길(walk)이 있으면 그것, 없으면 최단 경로. 2D·3D 같이 씀 */
+export function walkRoute(map: GameMap, walk: Walk | null | undefined, j: number, from: Pos, to: Pos, blocked: Set<Pos>): Pos[] {
+  return walk && walk.p === j && walk.route[0] === from && walk.route.at(-1) === to ? walk.route : path(map, from, to, blocked);
+}
+
 export interface SeatIn { name: string; bot?: boolean; suspect?: number | null }
 
 /**
@@ -436,6 +463,7 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     case 'move':
       if (!moves(g, i).has(a.to)) return '갈 수 없는 칸이에요';
+      { const route = chosenRoute(g, i, a.to, a.via); g.walk = route && { p: i, route }; }
       p.pos = a.to; p.fresh = false; g.phase = 'act';
       if (a.to < 0) { p.canSuggest = a.to !== centerPos(g.map); g.log.push({ t: 'enter', p: i, room: roomOf(a.to) }); return null; }
       // 복도에서 멈춤: 보너스칸이면 능력 기회, 아니면 추리할 수 없으니 턴 종료
@@ -665,5 +693,6 @@ export function view(g: Game, i: number): View {
       .map(e => (e.t === 'shown' && !(over || spect || e.p === i || e.to === i) ? { t: 'shown', p: e.p, to: e.to, id: e.id } : e)),
     env: over || spect ? g.env : undefined, opts: g.opts, weapons: g.weapons, npc: g.npc, open: g.open,
     archive: g.log.flatMap(e => (e.t === 'shown' && e.p !== i && e.to !== i ? [{ id: e.id, p: e.p, to: e.to }] : [])),
+    walk: g.walk ?? null,
   };
 }

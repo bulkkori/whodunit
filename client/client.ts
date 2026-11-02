@@ -702,7 +702,7 @@ function renderBoard(g: G.View) {
     // 자기 이동(복도로 가서 차례가 넘어간 경우 포함): 실제 경로를 따라 한 칸씩 통통 튀며
     if (prev != null && prev !== p.pos && (j === g.turn || j === lastTurn2D)) {
       const blocked = new Set(g.players.filter((q, k) => k !== j && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-      const route = G.path(m, prev, p.pos, blocked);
+      const route = G.walkRoute(m, g.walk, j, prev, p.pos, blocked);
       if (route.length > 1 && walked(g, j, route.length - 1)) {
         const br = b.getBoundingClientRect(), sc = br.width / (b.offsetWidth || br.width) || 1;
         const mid = (r: DOMRect): [number, number] => [(r.left + r.width / 2 - br.left) / sc, (r.top + r.height / 2 - br.top) / sc];
@@ -775,7 +775,11 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   const g = S?.game; if (!g) return;
   const ok = myMoves(g).has(p);
   touch ||= touchLike();
-  if (ok && (!touch || armed === p)) { armed = null; previewPath(null); $('#hovertip').hidden = true; act({ t: 'move', to: p }); return; }
+  if (ok && !touch && mvTrail.length - 1 > g.roll! && mvTrail.at(-1) === p) return showTip(p, x, y); // 빨간 길(칸 수 초과)로는 못 감
+  if (ok && (!touch || armed === p)) {
+    const via = !touch && mvTrail.length > 1 && mvTrail.at(-1) === p ? mvTrail.slice(1) : undefined; // PC: 마우스로 그린 길대로
+    armed = null; mvTrail = []; previewPath(null); $('#hovertip').hidden = true; act({ t: 'move', to: p, via }); return;
+  }
   armed = ok ? p : null;
   showTip(p, x, y, !ok); // 갈 수 있는 칸이면 '한 번 더 누르면 이동' 안내를 계속 띄워 둠
 }
@@ -816,53 +820,95 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   bd.addEventListener('click', e => { if (swallow) { e.stopImmediatePropagation(); swallow = false; } }, true);
 }
 $('#board').onmousemove = e => {
-  if (touchLike() || tokDragOn) return; // 터치 뒤 브라우저가 흉내 내는 mousemove는 무시, 말을 끄는 중엔 끌기 쪽이 길을 그림
-  const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]');
-  showTip(c ? +c.dataset.p! : null, e.clientX, e.clientY);
+  if (touchLike() || tokDragOn) return; // 터치 뒤 흉내 mousemove 무시, 말 끌기 중엔 끌기 쪽이 길을 그림
+  const c = (e.target as HTMLElement).closest<HTMLElement>('[data-p]'), p = c ? +c.dataset.p! : null;
+  if (p != null && S?.game) extendTrail(S.game, p); // 칸을 옮겨 갈 때마다 발자국을 이어 감(최단 경로로 다시 그리지 않음)
+  showTip(p, e.clientX, e.clientY);
 };
-$('#board').onmouseleave = () => { if (!touchLike()) showTip(null, 0, 0); };
-// ---------- 터치 방향키 이동: 주사위를 굴린 뒤 행동 버튼 줄이 방향키로 바뀜. 누른 그대로 발자국을 남기고 ✓로 확정 ----------
+$('#board').onmouseleave = () => { if (touchLike()) return; if (mvTrail.length > 1) $('#hovertip').hidden = true; else showTip(null, 0, 0); }; // 발자국은 판 밖으로 나가도 유지
+// ---------- 길 그리기 이동: 터치는 행동 버튼 줄이 방향키로, PC는 화살표 키·Enter. 누른 그대로 발자국을 남기고 그 길로 걸음 ----------
 let mvTrail: G.Pos[] = [], mvKey = '';
 /** 발자국을 칠하고 지금 칸(커서)을 강조. 판을 다시 그려도 renderMv가 다시 칠함 */
 function paintTrail(roll: number) {
   const b = $('#board');
   b.querySelectorAll('.path,.mvcur').forEach(c => { c.classList.remove('path', 'bad', 'mvcur'); (c as HTMLElement).removeAttribute('data-step'); });
-  mvTrail.slice(1).forEach(p => b.querySelector(`[data-p="${p}"]`)?.classList.add('path'));
+  const over = mvTrail.length - 1 > roll; // 칸 수를 넘은 길은 빨갛게(이 길로는 못 감)
+  mvTrail.slice(1).forEach(p => b.querySelector(`[data-p="${p}"]`)?.classList.add('path', ...(over ? ['bad'] : [])));
   const c = b.querySelector<HTMLElement>(`[data-p="${mvTrail.at(-1)}"]`); c?.classList.add('mvcur');
   if (c && mvTrail.length > 1) c.dataset.step = `${mvTrail.length - 1}/${roll}`;
 }
-function renderMv(g: G.View) {
-  const pad = $('#mvpad'), acts = $('#actions'), me = g.players[g.me];
-  const on = touchLike() && view === '2d' && g.turn === g.me && g.phase === 'move' && !diceBusy && me.pos != null && g.roll != null;
-  pad.hidden = !on; acts.classList.toggle('moving', on);
-  if (!on) { mvKey = ''; $('#board').querySelectorAll('.mvcur').forEach(c => c.classList.remove('mvcur')); return; }
+/** 지금 2D 화면에서 내가 길을 그릴 수 있는 이동 차례인지. 새 굴림이면 발자국을 처음부터 */
+function syncTrail(g: G.View): boolean {
+  const me = g.players[g.me];
+  if (!(view === '2d' && g.turn === g.me && g.phase === 'move' && !diceBusy && me.pos != null && g.roll != null)) {
+    mvKey = ''; mvTrail = []; $('#board').querySelectorAll('.mvcur').forEach(c => c.classList.remove('mvcur')); return false;
+  }
   const key = `${g.turnNo}:${g.roll}:${me.pos}`;
   if (key !== mvKey) { mvKey = key; mvTrail = [me.pos!]; }
-  const cur = mvTrail.at(-1)!, used = mvTrail.length - 1, roll = g.roll!, ok = new Set([...myMoves(g), me.pos!]);
-  paintTrail(roll);
-  const go = () => { pad.hidden = true; acts.classList.remove('moving'); previewPath(null); act({ t: 'move', to: cur }); };
-  const step = (dx: number, dy: number) => { // 지금 칸에서 그 방향에 가장 가까운 이웃(방은 가장 가까운 가장자리 기준)
-    const r0 = $('#board').querySelector(`[data-p="${cur}"]`)?.getBoundingClientRect(); if (!r0) return;
-    const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
-    let best: G.Pos | null = null, bs = 0.5;
+  return true;
+}
+/** 지금 칸에서 그 방향에 가장 가까운 이웃으로 한 칸(방은 가장 가까운 가장자리 기준). 지나온 칸이면 거기까지 되감기 */
+function stepTrail(g: G.View, dx: number, dy: number) {
+  if (!syncTrail(g)) return;
+  const me = g.players[g.me], cur = mvTrail.at(-1)!, ok = new Set([...myMoves(g), me.pos!]);
+  const r0 = $('#board').querySelector(`[data-p="${cur}"]`)?.getBoundingClientRect(); if (!r0) return;
+  const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+  let best: G.Pos | null = null, bs = 0.5;
+  for (const n of G.neighbors(g.map, cur)) {
+    if (!ok.has(n)) continue;
+    const r = $('#board').querySelector(`[data-p="${n}"]`)?.getBoundingClientRect(); if (!r) continue;
+    const vx = Math.min(Math.max(cx, r.left), r.right) - cx, vy = Math.min(Math.max(cy, r.top), r.bottom) - cy, l = Math.hypot(vx, vy) || 1;
+    const sc = (vx * dx + vy * dy) / l; if (sc > bs) { bs = sc; best = n; }
+  }
+  const back = best != null ? mvTrail.indexOf(best) : -1;
+  if (back >= 0) mvTrail = mvTrail.slice(0, back + 1);
+  else if (best == null || mvTrail.length - 1 >= g.roll! || (cur < 0 && cur !== me.pos)) { navigator.vibrate?.(30); return; } // 막힘·칸 다 씀·방에 들어감
+  else mvTrail.push(best);
+  $('#hovertip').hidden = true; renderMv(g);
+}
+/** PC 마우스: 올린 칸까지 항상 가장 짧은 길을 보여 주되, 같은 거리의 길이 여럿이면 지금 그려진 길과 가장 많이 겹치는 쪽을 골라
+ *  칸을 옮길 때 길 모양이 갑자기 튀지 않게 함. 칸 수를 넘으면 그 길이 빨갛게(paintTrail). 굽은 길을 직접 그리려면 화살표 키 */
+function extendTrail(g: G.View, p: G.Pos) {
+  if (!syncTrail(g) || p === mvTrail.at(-1)) return;
+  const k = mvTrail.indexOf(p); if (k >= 0) { mvTrail = mvTrail.slice(0, k + 1); return; } // 그려진 길 위 칸 = 거기까지(가장 짧은 길의 앞부분도 가장 짧음)
+  const start = g.players[g.me].pos!;
+  const others = new Set(g.players.filter((q, j) => j !== g.me && !q.out && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
+  const dist = G.distances(g.map, start, others), d = dist.get(p);
+  if (d == null) return; // 막혀서 못 가는 칸: 길은 그대로 두고 안내만
+  // 도착에서 거꾸로 한 칸씩: 거리가 1 작은 이웃 중 그려진 길에서 가장 뒤쪽에 있는 칸 → 없으면 아무거나
+  const out = [p];
+  for (let cur = p; cur !== start;) {
+    let best: G.Pos | null = null, bi = -2;
     for (const n of G.neighbors(g.map, cur)) {
-      if (!ok.has(n)) continue;
-      const r = $('#board').querySelector(`[data-p="${n}"]`)?.getBoundingClientRect(); if (!r) continue;
-      const vx = Math.min(Math.max(cx, r.left), r.right) - cx, vy = Math.min(Math.max(cy, r.top), r.bottom) - cy, l = Math.hypot(vx, vy) || 1;
-      const sc = (vx * dx + vy * dy) / l; if (sc > bs) { bs = sc; best = n; }
+      if (dist.get(n) !== dist.get(cur)! - 1 || (n < 0 && n !== start)) continue; // 다른 방은 지나갈 수 없음
+      const ti = mvTrail.indexOf(n); if (ti > bi) { bi = ti; best = n; }
     }
-    const back = best != null ? mvTrail.indexOf(best) : -1;
-    if (back >= 0) mvTrail = mvTrail.slice(0, back + 1); // 지나온 칸 = 거기까지 되감기
-    else if (best == null || used >= roll || (cur < 0 && cur !== me.pos)) { navigator.vibrate?.(30); return; } // 막힘·칸 다 씀·방에 들어감
-    else mvTrail.push(best);
-    renderMv(g);
-  };
+    if (best == null) return;
+    out.unshift(best); cur = best;
+  }
+  mvTrail = out;
+}
+function resetTrail(g: G.View) { if (!syncTrail(g)) return; mvTrail = [g.players[g.me].pos!]; previewPath(null); renderMv(g); }
+/** 그린 길대로 이동(서버가 길을 검사해 모두의 화면에서 그 길로 걷게 함) */
+function goTrail() {
+  if (mvTrail.length < 2) return;
+  const route = mvTrail; mvTrail = [];
+  $('#mvpad').hidden = true; $('#actions').classList.remove('moving'); previewPath(null);
+  act({ t: 'move', to: route.at(-1)!, via: route.slice(1) });
+}
+function renderMv(g: G.View) {
+  const pad = $('#mvpad'), acts = $('#actions'), on = syncTrail(g), touch = on && touchLike();
+  pad.hidden = !touch; acts.classList.toggle('moving', touch);
+  if (!on) return;
+  const used = mvTrail.length - 1, roll = g.roll!;
+  if (touch || used) paintTrail(roll); // PC는 화살표로 그리기 시작했을 때만(그 전엔 마우스 올림 미리보기가 길을 그림)
+  if (!touch) return;
   pad.replaceChildren();
   const btn = (cls: string, t: string, f: () => void, dis = false) => { const b = el('button', cls, t); b.onclick = f; b.disabled = dis; pad.append(b); };
-  btn('up', '▲', () => step(0, -1)); btn('lf', '◀', () => step(-1, 0));
-  btn('ok', used ? `✓ 이동 ${used}/${roll}` : `${roll}칸까지`, go, !used);
-  btn('rt', '▶', () => step(1, 0)); btn('dn', '▼', () => step(0, 1));
-  btn('back', '↺ 처음', () => { mvTrail = [me.pos!]; renderMv(g); }, !used);
+  btn('up', '▲', () => stepTrail(g, 0, -1)); btn('lf', '◀', () => stepTrail(g, -1, 0));
+  btn('ok', used ? `✓ 이동 ${used}/${roll}` : `${roll}칸까지`, goTrail, !used);
+  btn('rt', '▶', () => stepTrail(g, 1, 0)); btn('dn', '▼', () => stepTrail(g, 0, 1));
+  btn('back', '↺ 처음', () => resetTrail(g), !used);
 }
 
 // ---------- 이동 경로 미리보기: 내 이동 차례에 마우스를 올린(또는 탭한) 칸까지의 길만 칠한다 ----------
@@ -871,6 +917,7 @@ function previewPath(p: G.Pos | null) {
   b.querySelectorAll('.path').forEach(c => { c.classList.remove('path', 'bad'); (c as HTMLElement).removeAttribute('data-step'); });
   const g = S?.game, me = g?.players[g.me];
   const moving = !!g && !!me && g.turn === g.me && g.phase === 'move' && !diceBusy && g.roll != null && me.pos != null;
+  if (p != null && moving && !touchLike() && mvTrail.length > 1) { paintTrail(g!.roll!); b3?.preview(mvTrail.slice(1), true); return; } // PC: 그려 둔 발자국 유지
   if (p == null || !moving || p === me!.pos) { b3?.preview([], true); return; }
   const blocked = new Set(g!.players.filter((q, k) => k !== g!.me && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
   const route = G.path(g!.map, me!.pos!, p, blocked).slice(1);
@@ -901,6 +948,10 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
     const d = G.distances(g.map, me.pos, blocked).get(p);
     const moving = g.turn === g.me && g.phase === 'move' && !diceBusy && g.roll != null;
     if (d == null) line2 = blocked.has(p) ? '❌ 다른 말이 있는 칸' : '❌ 갈 수 없음 (다른 말이 길을 막음)';
+    else if (moving && !touchLike() && mvTrail.length > 1 && mvTrail.at(-1) === p) { // PC: 마우스로 그린 길 기준
+      const n = mvTrail.length - 1;
+      line2 = n <= g.roll! ? `✅ 이동 가능 · ${n}칸 (최대 ${g.roll}칸)` : `❌ 이동 불가 · ${n}칸 필요 (최대 ${g.roll}칸)`;
+    }
     else if (moving) line2 = d <= g.roll! ? `✅ 이동 가능 · ${d}칸 (최대 ${g.roll}칸)` + (touchLike() && armed === p ? ' — 버튼이나 같은 칸을 한 번 더' : '') : `❌ 이동 불가 · ${d}칸 필요 (최대 ${g.roll}칸)`;
     else line2 = `여기까지 ${d}칸`;
   }
@@ -998,7 +1049,7 @@ function renderPanel(g: G.View) {
     !my ? `${nm(g, g.turn)}의 차례입니다` :
     me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
     ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추리하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
-    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? (view === '2d' ? `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동 (말 끌기·칸 누르기도 돼요)` : `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'`) : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
+    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? (view === '2d' ? `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동 (말 끌기·칸 누르기도 돼요)` : `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'`) : (view === '2d' ? `🎲 ${g.roll} — 칸에 마우스를 올려 길을 보고 누르세요 (굽은 길은 화살표 키로 그리고 Enter)` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`))) :
     inRoom && me.canSuggest ? '추리하거나 턴을 끝내세요' : '턴을 끝내세요';
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',
@@ -1358,7 +1409,11 @@ new ResizeObserver(() => document.documentElement.style.setProperty('--paneltop'
 addEventListener('keydown', e => {
   if (!S?.game || dlg.open || (e.target as HTMLElement).matches('input,select,textarea')) return;
   const k = e.key.toLowerCase(), click = (a: ButtonAction) => { const b = $btn(`#actions [data-a=${a}]`); if (!b.disabled) b.click(); };
-  if (k === 'n') dr.classList.toggle('open');
+  const dir = ({ ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] } as Record<string, [number, number]>)[e.key];
+  if (dir && syncTrail(S.game)) { e.preventDefault(); stepTrail(S.game, ...dir); } // 화살표로 길 그리기
+  else if (e.key === 'Enter' && mvTrail.length > 1) { e.preventDefault(); goTrail(); }
+  else if (e.key === 'Escape' && mvTrail.length > 1) resetTrail(S.game);
+  else if (k === 'n') dr.classList.toggle('open');
   else if (k === 'r') click('roll');
   else if (k === 's') click('suggest');
   else if (e.key === 'Escape') dr.classList.remove('open');

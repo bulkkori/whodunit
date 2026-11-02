@@ -359,3 +359,20 @@ test('봇 템포 옵션: 값 검증과 기본값', () => {
   assert.ok(!G.isTempo('turbo') && !G.isTempo(1) && !G.isTempo(undefined));
   assert.ok(G.TEMPOS.slow.mul > G.TEMPOS.normal.mul && G.TEMPOS.normal.mul > G.TEMPOS.fast.mul);
 });
+
+test('직접 고른 길: 규칙에 맞으면 저장해 모두에게 보내고, 어긋나면 무시(이동 자체는 됨)', () => {
+  const g = G.newGame('mansion', seats(3), 5); g.turn = 0; g.phase = 'move'; g.roll = 6;
+  const from = g.players[0].pos!, m = g.map;
+  // 출발(중앙 방) → 문 칸 → 한 칸 더 → 되돌아가지 않는 세 번째 칸
+  const a = G.neighbors(m, from)[0], b = G.neighbors(m, a).find(x => x >= 0 && x !== from)!, c = G.neighbors(m, b).find(x => x >= 0 && x !== a)!;
+  assert.deepEqual(G.chosenRoute(g, 0, c, [a, b, c]), [from, a, b, c]);
+  assert.equal(G.chosenRoute(g, 0, c, [a, c]), null, '이웃이 아닌 칸으로 건너뜀');
+  assert.equal(G.chosenRoute(g, 0, b, [a, b, a, b]), null, '같은 칸 두 번');
+  assert.equal(G.chosenRoute(g, 0, c, [a, b, c, 'x' as never]), null, '도착이 끝이 아님·이상한 값');
+  assert.equal(G.chosenRoute(g, 0, c, Array(7).fill(c)), null, '주사위 눈 초과');
+  g.players[1].pos = b; g.players[1].out = false;
+  assert.equal(G.chosenRoute(g, 0, c, [a, b, c]), null, '다른 말 칸 통과');
+  g.players[1].pos = from;
+  assert.equal(G.act(g, 0, { t: 'move', to: c, via: [a, b, c] }), null);
+  assert.deepEqual(G.view(g, 1).walk, { p: 0, route: [from, a, b, c] });
+});

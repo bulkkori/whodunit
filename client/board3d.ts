@@ -382,7 +382,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       if (!pw.userData.target) pw.position.copy(t);
       else if (prev != null && prev !== p.pos && (j === g.turn || j === lastTurn)) { // 자기 이동(차례가 넘어간 경우 포함): 실제 경로(상하좌우)를 한 칸씩
         const blocked = new Set(g.players.filter((q, k) => k !== j && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-        const full = G.path(map!, prev, p.pos, blocked), roll = g.log.findLast(e => e.t === 'roll' && e.p === j);
+        const full = G.walkRoute(map!, g.walk, j, prev, p.pos, blocked), roll = g.log.findLast(e => e.t === 'roll' && e.p === j);
         if (roll?.t === 'roll' && full.length - 1 <= roll.v) { // 굴려서 걸은 이동만(순간 이동은 미끄러지듯)
           const route = full.slice(1, -1).filter(x => x >= 0);
           pw.userData.queue = [...route.map(x => posOf(x, 0, 1)), t];

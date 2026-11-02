@@ -10,7 +10,10 @@ input,select{background:var(--hall);border:1px solid var(--line);border-radius:8
 kbd{font-size:11px;opacity:.6;border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:2px}
 [hidden]{display:none!important}
 .logo{white-space:nowrap}
-#hcode{color:var(--sub);font-size:13px;white-space:nowrap}
+#hcode{color:var(--sub);font-size:13px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;min-width:0}
+#htitle{overflow:hidden;text-overflow:ellipsis}
+#hcodebtn{padding:1px 7px;min-height:0;min-width:0;font:700 12.5px "Nanum Gothic Coding",monospace;letter-spacing:.12em;background:transparent;color:var(--sub);border:1px dashed #ffffff33;border-radius:3px;box-shadow:none}
+#hcodebtn[aria-pressed=true]{letter-spacing:.05em}
 #turnbox{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
 #turnname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
 #bar{flex:1;height:6px;background:var(--hall);border-radius:3px;overflow:hidden;min-width:40px}

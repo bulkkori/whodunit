@@ -269,7 +269,9 @@ $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
 // 참여 코드 가리기(방송·화면 공유용): 이 기기에서만, 다음 방에도 유지. 가려도 초대 링크 복사는 그대로
 let codeHidden = store.get('wd_hidecode', false);
 const paintHide = () => { const b = $('#hidecode'); b.textContent = codeHidden ? '보이기' : '가리기'; b.setAttribute('aria-pressed', String(codeHidden)); };
-$('#hidecode').onclick = () => { codeHidden = !codeHidden; store.set('wd_hidecode', codeHidden); paintHide(); render(); };
+const toggleHide = () => { codeHidden = !codeHidden; store.set('wd_hidecode', codeHidden); paintHide(); render(); };
+$('#hidecode').onclick = toggleHide;
+$('#hcodebtn').onclick = toggleHide;
 paintHide();
 const inviteUrl = () => `${location.origin}${location.pathname}?room=${S?.code ?? ''}`;
 $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(inviteUrl()); toast('초대 링크를 복사했어요'); } catch { toast(inviteUrl()); } };
@@ -341,7 +343,9 @@ function show(id: Screen) {
 function render() {
   const g = S?.game;
   document.body.dataset.gtheme = g?.theme ?? S?.theme ?? theme();
-  $('#hcode').textContent = S ? (codeHidden ? S.title : `${S.title} · ${S.code}`) : '';
+  $('#htitle').textContent = S ? S.title : '';
+  const hb = $btn('#hcodebtn'); hb.hidden = !S; // 헤더 코드: 누르면 가리기/보이기(대기실 버튼과 같은 설정)
+  if (S) { hb.textContent = codeHidden ? '•'.repeat(S.code.length) : S.code; hb.setAttribute('aria-pressed', String(codeHidden)); hb.setAttribute('aria-label', codeHidden ? '참여 코드 보이기' : '참여 코드 가리기'); }
   if (!S) return show(creating ? 'createbox' : linkJoining ? 'skel' : 'lobby');
   if (S.stage === 'pick') { show('pickstage'); return renderPick(S); }
   if (!g) { show('wait'); return renderWait(S); }

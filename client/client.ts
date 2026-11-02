@@ -526,6 +526,7 @@ const pz = (() => {
 // ---------- 이동 때 자동 확대: 주사위가 멈추면 내 말과 갈 수 있는 칸이 화면에 꽉 차게, 이동이 끝나면 원래대로 ----------
 let focusKey = '';
 function autoFocus(g: G.View) {
+  renderMv(g);
   const me = g.players[g.me];
   const moving = g.turn === g.me && g.phase === 'move' && !diceBusy && me.pos != null;
   const lastRoll = g.log.findLast(e => e.t === 'roll'), key = moving ? `${g.seed}:${g.turnNo}:${lastRoll?.t === 'roll' ? lastRoll.k : 0}` : '';
@@ -807,6 +808,49 @@ $('#board').onmousemove = e => {
   showTip(c ? +c.dataset.p! : null, e.clientX, e.clientY);
 };
 $('#board').onmouseleave = () => { if (!touchLike()) showTip(null, 0, 0); };
+// ---------- 터치 방향키 이동: 주사위를 굴린 뒤 행동 버튼 줄이 방향키로 바뀜. 누른 그대로 발자국을 남기고 ✓로 확정 ----------
+let mvTrail: G.Pos[] = [], mvKey = '';
+/** 발자국을 칠하고 지금 칸(커서)을 강조. 판을 다시 그려도 renderMv가 다시 칠함 */
+function paintTrail(roll: number) {
+  const b = $('#board');
+  b.querySelectorAll('.path,.mvcur').forEach(c => { c.classList.remove('path', 'bad', 'mvcur'); (c as HTMLElement).removeAttribute('data-step'); });
+  mvTrail.slice(1).forEach(p => b.querySelector(`[data-p="${p}"]`)?.classList.add('path'));
+  const c = b.querySelector<HTMLElement>(`[data-p="${mvTrail.at(-1)}"]`); c?.classList.add('mvcur');
+  if (c && mvTrail.length > 1) c.dataset.step = `${mvTrail.length - 1}/${roll}`;
+}
+function renderMv(g: G.View) {
+  const pad = $('#mvpad'), acts = $('#actions'), me = g.players[g.me];
+  const on = touchLike() && view === '2d' && g.turn === g.me && g.phase === 'move' && !diceBusy && me.pos != null && g.roll != null;
+  pad.hidden = !on; acts.classList.toggle('moving', on);
+  if (!on) { mvKey = ''; $('#board').querySelectorAll('.mvcur').forEach(c => c.classList.remove('mvcur')); return; }
+  const key = `${g.turnNo}:${g.roll}:${me.pos}`;
+  if (key !== mvKey) { mvKey = key; mvTrail = [me.pos!]; }
+  const cur = mvTrail.at(-1)!, used = mvTrail.length - 1, roll = g.roll!, ok = new Set([...myMoves(g), me.pos!]);
+  paintTrail(roll);
+  const go = () => { pad.hidden = true; acts.classList.remove('moving'); previewPath(null); act({ t: 'move', to: cur }); };
+  const step = (dx: number, dy: number) => { // 지금 칸에서 그 방향에 가장 가까운 이웃(방은 가장 가까운 가장자리 기준)
+    const r0 = $('#board').querySelector(`[data-p="${cur}"]`)?.getBoundingClientRect(); if (!r0) return;
+    const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+    let best: G.Pos | null = null, bs = 0.5;
+    for (const n of G.neighbors(g.map, cur)) {
+      if (!ok.has(n)) continue;
+      const r = $('#board').querySelector(`[data-p="${n}"]`)?.getBoundingClientRect(); if (!r) continue;
+      const vx = Math.min(Math.max(cx, r.left), r.right) - cx, vy = Math.min(Math.max(cy, r.top), r.bottom) - cy, l = Math.hypot(vx, vy) || 1;
+      const sc = (vx * dx + vy * dy) / l; if (sc > bs) { bs = sc; best = n; }
+    }
+    const back = best != null ? mvTrail.indexOf(best) : -1;
+    if (back >= 0) mvTrail = mvTrail.slice(0, back + 1); // 지나온 칸 = 거기까지 되감기
+    else if (best == null || used >= roll || (cur < 0 && cur !== me.pos)) { navigator.vibrate?.(30); return; } // 막힘·칸 다 씀·방에 들어감
+    else mvTrail.push(best);
+    renderMv(g);
+  };
+  pad.replaceChildren();
+  const btn = (cls: string, t: string, f: () => void, dis = false) => { const b = el('button', cls, t); b.onclick = f; b.disabled = dis; pad.append(b); };
+  btn('up', '▲', () => step(0, -1)); btn('lf', '◀', () => step(-1, 0));
+  btn('ok', used ? `✓ 이동 ${used}/${roll}` : `${roll}칸까지`, go, !used);
+  btn('rt', '▶', () => step(1, 0)); btn('dn', '▼', () => step(0, 1));
+  btn('back', '↺ 처음', () => { mvTrail = [me.pos!]; renderMv(g); }, !used);
+}
 
 // ---------- 이동 경로 미리보기: 내 이동 차례에 마우스를 올린(또는 탭한) 칸까지의 길만 칠한다 ----------
 function previewPath(p: G.Pos | null) {
@@ -941,7 +985,7 @@ function renderPanel(g: G.View) {
     !my ? `${nm(g, g.turn)}의 차례입니다` :
     me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
     ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추리하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
-    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
+    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? (view === '2d' ? `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동 (말 끌기·칸 누르기도 돼요)` : `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'`) : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`)) :
     inRoom && me.canSuggest ? '추리하거나 턴을 끝내세요' : '턴을 끝내세요';
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',
@@ -950,7 +994,7 @@ function renderPanel(g: G.View) {
     end: my && G.canEnd(g, g.me), // 굴리기 전·굴리고 이동 전에는 못 끝냄
     accuse: my && ph !== 'refute' && ph !== 'move' && inCenter && !me.fresh,
   };
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#actions button')) b.disabled = !en[b.dataset.a as ButtonAction];
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#actions > button')) b.disabled = !en[b.dataset.a as ButtonAction];
   const hand = $('#hand'); hand.innerHTML = '';
   for (const c of me.hand ?? []) hand.append(cardEl(g.theme, c));
   renderLog(g);

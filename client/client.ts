@@ -266,15 +266,28 @@ $('#join').onclick = () => {
   join(c);
 };
 $('#code').onkeydown = e => { if (e.key === 'Enter') $('#join').click(); };
-// 참여 코드 가리기(방송·화면 공유용): 이 기기에서만, 다음 방에도 유지. 가려도 초대 링크 복사는 그대로
-let codeHidden = store.get('wd_hidecode', false);
+// 참여 코드 가리기(방송·화면 공유용): 처음엔 가린 상태, 이 기기에서만 바꾼 대로 다음 방에도 유지. 가려도 코드 복사는 그대로
+let codeHidden = store.get('wd_hidecode', true);
 const paintHide = () => { const b = $('#hidecode'); b.textContent = codeHidden ? '보이기' : '가리기'; b.setAttribute('aria-pressed', String(codeHidden)); };
 const toggleHide = () => { codeHidden = !codeHidden; store.set('wd_hidecode', codeHidden); paintHide(); render(); };
 $('#hidecode').onclick = toggleHide;
 $('#hcodebtn').onclick = toggleHide;
 paintHide();
-const inviteUrl = () => `${location.origin}${location.pathname}?room=${S?.code ?? ''}`;
-$('#copy').onclick = async () => { try { await navigator.clipboard.writeText(inviteUrl()); toast('초대 링크를 복사했어요'); } catch { toast(inviteUrl()); } };
+// 복사가 막힌 환경이면 화면에 대신 띄우되, 코드를 가린 중(방송)에는 띄우지 않음. 예전 초대 링크(?room=)로 들어오는 길은 그대로
+// https가 아닌 주소(로컬망·Tailscale 테스트)에선 clipboard API가 없어서 숨긴 입력칸 + execCommand로 한 번 더 시도
+const legacyCopy = (text: string) => {
+  const t = document.createElement('textarea'); t.value = text; t.readOnly = true;
+  Object.assign(t.style, { position: 'fixed', top: '0', left: '0', opacity: '0', pointerEvents: 'none' });
+  document.body.append(t); t.select(); t.setSelectionRange(0, text.length);
+  try { return document.execCommand('copy'); } catch { return false; } finally { t.remove(); }
+};
+const copyText = async (text: string, done: string) => {
+  try { await navigator.clipboard.writeText(text); return toast(done); } catch { /* 아래 예전 방식으로 */ }
+  if (legacyCopy(text)) return toast(done);
+  toast(codeHidden ? '복사할 수 없는 환경이에요. 코드를 잠깐 보이게 한 뒤 직접 알려 주세요' : text);
+};
+// 참여 코드 복사(가린 채로 채팅·DM에 붙여 넣기용) — 대기실·게임 중 헤더(PC) 둘 다
+for (const id of ['#copycode', '#hcopy']) $(id).onclick = () => { if (S) copyText(S.code, '참여 코드를 복사했어요'); };
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
 $('#opttempo').onchange = e => send({ t: 'opt', tempo: (e.target as HTMLSelectElement).value as G.Tempo });
@@ -344,7 +357,7 @@ function render() {
   const g = S?.game;
   document.body.dataset.gtheme = g?.theme ?? S?.theme ?? theme();
   $('#htitle').textContent = S ? S.title : '';
-  const hb = $btn('#hcodebtn'); hb.hidden = !S; // 헤더 코드: 누르면 가리기/보이기(대기실 버튼과 같은 설정)
+  const hb = $btn('#hcodebtn'); hb.hidden = $('#hcopy').hidden = !S; // 헤더 코드: 누르면 가리기/보이기(대기실 버튼과 같은 설정)
   if (S) { hb.textContent = codeHidden ? '•'.repeat(S.code.length) : S.code; hb.setAttribute('aria-pressed', String(codeHidden)); hb.setAttribute('aria-label', codeHidden ? '참여 코드 보이기' : '참여 코드 가리기'); }
   if (!S) return show(creating ? 'createbox' : linkJoining ? 'skel' : 'lobby');
   if (S.stage === 'pick') { show('pickstage'); return renderPick(S); }

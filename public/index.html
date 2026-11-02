@@ -17,7 +17,7 @@
 <body>
 <header>
   <b class="logo"><img src="favicon.png" alt="" width="20" height="20"> 후더닛</b>
-  <span id="hcode"><span id="htitle"></span><button type="button" id="hcodebtn" title="참여 코드 가리기/보이기 (방송·화면 공유용)" hidden></button></span>
+  <span id="hcode"><span id="htitle"></span><button type="button" id="hcodebtn" title="참여 코드 가리기/보이기 (방송·화면 공유용)" hidden></button><button type="button" id="hcopy" title="참여 코드 복사" aria-label="참여 코드 복사" hidden>복사</button></span>
   <div id="turnbox" hidden><span id="turnname"></span><div id="bar"><i></i></div><span id="secs"></span></div>
   <button id="music" class="ghost" aria-label="배경음악 바꾸기">🎵</button>
   <button id="mute" class="ghost" aria-label="효과음 켜기/끄기">🔊</button>
@@ -87,7 +87,7 @@
       <div class="winfo">
         <h2 id="wtitle"></h2>
         <div class="chips" id="wopts"></div>
-        <div class="codebox"><span class="sub cbhead">참여 코드<button type="button" id="hidecode" class="cbeye" aria-pressed="false" title="방송·화면 공유 중이면 가려 두세요">가리기</button></span><b id="bigcode"></b><button id="copy" class="ghost">🔗 초대 링크 복사</button></div>
+        <div class="codebox"><span class="sub cbhead">참여 코드<button type="button" id="hidecode" class="cbeye" aria-pressed="true" title="방송·화면 공유 중이면 가려 두세요">보이기</button></span><b id="bigcode"></b><button id="copycode" class="ghost">📋 참여 코드 복사</button></div>
       </div>
       <div class="wplayers">
         <div class="whead"><p class="sub" id="wcount"></p><a class="guide" href="guide.html" target="_blank" rel="noopener">설명서</a><button type="button" id="wdrawer_open" class="ghost">⚙️ 방 설정 · 맵</button></div>

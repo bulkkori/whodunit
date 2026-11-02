@@ -14,6 +14,7 @@ kbd{font-size:11px;opacity:.6;border:1px solid currentColor;border-radius:4px;pa
 #htitle{overflow:hidden;text-overflow:ellipsis}
 #hcodebtn{padding:1px 7px;min-height:0;min-width:0;font:700 12.5px "Nanum Gothic Coding",monospace;letter-spacing:.12em;background:transparent;color:var(--sub);border:1px dashed #ffffff33;border-radius:3px;box-shadow:none}
 #hcodebtn[aria-pressed=true]{letter-spacing:.05em}
+#hcopy{padding:1px 7px;min-height:0;min-width:0;font-size:12px;font-weight:700;background:transparent;color:var(--sub);border:1px solid #ffffff33;border-radius:3px;box-shadow:none} /* 헤더 코드 복사 */
 #turnbox{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
 #turnname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
 #bar{flex:1;height:6px;background:var(--hall);border-radius:3px;overflow:hidden;min-width:40px}
@@ -650,6 +651,12 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   body{font-size:22px}
   .gcard{width:120px}
 }
+/* 보통 PC(1920×1080·1536×864): 노트는 닫혀 있다가, 펼치면 판 위를 덮지 않고 판·패널이 옆으로 비켜 남 */
+@media (min-width:1500px) and (min-aspect-ratio:16/10){
+  #drawer{width:min(520px,24vw)}
+  :root:has(#drawer.open){--dock:calc(min(520px,24vw) + 40px)} /* + 손잡이 너비: 펼친 채로도 손잡이를 끌어 닫을 수 있게 패널을 덮지 않음 */
+  body:has(#game:not([hidden])):has(#drawer.open) main{margin-right:var(--dock)}
+}
 /* 울트라와이드: 추리 노트 항상 펼침 */
 @media (min-width:1800px) and (min-aspect-ratio:2/1){
   :root{--dock:min(520px,24vw)}
@@ -819,7 +826,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   #viewtog button{min-height:36px;min-width:52px}
   #reset3d{min-width:40px}
   #tallmemo,#closememo{min-width:40px;min-height:40px}
-  #wait #copy,#wait .stepper button{min-height:40px}
+  #wait #copycode,#wait .stepper button{min-height:40px}
   #createbox .combo .spin button{min-width:40px}
   #c_reroll{min-width:40px;min-height:40px}
   #lobby #practice{padding:10px 8px}
@@ -854,7 +861,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   #wait .codebox .sub{width:100%}
   #wait .codebox .cbhead{justify-content:flex-start}
   #wait #bigcode{font-size:30px;letter-spacing:.18em}
-  #wait #copy{padding:8px 10px;font-size:13px}
+  #wait #copycode{padding:8px 10px;font-size:13px}
   #wait h2{font-size:24px}
   #wait .wcta{position:sticky;bottom:0;z-index:5;margin:0 -18px -18px;padding:10px 18px calc(12px + var(--sb));background:linear-gradient(#0000,#ece1c8 18px)}
   #wait .wcta button{padding:12px}
@@ -967,3 +974,4 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
 #board .mvcur{outline:3px solid var(--can);outline-offset:-1px;z-index:3;animation:mvcur 1s ease-in-out infinite;background:color-mix(in srgb,var(--can) 55%,var(--hall))}
 @keyframes mvcur{50%{outline-color:#fff}}
 #actions #mvpad button:disabled{display:block;opacity:.45}
+@media (max-width:639px){#hcopy{display:none}} /* 폰 헤더는 자리가 없어 대기실 코드 복사만 */

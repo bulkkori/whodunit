@@ -91,7 +91,7 @@ dialog .cards{display:flex;flex-direction:column;gap:6px}
 #rolebox .rolehead{display:flex;justify-content:space-between;align-items:center}
 #rolebox .sub{font-size:13px}
 #code::placeholder{letter-spacing:normal;text-transform:none}
-#actions [data-a=suggest]:not(:disabled){animation:pulse 1.4s ease-in-out infinite}
+#actions [data-a=suggest]:not(:disabled){animation:pulse 1.4s ease-in-out 3}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
 .gcard.big{width:150px}
 #hand{display:flex;flex-wrap:wrap;gap:8px}
@@ -226,7 +226,7 @@ button{background:var(--accent);color:#16110f;border:0;border-radius:8px;padding
 .sk{display:block;border-radius:8px;background:linear-gradient(90deg,var(--hall) 0%,color-mix(in srgb,var(--ink) 9%,var(--hall)) 40%,var(--hall) 80%);background-size:300% 100%;animation:skShine 1.4s linear infinite}
 button.sk,button.sk:disabled{color:transparent!important;border-color:transparent!important;box-shadow:none!important;filter:none!important;opacity:1;cursor:progress;background:linear-gradient(90deg,var(--hall) 0%,color-mix(in srgb,var(--ink) 9%,var(--hall)) 40%,var(--hall) 80%) 0 0/300% 100%!important}
 button.sk *{visibility:hidden}
-@keyframes skShine{from{background-position:100% 0}to{background-position:-200% 0}}
+@keyframes skShine{0%,100%{opacity:1}50%{opacity:.55}}
 .sk-h{height:30px;width:60%}
 .sk-code{height:110px}
 .sk-t{height:16px;width:40%}
@@ -525,8 +525,11 @@ header.ping-ref{animation:hpingref 1.4s ease-out}
 #netbar{position:fixed;left:50%;top:calc(var(--hdr) + var(--st) + 8px);transform:translateX(-50%);z-index:70;padding:6px 14px;border-radius:3px;background:#2a1d17ee;color:#f3e6cc;font-size:13px;box-shadow:0 4px 14px #0008;white-space:nowrap}
 #netbar::before{content:"";display:inline-block;width:10px;height:10px;margin-right:8px;border:2px solid #f3e6cc;border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:spin .7s linear infinite}
 #board.pzanim{transition:transform .45s cubic-bezier(.2,.85,.25,1)}
-.tok.me{outline:2px solid #fff;box-shadow:0 0 0 2px #fff,0 1px 3px #0008;animation:mepulse 2s ease-in-out infinite}
-@keyframes mepulse{50%{box-shadow:0 0 0 2px #fff,0 0 0 calc(100cqw / var(--n) * .22) #ffffff40}}
+.tok.me{outline:2px solid #fff;box-shadow:0 0 0 2px #fff,0 1px 3px #0008;position:relative}
+/* 내 말 표시: 고리 하나가 퍼졌다 사라짐(transform·opacity만 → GPU가 처리, 화면 다시 그리기 없음) */
+.tok.me::after{content:"";position:absolute;inset:-2px;border-radius:50%;box-shadow:0 0 0 2px #fff;pointer-events:none;will-change:transform,opacity;animation:mepulse 2.4s ease-out infinite}
+.tok.tokghost::after{display:none}
+@keyframes mepulse{0%{transform:scale(1);opacity:.55}70%,100%{transform:scale(1.6);opacity:0}}
 .tok.me.found{animation:mefound .5s ease-in-out 4}
 @keyframes mefound{50%{transform:scale(1.7);box-shadow:0 0 0 3px #fff,0 0 0 8px #c9a24a99}}
 #plist li.me{cursor:pointer}
@@ -783,7 +786,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   #wdrawer,#wdrawer.open{transition:none}
   .mapstage .mapprev,.mapthumb{transition:opacity .2s}
   #dlg .ostamp,#dlg .ocards .gcard,#intro .ienv.sealed::after{animation:none}
-  .tok.me,.tok.me.found{animation:none}
+  .tok.me,.tok.me.found,.tok.me::after{animation:none}
   #board.pzanim{transition:none}
 }
 /* 마우스가 있는 기기: 호버 효과 */

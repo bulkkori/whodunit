@@ -18,9 +18,10 @@ const mat = (c: number, o: THREE.MeshStandardMaterialParameters = {}) => new THR
 const noPick = (o: THREE.Object3D) => { o.raycast = () => {}; };
 // 바닥 텍스처: 주소별로 한 번만 불러옴. 반복(타일) 설정
 const texLoader = new THREE.TextureLoader(), texCache = new Map<string, THREE.Texture>();
+let texArrived = () => {}; // 보드가 만들어지면 '다시 그리기'로 바뀜
 function loadTex(url: string) {
   let t = texCache.get(url);
-  if (!t) { t = texLoader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache.set(url, t); }
+  if (!t) { t = texLoader.load(url, () => texArrived()); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache.set(url, t); }
   return t;
 }
 /** 벽 면용: 월드 좌표로 가로 = 벽을 따라 이어지게, 세로 = 바닥에서부터(벽이 낮아지면 걸레받이만 보임). 높이 0.9 = 그림 세로 전체 */
@@ -140,14 +141,15 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   onHover: (p: G.Pos | null, x: number, y: number) => void = () => {},
   onTap: (p: G.Pos, x: number, y: number, touch: boolean) => void = () => {}): Board3D {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)); // 폰은 1.5배까지(발열)
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.append(renderer.domElement);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
   const controls = new OrbitControls(camera, renderer.domElement);
   // 자동 시점 이동 목표(손으로 돌리기 시작하면 취소)
   let camGoal: { pos: THREE.Vector3; tgt: THREE.Vector3 } | null = null;
-  controls.addEventListener('start', () => { camGoal = null; });
+  controls.addEventListener('start', () => { camGoal = null; invalidate(); });
+  controls.addEventListener('change', () => invalidate());
   Object.assign(controls, { enableDamping: true, maxPolarAngle: 1.25, minDistance: 5, maxDistance: 45 });
   scene.add(new THREE.HemisphereLight(0xfff4e0, 0x202030, 1.1));
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -281,7 +283,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       x.fillText(icon, 96, 100);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
       const url = asset(g.theme, 'w' + k);
-      if (url) { const im = new Image(); im.onload = () => { medal(); x.save(); x.beginPath(); x.arc(96, 94, 70, 0, Math.PI * 2); x.clip(); x.drawImage(im, 26, 24, 140, 140); x.restore(); tex.needsUpdate = true; }; im.src = url; }
+      if (url) { const im = new Image(); im.onload = () => { medal(); x.save(); x.beginPath(); x.arc(96, 94, 70, 0, Math.PI * 2); x.clip(); x.drawImage(im, 26, 24, 140, 140); x.restore(); tex.needsUpdate = true; invalidate(); }; im.src = url; }
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
       sp.scale.set(0.95, 0.95, 0.95); sp.userData.target = null; noPick(sp); B.add(sp);
       return sp;
@@ -297,8 +299,8 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     m4.compose(v3.set(w.x, 0.05 + w.h / 2, w.z), q0, s3.set(1.04, w.h, 0.08)); w.mesh.setMatrixAt(w.idx, m4);
   }
   /** 카메라가 바라보는 방향(수평)으로 바깥을 향한 벽 = 시야를 가리는 벽 → 낮춤. 높이는 부드럽게 바뀜 */
-  function updateWalls(dt: number) {
-    if (!walls.length) return;
+  function updateWalls(dt: number): boolean {
+    if (!walls.length) return false;
     const cx = camera.position.x - controls.target.x, cz = camera.position.z - controls.target.z, l = Math.hypot(cx, cz) || 1;
     const changed = new Set<THREE.InstancedMesh>();
     walls.forEach(w => {
@@ -311,6 +313,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     // 방 이름이 카메라를 돌려도 거꾸로 보이지 않게, 바닥에 누운 채 카메라 쪽으로 돌림
     const az = Math.atan2(cx, cz);
     board?.children.forEach(o => { if (o.userData.label) o.rotation.y = az; });
+    return changed.size > 0;
   }
 
   function fit() {
@@ -338,6 +341,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     if (hm.instanceColor) hm.instanceColor.needsUpdate = true;
   }
   function preview(cells: G.Pos[], ok: boolean) {
+    invalidate();
     if (!hallMesh) return;
     pathSet = new Set(cells); pathOk = ok; paintHalls();
     for (const r of roomMeshes) r.material.emissive.set(pathSet.has(r.userData.p) ? (ok ? 0x6a5410 : 0x5a1410) : 0x000000);
@@ -353,6 +357,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     });
   }
   function update(g: G.View, moves: Set<G.Pos>) {
+    invalidate();
     if (key !== g.seed + g.theme) { key = g.seed + g.theme; build(g); }
     const M = map!, hm = hallMesh!;
     can = moves; turn = g.phase === 'over' ? -1 : g.turn;
@@ -420,6 +425,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   const dieGeo = new THREE.BoxGeometry(0.62, 0.62, 0.62);
 
   function throwDice(d: [number, number], power: number): Promise<void> {
+    invalidate();
     for (const t of throws) { scene.remove(t.mesh); t.done(); }
     throws = [];
     const all = dieMaterials(), T = 1.0 + power * 0.5;
@@ -449,34 +455,44 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       return true;
     });
   }
-  let frameErrs = 0;
+  let frameErrs = 0, dirty = 3, looping = false;
+  // 다시 그릴 일이 생기면 반복을 깨움(가만히 있을 땐 반복 자체를 멈춰 폰이 쉬게)
+  const invalidate = () => { dirty = 3; if (running && !looping) { looping = true; clock.getDelta(); requestAnimationFrame(frame); } };
+  texArrived = invalidate;
   function frame() {
-    if (!running) return;
-    try { frameBody(); } catch (e) { if (++frameErrs > 30) { running = false; console.error('3D stopped', (e as Error)?.name); return; } } // 한 프레임 오류로 보드 전체가 멈추지 않게
-    requestAnimationFrame(frame);
+    if (!running) { looping = false; return; }
+    let busy = true;
+    try { busy = frameBody(); } catch (e) { if (++frameErrs > 30) { running = false; looping = false; console.error('3D stopped', (e as Error)?.name); return; } } // 한 프레임 오류로 보드 전체가 멈추지 않게
+    if (busy) requestAnimationFrame(frame); else looping = false;
   }
-  function frameBody() {
+  /** 이번 프레임에 할 일이 있었으면 true(다음 프레임도 돎) */
+  function frameBody(): boolean {
     const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
-    if (env) { env.rotation.y = t * 0.8; env.position.y = 0.55 + Math.sin(t * 2) * 0.05; }
+    let moving = throws.length > 0 || !!camGoal;
+    if (env && moving) { env.rotation.y = t * 0.8; env.position.y = 0.55 + Math.sin(t * 2) * 0.05; } // 봉투는 다른 게 움직일 때만 같이 돎
     stepDice(t);
     for (const pw of [...pawns, ...npcPawns.filter((x): x is THREE.Group => !!x)]) {
       const queue = pw.userData.queue as THREE.Vector3[] | undefined;
       if (queue?.length) { // 칸 단위로 통통: 한 칸에 약 0.23초, 칸 사이에서 포물선으로 튀고 닿을 때 톡
         const nx = queue[0], from = pw.userData.from as THREE.Vector3;
         const seg = Math.max(0.001, Math.hypot(nx.x - from.x, nx.z - from.z)), dx = nx.x - pw.position.x, dz = nx.z - pw.position.z, d = Math.hypot(dx, dz), step = dt * 4.3 * Math.max(1, seg);
+        moving = true;
         if (d <= step) { pw.position.set(nx.x, nx.y, nx.z); queue.shift(); pw.userData.from = nx.clone(); Sound.step(!queue.length); }
         else { pw.position.x += (dx / d) * step; pw.position.z += (dz / d) * step; const k = 1 - (d - step) / seg; pw.position.y = 0.08 + Math.sin(Math.min(1, Math.max(0, k)) * Math.PI) * 0.3; }
         continue;
       }
       const tg = pw.userData.target as THREE.Vector3 | null; if (!tg) continue;
       const dist = Math.hypot(tg.x - pw.position.x, tg.z - pw.position.z);
+      if (dist < 0.001 && Math.abs(pw.position.y - 0.08) < 0.001) continue;
+      moving = true;
       pw.position.x += (tg.x - pw.position.x) * Math.min(1, dt * 6);
       pw.position.z += (tg.z - pw.position.z) * Math.min(1, dt * 6);
       pw.position.y = 0.08 + Math.min(0.4, dist * 0.15);
     }
     for (const sp of weaponSprites) {
       const tg = sp.userData.target as THREE.Vector3 | null; if (!tg) continue;
-      sp.position.lerp(tg, Math.min(1, dt * 4));
+      if (sp.position.distanceTo(tg) < 0.001) continue;
+      moving = true; sp.position.lerp(tg, Math.min(1, dt * 4));
     }
     const cur = pawns[turn];
     ring.visible = !!cur?.visible;
@@ -486,27 +502,31 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       camera.position.lerp(camGoal.pos, k); controls.target.lerp(camGoal.tgt, k);
       if (camera.position.distanceTo(camGoal.pos) < 0.02) camGoal = null;
     }
-    controls.update();
-    updateWalls(dt);
+    if (controls.update()) moving = true; // 손을 뗀 뒤 관성으로 도는 중
+    if (updateWalls(dt)) moving = true;
+    if (!moving && dirty <= 0) return false;
+    if (!moving) dirty--;
     renderer.render(scene, camera);
+    return true;
   }
   new ResizeObserver(() => {
+    invalidate();
     const w = container.clientWidth, h = container.clientHeight; if (!w || !h) return;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (map) fit();
   }).observe(container);
 
   return {
     update,
-    start() { if (!running) { running = true; clock.getDelta(); frame(); } },
+    start() { if (!running) { running = true; invalidate(); } },
     stop() { running = false; for (const t of throws) { scene.remove(t.mesh); t.done(); } throws = []; },
-    resetView() { camGoal = null; fit(); },
+    resetView() { camGoal = null; fit(); invalidate(); },
     focus(cells) {
       if (!map) return;
       // 처음 시점(fit) 위치를 계산해 두고, 칸 묶음이면 같은 방향에서 묶음 크기만큼만 떨어진 곳으로
       const p0 = camera.position.clone(), t0 = controls.target.clone(); fit();
       const home = { pos: camera.position.clone(), tgt: controls.target.clone() };
       camera.position.copy(p0); controls.target.copy(t0); controls.update();
-      if (!cells?.length) { camGoal = home; return; }
+      if (!cells?.length) { camGoal = home; invalidate(); return; }
       const pts = cells.map(c => posOf(c, 0, 1));
       const xs = pts.map(v => v.x), zs = pts.map(v => v.z);
       const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
@@ -514,7 +534,7 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       const ratio = Math.min(1, Math.max(0.35, size / n)); // 판 전체 대비 크기만큼 거리 줄이기(너무 가까이는 안 감)
       const off = home.pos.clone().sub(home.tgt).multiplyScalar(ratio);
       const tgt = new THREE.Vector3(cx, 0, cz);
-      camGoal = { pos: tgt.clone().add(off), tgt };
+      camGoal = { pos: tgt.clone().add(off), tgt }; invalidate();
     },
     rebuild() { key = null; },
     throwDice,

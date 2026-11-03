@@ -997,3 +997,12 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
 #intro .irole span{margin-top:4px;font-size:13px;font-weight:700;color:#9a6a12}
 #intro .irole em{position:absolute;top:12px;right:12px;font:800 15px "Nanum Myeongjo",serif;font-style:normal;letter-spacing:.2em;color:#a3272f;border:2.5px double #a3272f;padding:1px 8px;transform:rotate(10deg);opacity:0;mix-blend-mode:multiply}
 #intro .irole.stamped em{animation:stamp .35s cubic-bezier(.3,1.6,.5,1) both}
+/* 터치 가로 화면(태블릿 가로): 이동 차례엔 행동 줄(방향키)을 오른쪽 패널 맨 아래 칸으로 — 엄지 자리, 다른 내용을 가리지 않음(패널 안에서 위 내용만 스크롤) */
+@media (min-aspect-ratio:23/20) and (hover:none) and (pointer:coarse){
+  #panel:has(#actions.moving){height:calc(100dvh - var(--hdr) - var(--pad) * 2 - var(--st) - var(--sb))}
+  #actions.moving{order:99;margin-top:auto;position:sticky;bottom:0;z-index:5;padding:10px 0 2px;background:#ece1c8;box-shadow:0 -10px 14px #ece1c8;animation:padUp .25s ease-out}
+  #actions.moving #mvpad{grid-template-columns:1fr 1fr 1fr 1.3fr;grid-template-rows:58px 58px;gap:8px}
+  #actions.moving #mvpad :is(.up,.dn,.lf,.rt){font-size:22px}
+  #actions.moving #mvpad :is(.ok,.back){white-space:normal;line-height:1.15;padding:0 4px;font-size:15px}
+}
+@keyframes padUp{from{opacity:0;transform:translateY(12px)}}

@@ -8,142 +8,338 @@
 <link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
-:root{--paper:#ece1c8;--paper2:#d6c39c;--ink:#2a1d17;--sub:#5a4738;--seal:#6b1f2b;--gold:#c9a24a;--line:#2a1d1733}
+/* 설명서: 실제 책처럼 — PC는 두 쪽 펼침 + 책장 넘김, 폰은 한 쪽씩 옆으로 밀기 (넘기기는 guide.js) */
+:root{--paper:#efe4c9;--paper2:#e2d2ad;--ink:#2a1d17;--sub:#5d4a3c;--seal:#6b1f2b;--gold:#c9a24a;--line:#2a1d1733;--leather:#4a1620}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.65 "Pretendard Variable","Pretendard",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased;word-break:keep-all;
-  background:radial-gradient(ellipse 70% 40% at 50% 100%,#d9a35b22,#0000 70%),radial-gradient(ellipse at 50% 20%,#2e2124 0%,#150f11 65%,#0b0809 100%) fixed #0b0809}
-.sheet{max-width:760px;margin:6vh auto 8vh;padding:44px 40px 40px;position:relative;
-  background:radial-gradient(ellipse at 50% 30%,#f1e7d0 50%,var(--paper2) 140%);border-radius:3px;box-shadow:0 1px 0 #fff8 inset,0 30px 70px #000c,0 6px 14px #0008}
-.tab{position:absolute;bottom:100%;left:22px;padding:6px 16px 4px;background:var(--paper2);border-radius:8px 8px 0 0;font:700 12px/1.4 "Nanum Gothic Coding",monospace;letter-spacing:.14em;color:var(--sub)}
-.stamp{position:absolute;top:26px;right:24px;transform:rotate(8deg);border:2.5px double #a3272f;color:#a3272f;padding:3px 9px;font:800 13px/1.3 "Nanum Myeongjo",serif;letter-spacing:.12em;opacity:.7;mix-blend-mode:multiply}
-h1{margin:0 0 6px;font:800 40px/1.1 "Nanum Myeongjo","Batang",serif;letter-spacing:-.02em}
-.lead{margin:0 0 18px;color:var(--sub);font-size:15px}
-nav{display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 0 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:14px}
-nav a{color:var(--seal);text-decoration:none;font-weight:700}
-nav a:hover{text-decoration:underline}
-h2{margin:36px 0 10px;padding-bottom:6px;border-bottom:1.5px solid var(--seal);font:800 23px/1.2 "Nanum Myeongjo",serif;color:var(--seal)}
-h2 small{font:700 12px "Nanum Gothic Coding",monospace;letter-spacing:.15em;color:var(--sub);margin-right:8px;vertical-align:middle}
-h3{margin:20px 0 6px;font:800 16px "Nanum Myeongjo",serif}
-p{margin:8px 0}
-ol,ul{margin:6px 0 10px;padding-left:22px}
-li{margin:4px 0}
+body{margin:0;min-height:100vh;color:var(--ink);font:15.5px/1.65 "Pretendard Variable","Pretendard",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;word-break:keep-all;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(ellipse 60% 50% at 50% 42%,#d9a35b30,#0000 70%),repeating-linear-gradient(92deg,#2a1a12 0 3px,#24160f 3px 9px,#2c1c14 9px 12px),#22150f;overflow:hidden}
+
+/* ---------- 쪽(공통) ---------- */
+.page{position:relative;background:radial-gradient(ellipse at 50% 35%,#f4ead3 40%,var(--paper2) 135%);padding:34px 34px 46px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#2a1d1733 #0000}
+.page h2{margin:0 0 12px;padding-bottom:6px;border-bottom:1.5px solid var(--seal);font:800 22px/1.25 "Nanum Myeongjo",serif;color:var(--seal)}
+.page h2 small{display:block;font:700 11.5px "Nanum Gothic Coding",monospace;letter-spacing:.2em;color:var(--sub);margin-bottom:4px}
+.page h3{margin:16px 0 4px;font:800 15.5px "Nanum Myeongjo",serif}
+.page p{margin:7px 0}
+.page ul,.page ol{margin:6px 0 8px;padding-left:20px}
+.page li{margin:3px 0}
+.page table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
+.page th,.page td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.page th{font:800 13px "Nanum Myeongjo",serif;color:var(--seal);border-bottom:1.5px solid var(--seal)}
 b.k{background:linear-gradient(transparent 60%,#c9a24a66 0)}
-.step{display:grid;grid-template-columns:34px 1fr;gap:10px 12px;margin:10px 0}
-.step i{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--seal);color:#f3e6cc;font:800 16px "Nanum Gothic Coding",monospace;font-style:normal}
-.step div{padding-top:5px}
-.step div>b:first-child{display:block;font:800 16px "Nanum Myeongjo",serif;margin-bottom:2px}
-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px}
-th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:800 13.5px "Nanum Myeongjo",serif;color:var(--seal);border-bottom:1.5px solid var(--seal)}
-td b{font-weight:800}
-.tip{margin:14px 0;padding:10px 14px;border:1.5px dashed var(--sub);border-radius:3px;background:#fbf6ea;font-size:14.5px}
+.step{display:grid;grid-template-columns:30px 1fr;gap:6px 10px;margin:9px 0}
+.step i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--seal);color:#f3e6cc;font:800 14px "Nanum Gothic Coding",monospace;font-style:normal}
+.step div{padding-top:3px}
+.step div>b:first-child{display:block;font:800 15.5px "Nanum Myeongjo",serif;margin-bottom:1px}
+.tip{margin:12px 0;padding:9px 12px;border:1.5px dashed var(--sub);border-radius:3px;background:#fbf6ea99;font-size:14px}
 .tip b{color:var(--seal)}
-.mark{display:inline-block;min-width:1.4em;text-align:center;font:26px/1 "Nanum Pen Script",cursive;vertical-align:-4px}
+.mark{display:inline-block;min-width:1.3em;text-align:center;font:24px/1 "Nanum Pen Script",cursive;vertical-align:-4px}
 .ok{color:#2f6b34}.no{color:#a3272f}.q{color:#9a6a12}
-.pill{display:inline-block;padding:1px 8px;border:1px solid var(--sub);border-radius:3px;font-size:12.5px;color:var(--sub);margin-right:4px}
-.back{display:inline-block;margin-top:34px;padding:12px 22px;border-radius:3px;background:var(--seal);color:#f3e6cc;text-decoration:none;font:800 16px "Nanum Myeongjo",serif;letter-spacing:.15em;box-shadow:inset 0 0 0 2px var(--seal),inset 0 0 0 3px #f3e6cc66}
-.back:hover{background:#80283a}
-p a{color:var(--seal);font-weight:700}
-@media (max-width:600px){.sheet{margin:7vh 12px 6vh;padding:34px 20px 28px}h1{font-size:32px}.stamp{top:16px;right:14px;font-size:11px}table{font-size:13.5px}th,td{padding:7px 5px}}
+.pill{display:inline-block;padding:0 7px;border:1px solid var(--sub);border-radius:3px;font-size:12px;color:var(--sub);white-space:nowrap}
+kbd{display:inline-block;min-width:1.7em;padding:0 5px;border:1px solid #2a1d1766;border-bottom-width:2.5px;border-radius:4px;background:#fbf6ea;font:700 12.5px "Nanum Gothic Coding",monospace;text-align:center}
+.page a{color:var(--seal);font-weight:700}
+.folio{position:absolute;left:0;right:0;bottom:14px;text-align:center;font:700 12px "Nanum Gothic Coding",monospace;letter-spacing:.15em;color:var(--sub)}
+.rh{position:absolute;top:12px;left:34px;right:34px;display:flex;justify-content:space-between;font:700 10.5px "Nanum Gothic Coding",monospace;letter-spacing:.18em;color:#5d4a3c99}
+.page>.rh+*{margin-top:14px}
+.fig{display:flex;justify-content:center;gap:10px;margin:12px 0 6px}
+.mini{width:84px;aspect-ratio:5/7;border-radius:6px;overflow:hidden;position:relative;background:#1d1518;box-shadow:0 3px 8px #0005,inset 0 0 0 3px #c9a96e;display:flex;flex-direction:column}
+.mini span{font:800 11px "Nanum Myeongjo",serif;color:#f3e6cc;text-align:center;padding:3px 0;background:var(--kc,#b23a3a)}
+.mini img{flex:1;min-height:0;width:100%;object-fit:cover;object-position:50% 12%}
+.mini.w{--kc:#2f5d9e}.mini.w img{object-fit:contain;padding:6px}.mini.r{--kc:#2e7d4f}
+.mini em{font:800 10.5px "Nanum Myeongjo",serif;font-style:normal;text-align:center;background:#fbf4e2;color:var(--ink);padding:2px 0}
+.cap{text-align:center;font-size:12.5px;color:var(--sub);margin:0 0 6px}
+.toc{list-style:none;padding:0;margin:10px 0}
+.toc li{display:flex;align-items:baseline;gap:8px;margin:9px 0;font:700 15px "Nanum Myeongjo",serif}
+.toc li::after{content:"";order:2;flex:1;border-bottom:1.5px dotted #2a1d1766}
+.toc a{order:1;color:var(--ink);text-decoration:none}
+.toc a small{font:700 11px "Nanum Gothic Coding",monospace;color:var(--seal);margin-right:8px;letter-spacing:.1em}
+.toc span{order:3;font:700 13px "Nanum Gothic Coding",monospace;color:var(--sub)}
+.lined{flex:1;min-height:200px;background:repeating-linear-gradient(#0000 0 31px,#2a1d1726 31px 32px);margin-top:14px;position:relative}
+#p-memo{display:flex;flex-direction:column}
+.lined p{font:24px/32px "Nanum Pen Script",cursive;color:#3b4a7a;margin:0;padding-top:2px;transform:rotate(-1deg)}
+
+/* ---------- 표지 · 뒷표지 ---------- */
+.cover,.backc{background:radial-gradient(ellipse at 40% 30%,#6b2330 0%,var(--leather) 55%,#2c0c12 100%);color:#e9d39a;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+.cover::before,.backc::before{content:"";position:absolute;inset:16px;border:2px solid #c9a24a99;box-shadow:inset 0 0 0 5px #4a162000,inset 0 0 0 6px #c9a24a55;border-radius:4px;pointer-events:none}
+.cover small{font:700 12px "Nanum Gothic Coding",monospace;letter-spacing:.35em;color:#c9a24acc}
+.cover h1{margin:10px 0 4px;font:800 54px/1.05 "Nanum Myeongjo",serif;letter-spacing:.04em;color:#f1dca0;text-shadow:0 1px 0 #0008,0 -1px 0 #fff3}
+.cover .ctitle{font:800 17px "Nanum Myeongjo",serif;letter-spacing:.3em;color:#e9d39a}
+.cover .emb{width:120px;height:80px;margin:30px auto 26px;position:relative;background:linear-gradient(#e2cfa6,#cdb582);border-radius:2px;box-shadow:0 10px 24px #000a}
+.cover .emb::before{content:"";position:absolute;inset:0 0 auto 0;height:52%;background:linear-gradient(#d8c296,#c4aa76);clip-path:polygon(0 0,100% 0,50% 100%)}
+.cover .emb::after{content:"";position:absolute;left:50%;top:38%;width:28px;height:28px;margin-left:-14px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#a8384a,#6b1f2b 60%,#4a1220);box-shadow:0 2px 4px #0008}
+.cover .cfoot{position:absolute;bottom:34px;left:0;right:0;font:700 11px "Nanum Gothic Coding",monospace;letter-spacing:.25em;color:#c9a24a99}
+.cover .chint{margin-top:6px;font-size:13px;color:#e9d39aaa}
+.backc p{max-width:80%;font:700 15px/1.7 "Nanum Myeongjo",serif;color:#e9d39acc}
+.backc .links{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.backc a{color:#f1dca0;font-weight:700;text-decoration:none;border-bottom:1px solid #c9a24a66;padding-bottom:2px}
+.backc .play{margin-top:18px;padding:11px 22px;border:0;border-radius:3px;background:#e9d39a;color:var(--leather);font:800 16px "Nanum Myeongjo",serif;letter-spacing:.15em}
+
+/* ---------- 조작 줄 ---------- */
+.bknav{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:999px;background:#0b0809cc;box-shadow:0 4px 14px #0008;z-index:10}
+.bknav button,.bknav a{min-width:40px;height:36px;border-radius:999px;border:1px solid #e9d39a55;background:transparent;color:#e9d39a;font:800 18px/1 "Nanum Myeongjo",serif;cursor:pointer;display:grid;place-items:center;text-decoration:none;padding:0 12px}
+.bknav a{font-size:13px}
+.bknav button:disabled{opacity:.3;cursor:default}
+.bknav output{min-width:64px;text-align:center;font:700 12.5px "Nanum Gothic Coding",monospace;color:#e9d39a;letter-spacing:.08em}
+
+/* ---------- PC: 두 쪽 펼침, 한 장(leaf)의 앞=오른쪽 쪽, 뒤=다음 펼침의 왼쪽 쪽 ---------- */
+body.spread{--w:min(calc((100vw - 120px) / 2),calc((100dvh - 110px) * .72),560px);--h:calc(var(--w) / .72);display:grid;place-items:center;height:100dvh;padding-bottom:40px}
+body.spread #book{position:relative;width:calc(var(--w) * 2);height:var(--h);perspective:2600px;transition:transform .8s cubic-bezier(.3,.1,.2,1)}
+body.spread #book.closed-front{transform:translateX(calc(var(--w) * -.5))}
+body.spread #book.closed-back{transform:translateX(calc(var(--w) * .5))}
+body.spread #book::before{content:"";position:absolute;inset:-10px -12px;border-radius:6px;background:linear-gradient(90deg,#3a0f17,#4a1620 49.6%,#2a0a10 50%,#4a1620 50.4%,#3a0f17);box-shadow:0 26px 60px #000c;opacity:0;transition:opacity .4s}
+body.spread #book.open::before{opacity:1}
+.leaf{position:absolute;top:0;left:50%;width:var(--w);height:var(--h);transform-origin:0 50%;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,.1,.2,1)}
+.leaf.flipped{transform:rotateY(-180deg)}
+.leaf>.page{position:absolute;inset:0;margin:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.leaf>.page:not(.cover):not(.backc){box-shadow:inset 22px 0 26px -18px #0004}
+.leaf>.page.back{transform:rotateY(180deg)}
+.leaf>.page.back:not(.backc){box-shadow:inset -22px 0 26px -18px #0004}
+.leaf>.page{border-radius:0 4px 4px 0} /* 모든 쪽 모서리를 표지와 같게(뒤 쪽이 모서리로 비치지 않게) */
+.leaf>.page.back{border-radius:4px 0 0 4px}
+.leaf>.page:not(.cover):not(.backc){cursor:default}
+/* 쪽 가장자리를 누르면 넘김 */
+.edge{position:absolute;top:0;bottom:0;width:36px;z-index:2;cursor:pointer}
+.edge.r{right:0;background:linear-gradient(90deg,#0000,#0000000d)}
+.edge.l{left:0;background:linear-gradient(-90deg,#0000,#0000000d)}
+.edge:hover{background:linear-gradient(90deg,#0000,#00000022)}
+.edge.l:hover{background:linear-gradient(-90deg,#0000,#00000022)}
+
+/* ---------- 폰: 한 쪽씩 옆으로 밀기 ---------- */
+body.flat #book{display:flex;height:100dvh;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+body.flat #book::-webkit-scrollbar{display:none}
+body.flat .page{flex:none;width:100vw;height:100dvh;scroll-snap-align:center;scroll-snap-stop:always;padding:30px max(20px,env(safe-area-inset-left)) 92px;box-shadow:inset 10px 0 18px -12px #0005}
+body.flat .page .folio{bottom:70px}
+body.flat .rh{left:20px;right:20px}
+body.flat .cover h1{font-size:48px}
+body.flat .lined{min-height:55vh}
+@media (prefers-reduced-motion:reduce){.leaf,body.spread #book{transition:none}}
 </style>
 </head>
 <body>
-<article class="sheet">
-  <span class="tab">CASE FILE · 플레이 안내</span>
-  <span class="stamp">처음 오신 분께</span>
-  <h1>후더닛 설명서</h1>
-  <p class="lead">저택에서 사건이 벌어졌습니다. 봉투에 봉인된 <b class="k">인물 · 도구 · 장소</b> 세 장을 가장 먼저 맞히는 탐정이 이깁니다. 3~8명이 함께하며, 빈자리는 봇이 채웁니다. 한 판에 15~30분쯤 걸립니다.</p>
-  <nav>
-    <a href="#start">시작하기</a><a href="#screen">화면 보기</a><a href="#turn">한 턴의 흐름</a><a href="#note">추리 노트</a>
-    <a href="#accuse">최종 고발</a><a href="#roles">특수 능력</a><a href="#control">조작법</a><a href="#faq">자주 묻는 것</a>
-  </nav>
+<main id="book" aria-label="후더닛 설명서">
 
-  <h2 id="start"><small>01</small>시작하기</h2>
+<section class="page cover" id="cover">
+  <small>CASE FILE · 수사 지침서</small>
+  <h1>후더닛</h1>
+  <div class="ctitle">탐정 설명서</div>
+  <div class="emb" aria-hidden="true"></div>
+  <p class="chint">표지를 넘겨 시작하세요 →</p>
+  <div class="cfoot">CONFIDENTIAL · 고딕 저택 편</div>
+</section>
+
+<section class="page" id="toc">
+  <div class="rh"><span>후더닛 설명서</span><span>차례</span></div>
+  <h2><small>CONTENTS</small>차례</h2>
+  <ol class="toc">
+    <li><a href="#p-case"><small>00</small>사건 개요</a><span>2</span></li>
+    <li><a href="#p-start"><small>01</small>시작하기</a><span>3</span></li>
+    <li><a href="#p-screen"><small>02</small>화면 보기</a><span>4</span></li>
+    <li><a href="#p-turn"><small>03</small>한 턴의 흐름</a><span>5</span></li>
+    <li><a href="#p-move"><small>04</small>말 움직이기</a><span>7</span></li>
+    <li><a href="#p-note"><small>05</small>추리 노트</a><span>8</span></li>
+    <li><a href="#p-accuse"><small>06</small>최종 고발과 결말</a><span>9</span></li>
+    <li><a href="#p-roles"><small>07</small>특수 능력</a><span>10</span></li>
+    <li><a href="#p-bluff"><small>08</small>블러핑과 수사 요령</a><span>11</span></li>
+    <li><a href="#p-keys"><small>09</small>조작법 한눈에</a><span>12</span></li>
+    <li><a href="#p-faq"><small>10</small>자주 묻는 것</a><span>13</span></li>
+    <li><a href="#p-memo"><small>··</small>수사 메모</a><span>14</span></li>
+  </ol>
+  <p class="tip"><b>넘기는 법</b> PC는 <kbd>←</kbd> <kbd>→</kbd> 키나 쪽 가장자리를 누르고, 폰은 옆으로 밀어 넘깁니다. 아래 조작 줄로 처음·끝으로 갈 수 있어요.</p>
+  <div class="folio">1</div>
+</section>
+
+<section class="page" id="p-case">
+  <div class="rh"><span>후더닛 설명서</span><span>00 사건 개요</span></div>
+  <h2><small>00</small>사건 개요</h2>
+  <p>저택에서 사건이 벌어졌습니다. 봉투에 봉인된 <b class="k">인물 · 도구 · 장소</b> 세 장을 가장 먼저 맞히는 탐정이 이깁니다.</p>
+  <div class="fig" aria-hidden="true">
+    <div class="mini"><span>인물</span><img src="assets/mansion/s3.webp" alt=""><em>주치의 마르타</em></div>
+    <div class="mini w"><span>도구</span><img src="assets/mansion/w0.webp" alt=""><em>독을 탄 홍차</em></div>
+    <div class="mini r"><span>장소</span><img src="assets/mansion/r4.webp" alt=""><em>음악실</em></div>
+  </div>
+  <p class="cap">"음악실에서, 독을 탄 홍차로, 주치의 마르타가?"</p>
+  <table>
+    <tr><th>인원</th><td>3~8명. 빈자리는 봇이 채우고, 혼자 봇과도 할 수 있습니다.</td></tr>
+    <tr><th>시간</th><td>한 판 15~30분</td></tr>
+    <tr><th>카드</th><td>인물·도구는 각각 6~8장(인원에 따라), 장소는 9~11곳</td></tr>
+    <tr><th>이기는 법</th><td>사건 파일실에서 세 장을 모두 맞게 고발</td></tr>
+  </table>
+  <div class="folio">2</div>
+</section>
+
+<section class="page" id="p-start">
+  <div class="rh"><span>후더닛 설명서</span><span>01 시작하기</span></div>
+  <h2><small>01</small>시작하기</h2>
   <div class="step"><i>1</i><div><b>서명(닉네임)을 적습니다</b>같은 방 사람에게만 보입니다. 실명이나 연락처는 쓰지 마세요.</div></div>
   <div class="step"><i>2</i><div><b>방을 만들거나 들어갑니다</b>방을 만들면 <b>참여 코드 5자리</b>가 생깁니다. 코드는 처음에 가려져 있으니 <b>참여 코드 복사</b>로 친구에게 보내세요. 친구는 첫 화면에 코드를 입력해 들어옵니다. 처음이라면 <b>봇 2명과 바로 연습</b>으로 혼자 한 판 돌려 보세요.</div></div>
-  <div class="step"><i>3</i><div><b>인물을 고릅니다</b>이번 판에 내가 움직일 말입니다. 2분 안에 고르지 않으면 남은 인물 중 무작위로 정해집니다. 고른 인물이 범인일 수도 있습니다. 말과 정답은 상관없습니다.</div></div>
-  <div class="step"><i>4</i><div><b>카드가 나뉩니다</b>인물·도구·장소에서 한 장씩 뽑아 봉투에 봉인하고(이게 정답), 나머지를 섞어 모두에게 같은 장수로 나눕니다. 나누고 남은 카드는 <b>모두에게 공개</b>되며 정답이 아닙니다. 내 손의 카드도 당연히 정답이 아닙니다.</div></div>
+  <div class="step"><i>3</i><div><b>인물을 고릅니다</b>이번 판에 내가 움직일 말입니다. 2분 안에 고르지 않으면 남은 인물 중 무작위로 정해집니다. 고른 인물이 범인일 수도 있지만, 말과 정답은 상관없습니다.</div></div>
+  <div class="step"><i>4</i><div><b>사건이 봉인됩니다</b>인물·도구·장소에서 한 장씩 봉투에 봉인하고(이게 정답), 나머지를 섞어 모두에게 같은 장수로 나눕니다. 남는 카드는 <b>모두에게 공개</b>되며 정답이 아닙니다. 내 손의 카드도 정답이 아닙니다.</div></div>
+  <div class="step"><i>5</i><div><b>임명장을 받습니다</b>시작 연출 마지막에 이번 판 내 <b>특수 능력</b>이 적힌 임명장이 나옵니다(07장).</div></div>
+  <div class="folio">3</div>
+</section>
 
-  <h2 id="screen"><small>02</small>화면 보기</h2>
+<section class="page" id="p-screen">
+  <div class="rh"><span>후더닛 설명서</span><span>02 화면 보기</span></div>
+  <h2><small>02</small>화면 보기</h2>
   <ul>
-    <li><b>보드</b>: 둘레에 방이 9~11개(인원에 따라), 한가운데에 <b>사건 파일실</b>이 있습니다. 모두 사건 파일실에서 출발합니다. 방 사이의 어두운 칸은 복도입니다.</li>
-    <li><b>보너스칸 ( ! )</b>: 복도에 새겨진 느낌표 칸입니다. 여기에 정확히 멈추면 특수 능력을 쓸 수 있습니다. 위치는 판마다 바뀝니다.</li>
-    <li><b>비밀 통로</b>: 네 모서리 방은 서로 비밀 통로로 이어져 있습니다. 그 방에서 턴을 시작하면 주사위 대신 통로로 건너갈 수 있습니다.</li>
-    <li><b>행동 패널</b>: 지금 할 수 있는 버튼만 보입니다. 위에 상황 설명이 함께 뜹니다.</li>
-    <li><b>내 카드</b>: PC는 패널 아래, 폰은 보드 왼쪽 아래 부채꼴입니다(누르면 크게).</li>
-    <li><b>추리 노트 · 수사 일지</b>: PC는 오른쪽 탭, 폰은 보드 오른쪽 탭을 누르면 아래에서 올라옵니다.</li>
-    <li><b>2D / 3D</b>: 보드 위 버튼으로 바꿉니다. 3D는 벽이 시점에 따라 낮아져 안이 보입니다.</li>
+    <li><b>보드</b>: 둘레에 방이 9~11개, 한가운데에 <b>사건 파일실</b>이 있습니다. 모두 사건 파일실에서 출발합니다. 방 사이의 어두운 칸은 복도이고, 맵은 판마다 새로 만들어집니다.</li>
+    <li><b>보너스칸 ( ! )</b>: 복도의 느낌표 칸. 정확히 멈추면 특수 능력을 쓸 수 있습니다.</li>
+    <li><b>비밀 통로</b>: 네 모서리 방은 서로 이어져 있어, 그 방에서 턴을 시작하면 주사위 대신 건너갈 수 있습니다.</li>
+    <li><b>행동 패널</b>: 지금 할 수 있는 버튼과 상황 설명. 폰에서는 이동할 때 방향키로 바뀝니다.</li>
+    <li><b>내 카드</b>: PC는 패널 아래, 폰은 보드 왼쪽 아래 부채꼴(누르면 크게).</li>
+    <li><b>추리 노트 · 수사 일지</b>: 오른쪽 탭. PC 큰 화면에서는 펼치면 판 옆에 나란히 놓이고, 폰은 아래에서 올라옵니다.</li>
+    <li><b>2D / 3D</b>: 보드 위 버튼으로 바꿉니다.</li>
+    <li><b>참여 코드</b>: 머리줄의 코드를 누르면 가리기/보이기, 옆 <b>복사</b>로 가린 채 복사(PC). 방송할 때 편합니다.</li>
   </ul>
+  <div class="folio">4</div>
+</section>
 
-  <h2 id="turn"><small>03</small>한 턴의 흐름</h2>
-  <div class="step"><i>1</i><div><b>주사위를 굴립니다</b>버튼을 <b>꾹 눌렀다 떼면</b> 던집니다. 오래 누를수록 세게 던지지만 눈은 운입니다. 두 개의 합만큼 이동합니다. 모서리 방에 있다면 대신 <b>비밀 통로</b>를 쓸 수 있습니다.</div></div>
-  <div class="step"><i>2</i><div><b>이동합니다</b>복도를 상하좌우로 움직이고, 방에 들어가면 그 턴의 이동은 끝납니다. 다른 말이 선 복도 칸은 지나갈 수 없습니다. 눈이 남아도 중간에 멈출 수 있습니다. 보너스칸에 멈추면 능력을 쓸 기회가 생깁니다.</div></div>
-  <div class="step"><i>3</i><div><b>방에 들어갔다면 추리합니다</b>인물 하나와 도구 하나를 지목합니다. 장소는 지금 있는 방입니다. 지목된 인물 말과 도구 말이 이 방으로 끌려옵니다. 같은 방에 계속 머물며 연속으로 추리할 수는 없습니다. 단, 남의 추리로 끌려온 방에서는 바로 추리할 수 있습니다.</div></div>
-  <div class="step"><i>4</i><div><b>반박을 받습니다</b>내 다음 사람부터 차례로, 지목한 세 장 중 하나라도 가진 <b>첫 번째 사람</b>이 그중 한 장을 <b>나에게만</b> 보여 줍니다. 그 사람이 여러 장을 갖고 있다면 어느 것을 보여 줄지 고릅니다. 다른 사람들은 "카드 1장을 보여 줬다"는 사실만 봅니다. <b>아무도 반박하지 못하면</b> 세 장 모두 내 손에 없는 한 정답에 매우 가깝습니다.</div></div>
-  <div class="step"><i>5</i><div><b>턴을 끝냅니다</b>주사위를 굴리기 전이나 이동하기 전에는 끝낼 수 없습니다. 사건 파일실에서 다시 나갈 때도 주사위를 굴려 나갑니다.</div></div>
-  <p class="tip"><b>제한 시간</b> 주사위를 굴린 뒤부터 2분, 반박도 2분입니다. 시간이 지나면 자동으로 넘어가고(반박은 맞는 카드 중 하나가 자동 공개), 두 턴 연속 넘기면 봇이 대신 진행합니다. 다시 돌아오면 바로 이어서 할 수 있습니다.</p>
+<section class="page" id="p-turn">
+  <div class="rh"><span>후더닛 설명서</span><span>03 한 턴의 흐름</span></div>
+  <h2><small>03</small>한 턴의 흐름 <span class="pill">1/2</span></h2>
+  <div class="step"><i>1</i><div><b>주사위를 굴립니다</b>버튼을 <b>꾹 눌렀다 떼면</b> 던집니다. 두 개의 합만큼 이동합니다. 모서리 방에 있다면 대신 <b>비밀 통로</b>를 쓸 수 있습니다.</div></div>
+  <div class="step"><i>2</i><div><b>이동합니다</b>복도를 상하좌우로 움직이고, 방에 들어가면 그 턴의 이동은 끝납니다. 다른 말이 선 복도 칸은 지나갈 수 없고, 눈이 남아도 중간에 멈출 수 있습니다. 보너스칸에 멈추면 능력을 쓸 기회가 생깁니다. 움직이는 방법은 04장을 보세요.</div></div>
+  <div class="step"><i>3</i><div><b>방에 들어갔다면 추리합니다</b>인물 하나와 도구 하나를 지목합니다. 장소는 지금 있는 방입니다. 지목된 인물 말과 도구 말이 이 방으로 끌려옵니다.</div></div>
+  <p class="tip"><b>연속 추리</b> 같은 방에 눌러앉아 매 턴 추리할 수는 없습니다. 다른 방에 들렀다 오거나, 남의 추리로 이 방에 끌려왔다면 바로 추리할 수 있습니다.</p>
+  <div class="folio">5</div>
+</section>
 
-  <h2 id="note"><small>04</small>추리 노트</h2>
+<section class="page" id="p-turn2">
+  <div class="rh"><span>후더닛 설명서</span><span>03 한 턴의 흐름</span></div>
+  <h2><small>03</small>한 턴의 흐름 <span class="pill">2/2</span></h2>
+  <div class="step"><i>4</i><div><b>반박을 받습니다</b>내 다음 사람부터 차례로, 지목한 세 장 중 하나라도 가진 <b>첫 번째 사람</b>이 그중 한 장을 <b>나에게만</b> 보여 줍니다. 여러 장이 있으면 어느 것을 보여 줄지 고릅니다. 다른 사람들은 "카드 1장을 보여 줬다"는 사실만 봅니다.</div></div>
+  <div class="step"><i>5</i><div><b>아무도 반박하지 못하면</b>세 장 모두 내 손에 없는 한, 정답에 아주 가깝습니다.</div></div>
+  <div class="step"><i>6</i><div><b>턴을 끝냅니다</b>주사위를 굴리기 전이나 이동하기 전에는 끝낼 수 없습니다. 복도에서 멈추면 자동으로 끝납니다.</div></div>
+  <p class="tip"><b>제한 시간</b> 주사위를 굴린 뒤 2분, 반박도 2분. 시간이 지나면 자동으로 넘어가고(반박은 맞는 카드 중 하나가 자동 공개), 두 턴 연속 넘기면 봇이 대신 진행합니다. 돌아오면 바로 이어서 할 수 있습니다.</p>
+  <div class="folio">6</div>
+</section>
+
+<section class="page" id="p-move">
+  <div class="rh"><span>후더닛 설명서</span><span>04 말 움직이기</span></div>
+  <h2><small>04</small>말 움직이기</h2>
+  <h3>PC</h3>
+  <ul>
+    <li><b>마우스</b>: 칸에 올리면 그 칸까지 <b>가장 짧은 길</b>이 칠해지고, 누르면 이동합니다. 칸을 옮겨도 길 모양이 갑자기 바뀌지 않습니다. 갈 수 있는 칸 수를 넘으면 <span class="no">빨갛게</span> 칠해지고 이동하지 않습니다.</li>
+    <li><b>화살표 키</b>: 굽은 길로 가고 싶으면 <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>로 한 칸씩 길을 그리고 <kbd>Enter</kbd>. <kbd>Esc</kbd>는 처음부터.</li>
+    <li><b>끌어다 놓기</b>: 내 말을 끌어 원하는 칸에 놓아도 됩니다.</li>
+  </ul>
+  <h3>폰 · 태블릿</h3>
+  <ul>
+    <li><b>방향키</b>: 주사위를 굴리면 버튼 줄이 ▲▼◀▶로 바뀝니다. 한 칸씩 옮기면 지나온 칸에 발자국이 남고, 지금 칸이 반짝입니다. <b>✓ 이동</b>으로 확정, 지나온 칸 쪽을 누르면 되돌아가고 <b>↺ 처음</b>은 다시 시작.</li>
+    <li><b>끌기 · 누르기</b>: 내 말을 끌어다 놓거나, 칸을 한 번 눌러 고른 뒤 <b>여기로 이동</b>.</li>
+  </ul>
+  <p class="tip"><b>고른 길 그대로</b> 화살표나 방향키로 그린 길은 다른 사람 화면에서도 그 길 그대로 걸어갑니다. 길은 결과와 상관없고, 도착한 칸만 중요합니다.</p>
+  <div class="folio">7</div>
+</section>
+
+<section class="page" id="p-note">
+  <div class="rh"><span>후더닛 설명서</span><span>05 추리 노트</span></div>
+  <h2><small>05</small>추리 노트</h2>
   <p>카드마다 "누가 갖고 있나"를 적는 표입니다. 칸을 누를 때마다 <span class="mark no">✗</span> → <span class="mark ok">✓</span> → <span class="mark q">?</span> → 빈칸 순으로 바뀌고, 카드 이름을 누르면 줄을 그어 후보에서 뺍니다.</p>
   <table>
-    <tr><th>자동 표시 방식</th><th>노트에 저절로 적히는 것</th></tr>
-    <tr><td><b>확실한 것 + 단서</b> (기본)</td><td>내 카드, 공개 카드, 나에게 보여 준 카드는 <span class="ok">✓</span>, 반박 못 한 사람은 <span class="no">✗</span>. 남끼리 카드를 주고받으면 지목된 세 장에 <b>흐린 ?</b>가 찍혀 "여기에 단서가 있다"고 알려 줍니다.</td></tr>
-    <tr><td><b>확실한 것만</b></td><td>위에서 흐린 ?만 뺍니다. 단서를 엮는 건 직접 합니다.</td></tr>
-    <tr><td><b>직접 표시</b></td><td>아무것도 적지 않습니다. 실제 보드게임처럼 기억력과 기록으로 승부합니다.</td></tr>
+    <tr><th>자동 표시</th><th>저절로 적히는 것</th></tr>
+    <tr><td><b>확실한 것 + 단서</b><br>(기본)</td><td>내 카드·공개 카드·나에게 보여 준 카드는 <span class="ok">✓</span>, 반박 못 한 사람은 <span class="no">✗</span>. 남끼리 카드를 주고받으면 지목된 세 장에 <b>흐린 ?</b></td></tr>
+    <tr><td><b>확실한 것만</b></td><td>흐린 ?는 빼고, 단서는 직접 엮습니다</td></tr>
+    <tr><td><b>직접 표시</b></td><td>아무것도 적지 않습니다. 기억력과 기록으로 승부</td></tr>
   </table>
-  <p>방식은 사람마다 따로 고르고 다음 판에도 유지됩니다. <b>수사 일지</b> 탭에는 지금까지의 추리와 반박 결과가 한 건씩 정리됩니다.</p>
+  <p>방식은 사람마다 따로 고르고 다음 판에도 유지됩니다. <b>수사 일지</b>에는 지금까지의 추리와 반박 결과가 한 건씩 정리됩니다.</p>
+  <div class="folio">8</div>
+</section>
 
-  <h2 id="accuse"><small>05</small>최종 고발</h2>
-  <p>인물·도구·장소 세 장을 확신하면 <b>사건 파일실</b>로 돌아가 최종 고발합니다. 출발점이라 처음 있을 때는 할 수 없고, <b>한 번 나갔다가 다시 들어와야</b> 합니다.</p>
+<section class="page" id="p-accuse">
+  <div class="rh"><span>후더닛 설명서</span><span>06 최종 고발과 결말</span></div>
+  <h2><small>06</small>최종 고발과 결말</h2>
+  <p>세 장을 확신하면 <b>사건 파일실</b>로 돌아가 최종 고발합니다. 출발점이라 처음에는 할 수 없고, <b>한 번 나갔다가 다시 들어와야</b> 합니다.</p>
   <ul>
     <li><b>정답</b>이면 그 자리에서 승리합니다.</li>
-    <li><b>오답</b>이면 탈락합니다. 말은 판에서 빠지지만, 내가 가진 카드로 남의 추리에 반박하는 일은 끝까지 계속합니다. 탈락한 사람은 봉투 속 정답을 볼 수 있습니다.</li>
+    <li><b>오답</b>이면 탈락합니다. 말은 판에서 빠지지만 반박은 끝까지 계속하고, 봉투 속 정답을 볼 수 있습니다.</li>
     <li>모두 탈락하면 사건은 <b>미제</b>로 끝납니다.</li>
   </ul>
-  <p class="tip"><b>팁</b> 고발은 추리와 달리 다른 사람이 반박하지 않습니다. 틀리면 끝이니, 세 종류 모두 후보가 하나씩만 남았을 때 가세요.</p>
+  <h3>사건 종결 보고서</h3>
+  <p>판이 끝나면 정답 장소를 배경으로 범인과 도구가 드러나는 <b>결말 장면</b>이 나옵니다. "그날 밤 음악실에서, 독을 탄 홍차로 일을 저지른 것은…"</p>
+  <p class="tip"><b>팁</b> 고발은 추리와 달리 아무도 반박하지 않습니다. 틀리면 끝이니, 세 종류 모두 후보가 하나씩 남았을 때 가세요.</p>
+  <div class="folio">9</div>
+</section>
 
-  <h2 id="roles"><small>06</small>특수 능력</h2>
-  <p>판이 시작될 때 모두에게 <b>비밀 능력</b>이 하나씩 주어집니다. 보너스칸 ( ! )에 정확히 <b>멈춘 그 턴에만</b> 쓸 수 있고, 횟수가 정해져 있습니다. 쓰는 순간(준비형은 발동하는 순간) 모두에게 공개됩니다. 쓰지 않으면 그냥 턴을 끝내면 됩니다.</p>
+<section class="page" id="p-roles">
+  <div class="rh"><span>후더닛 설명서</span><span>07 특수 능력</span></div>
+  <h2><small>07</small>특수 능력</h2>
+  <p>판마다 <b>비밀 능력</b>이 하나씩 주어집니다. 보너스칸 ( ! )에 <b>정확히 멈춘 그 턴에만</b> 쓸 수 있고, 쓰는 순간(준비형은 발동하는 순간) 모두에게 공개됩니다.</p>
   <table>
-    <tr><th>능력</th><th>종류</th><th>횟수</th><th>하는 일</th></tr>
-    <tr><td><b>지정 심문</b></td><td><span class="pill">정보</span></td><td>3</td><td>한 명과 종류(인물·도구·장소)를 고르면, 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다. 없으면 없다는 사실만 알게 됩니다.</td></tr>
-    <tr><td><b>도청 장치</b></td><td><span class="pill">정보</span> 준비형</td><td>2</td><td>설치해 두면 이후 남들끼리 주고받는 반박 카드를 두 번 몰래 봅니다.</td></tr>
-    <tr><td><b>기록 열람</b></td><td><span class="pill">정보</span></td><td>3</td><td>남들끼리 했던 지난 반박 하나를 골라 그때 보여 준 카드를 확인합니다.</td></tr>
-    <tr><td><b>추격</b></td><td><span class="pill">행동</span></td><td>3</td><td>주사위를 다시 굴려 이어서 이동합니다. 방에 닿으면 추리할 수 있습니다.</td></tr>
-    <tr><td><b>원격 수색</b></td><td><span class="pill">행동</span></td><td>1</td><td>방 하나를 골라 그 장소 카드와, 그 방에 놓인 도구 1개의 카드를 누가 가졌는지 확인합니다. 아무도 없으면 정답입니다.</td></tr>
-    <tr><td><b>지름길</b></td><td><span class="pill">행동</span></td><td>3</td><td>사건 파일실을 뺀 아무 방으로 바로 이동해 추리할 수 있습니다.</td></tr>
-    <tr><td><b>묵비권</b></td><td><span class="pill">방어</span> 준비형</td><td>2</td><td>준비해 두면 다음에 내가 반박할 차례에 카드를 보여 주지 않고 다음 사람에게 넘깁니다. 쓴 사실은 공개되므로 "저 사람이 뭔가 갖고 있다"는 건 들킵니다.</td></tr>
-    <tr><td><b>보험</b></td><td><span class="pill">방어</span> 준비형</td><td>1</td><td>가입해 두면 다음 최종 고발이 틀려도 탈락하지 않고 한 턴 쉽니다.</td></tr>
+    <tr><th>능력</th><th>횟수</th><th>하는 일</th></tr>
+    <tr><td><b>지정 심문</b><br><span class="pill">정보</span></td><td>3</td><td>한 명과 종류를 고르면 그 사람의 그 종류 카드 1장을 무작위로 봄</td></tr>
+    <tr><td><b>도청 장치</b><br><span class="pill">정보·준비</span></td><td>2</td><td>이후 남들끼리 주고받는 반박 카드를 두 번 몰래 봄</td></tr>
+    <tr><td><b>기록 열람</b><br><span class="pill">정보</span></td><td>3</td><td>남들끼리 했던 지난 반박 하나의 카드를 확인</td></tr>
+    <tr><td><b>추격</b><br><span class="pill">행동</span></td><td>3</td><td>주사위를 다시 굴려 이어서 이동</td></tr>
+    <tr><td><b>원격 수색</b><br><span class="pill">행동</span></td><td>1</td><td>방 하나의 장소 카드와 그 방 도구 1개를 누가 가졌는지 확인</td></tr>
+    <tr><td><b>지름길</b><br><span class="pill">행동</span></td><td>3</td><td>사건 파일실을 뺀 아무 방으로 바로 이동해 추리</td></tr>
+    <tr><td><b>묵비권</b><br><span class="pill">방어·준비</span></td><td>2</td><td>다음 내 반박 차례에 카드를 보여 주지 않고 넘김(쓴 사실은 공개)</td></tr>
+    <tr><td><b>보험</b><br><span class="pill">방어·준비</span></td><td>1</td><td>다음 최종 고발이 틀려도 탈락하지 않고 한 턴 쉼</td></tr>
   </table>
+  <div class="folio">10</div>
+</section>
 
+<section class="page" id="p-bluff">
+  <div class="rh"><span>후더닛 설명서</span><span>08 블러핑과 수사 요령</span></div>
+  <h2><small>08</small>블러핑과 수사 요령</h2>
   <h3>블러핑</h3>
-  <p>내 손에 있는 카드를 일부러 섞어 지목할 수 있습니다. 예를 들어 내가 가진 인물을 지목하면 반박은 도구나 장소로만 나오니, 나머지 두 장에 대한 정보를 좁힐 수 있고 남들을 헷갈리게도 합니다. 방을 만들 때 <b>블러핑 금지</b>로 바꿀 수 있습니다.</p>
+  <p>내 손에 있는 카드를 일부러 섞어 지목할 수 있습니다. 내가 가진 인물을 지목하면 반박은 도구나 장소로만 나오니 나머지 두 장을 좁힐 수 있고, 남들을 헷갈리게도 합니다. 방장은 방 설정에서 <b>블러핑 금지</b>로 바꿀 수 있습니다.</p>
+  <h3>수사 요령</h3>
+  <ol>
+    <li><b>반박 못 한 사람</b>은 지목된 세 장이 모두 없습니다. 노트에 바로 ✗.</li>
+    <li>남끼리 카드를 주고받았다면, 반박한 사람은 그 세 장 중 <b>적어도 하나</b>를 가졌습니다. 흐린 ?를 모아 보세요.</li>
+    <li>방은 많고 주사위는 운입니다. <b>지름길·추격</b> 능력과 비밀 통로로 먼 방을 줄이세요.</li>
+    <li>후보가 하나씩 남기 전에는 고발하지 마세요. <b>보험</b>이 있다면 예외.</li>
+  </ol>
+  <div class="folio">11</div>
+</section>
 
-  <h2 id="control"><small>07</small>조작법</h2>
+<section class="page" id="p-keys">
+  <div class="rh"><span>후더닛 설명서</span><span>09 조작법 한눈에</span></div>
+  <h2><small>09</small>조작법 한눈에</h2>
   <table>
     <tr><th></th><th>PC</th><th>폰 · 태블릿</th></tr>
-    <tr><td><b>이동</b></td><td>칸에 마우스를 올리면 길이 보이고, 누르면 이동</td><td>내 말을 <b>끌어다 놓기</b>, 또는 칸을 한 번 눌러 고른 뒤 <b>여기로 이동</b> 버튼</td></tr>
-    <tr><td><b>보드 확대</b></td><td>휠로 확대, 확대한 채 끌어서 이동, ⟲로 원래대로</td><td>두 손가락으로 확대, 한 손가락으로 끌기. 주사위를 굴리면 갈 수 있는 범위로 저절로 다가갑니다</td></tr>
-    <tr><td><b>내 말 찾기</b></td><td>내 말은 흰 테두리가 숨 쉬듯 빛납니다</td><td>참가자 줄의 내 이름을 누르면 내 말로 다가갑니다</td></tr>
-    <tr><td><b>추리 노트</b></td><td>오른쪽 탭, 또는 <b>N</b> 키</td><td>오른쪽 탭. 손잡이를 위로 밀면 크게, 아래로 밀면 닫힘. 좌우로 밀면 노트 ↔ 일지</td></tr>
-    <tr><td><b>단축키</b></td><td><b>R</b> 주사위, <b>S</b> 추리, <b>N</b> 노트</td><td>—</td></tr>
+    <tr><td><b>주사위</b></td><td>버튼 꾹, 또는 <kbd>R</kbd></td><td>버튼 꾹 눌렀다 떼기</td></tr>
+    <tr><td><b>이동</b></td><td>마우스 · 화살표+<kbd>Enter</kbd> · 끌기</td><td>방향키 · 끌기 · 두 번 누르기</td></tr>
+    <tr><td><b>추리</b></td><td>버튼, 또는 <kbd>S</kbd></td><td>버튼</td></tr>
+    <tr><td><b>보드 확대</b></td><td>휠, 확대한 채 끌기, ⟲로 원래대로</td><td>두 손가락 확대, 한 손가락 끌기. 굴리면 갈 수 있는 범위로 저절로</td></tr>
+    <tr><td><b>내 말 찾기</b></td><td>흰 테두리가 숨 쉬듯 빛남</td><td>참가자 줄의 내 이름 누르기</td></tr>
+    <tr><td><b>추리 노트</b></td><td>오른쪽 탭, 또는 <kbd>N</kbd></td><td>오른쪽 탭. 손잡이를 밀어 크게·닫기, 좌우로 노트↔일지</td></tr>
   </table>
   <p class="tip"><b>폰 팁</b> 사파리 공유 → <b>홈 화면에 추가</b>로 열면 주소창 없이 전체 화면으로 할 수 있습니다. 내 차례와 반박 차례에는 소리와 함께 화면 위가 반짝입니다.</p>
+  <div class="folio">12</div>
+</section>
 
-  <h2 id="faq"><small>08</small>자주 묻는 것</h2>
+<section class="page" id="p-faq">
+  <div class="rh"><span>후더닛 설명서</span><span>10 자주 묻는 것</span></div>
+  <h2><small>10</small>자주 묻는 것</h2>
   <h3>잠깐 다른 앱을 봤는데 괜찮나요?</h3>
-  <p>돌아오면 자동으로 다시 연결됩니다. 1분 안에 돌아오면 자리가 그대로 유지되고, 그보다 오래 걸리면 봇이 대신 진행하다가 돌아오는 순간 넘겨줍니다.</p>
+  <p>돌아오면 자동으로 다시 연결됩니다. 1분 안에 돌아오면 자리가 그대로, 더 오래 걸리면 봇이 대신하다가 돌아오는 순간 넘겨줍니다.</p>
   <h3>게임 중에 나가면요?</h3>
   <p>탈락 처리되고 가진 카드는 모두에게 공개됩니다. 반박할 사람이 사라지면 판이 깨지기 때문입니다.</p>
-  <h3>왜 같은 방에서 계속 추리할 수 없나요?</h3>
-  <p>한 방에 눌러앉아 매 턴 추리하는 것을 막기 위해서입니다. 다른 방에 들렀다 오거나, 남의 추리로 끌려오면 다시 할 수 있습니다.</p>
   <h3>봇이 너무 빨라요</h3>
-  <p>방을 만들 때나 대기실 방 설정에서 <b>봇 템포</b>를 <b>천천히</b>로 바꾸세요. 봇은 추리·반박 결과가 나온 뒤 한 박자 쉬었다 움직이므로, 수사 일지를 읽고 노트를 적을 시간이 생깁니다. 사람 차례에는 봇이 기다립니다.</p>
+  <p>방 설정에서 <b>봇 템포</b>를 <b>천천히</b>로 바꾸세요. 사람 차례에는 봇이 기다립니다.</p>
+  <h3>방송해도 되나요?</h3>
+  <p>네. 참여 코드는 처음부터 가려져 있고, 가린 채로 복사해 채팅에 붙여 넣을 수 있습니다.</p>
   <h3>얼리 액세스입니다</h3>
-  <p>서버가 갱신되면 진행 중인 판이 사라질 수 있습니다. 15분 동안 아무도 없으면 서버가 잠들어 첫 접속에 최대 1분이 걸립니다. 이상한 점이나 바라는 점은 <a href="https://naver.me/xzHBWAvk" target="_blank" rel="noopener">피드백 폼</a>(익명, 2~3분)으로 알려 주세요.</p>
+  <p>서버가 갱신되면 진행 중인 판이 사라질 수 있고, 한동안 아무도 없으면 첫 접속에 최대 1분이 걸립니다. 바라는 점은 <a href="https://naver.me/xzHBWAvk" target="_blank" rel="noopener">피드백 폼</a>으로 알려 주세요.</p>
+  <div class="folio">13</div>
+</section>
 
-  <a class="back" href="/">게임으로 돌아가기</a>
-</article>
+<section class="page" id="p-memo">
+  <div class="rh"><span>후더닛 설명서</span><span>수사 메모</span></div>
+  <h2><small>NOTES</small>수사 메모</h2>
+  <div class="lined"><p>범인은 반드시 흔적을 남긴다.<br>반박 못 한 사람부터 지워 나갈 것.<br>— 어느 탐정의 메모</p></div>
+  <div class="folio">14</div>
+</section>
+
+<section class="page backc" id="backc">
+  <p>진실은 언제나 봉투 속에 있다.<br>가장 먼저 여는 사람은 당신일까.</p>
+  <a class="play" href="/">게임으로 돌아가기</a>
+</section>
+
+</main>
+<nav class="bknav" aria-label="쪽 넘기기"><button id="first" title="처음" aria-label="처음">«</button><button id="prev" title="이전 (←)" aria-label="이전 쪽">‹</button><output id="pno">표지</output><button id="next" title="다음 (→)" aria-label="다음 쪽">›</button><a href="/">게임</a></nav>
+<script src="guide.js"></script>
 </body>
 </html>

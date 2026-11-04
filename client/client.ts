@@ -1501,10 +1501,30 @@ const redrawPreviews = () => {
   if (!$('#wait').hidden && S) { $('#w_prev').dataset.k = ''; renderWait(S); }
 };
 onTexReady(redrawPreviews);
+// 첫 화면: 용의자 라인업 벽(키 눈금 + 8명) · 조명이 한 명씩 비추고, 카드 속 얼굴 줄도 같이
+function lineupShow() {
+  const lu = $('#lineup'), row = $('#mugs .mrow'), plate = $('#mugs .mname'), T = G.THEMES.mansion;
+  const urls = T.s.map((_, i) => asset('mansion', 's' + i)); if (urls.some(u => !u)) return;
+  for (const cm of [100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]) { const m = el('span', 'lmark', `${cm}`); m.style.setProperty('--cm', String(cm)); lu.append(m); }
+  const spot = el('div', 'lspot'), people = el('div', 'lpeople'); lu.append(spot, people);
+  const imgs = urls.map(u => { const im = new Image(); im.src = u!; im.alt = ''; people.append(im); return im; });
+  const mugs = urls.map(u => { const d = el('i'); d.style.backgroundImage = `url(${u})`; row.append(d); return d; });
+  let k = -1;
+  const next = () => {
+    if ($('#lobby').hidden) return;
+    const card = $('#lobby').getBoundingClientRect();
+    // 카드 뒤에 가린 사람은 건너뛰고(폰은 거의 다 가려서 카드 속 얼굴 줄만 반짝) 다음 사람
+    const open = imgs.map((im, i) => { const r = im.getBoundingClientRect(), c = r.left + r.width / 2; return c < card.left - 20 || c > card.right + 20 ? i : -1; }).filter(i => i >= 0);
+    k = (k + 1) % imgs.length;
+    imgs.forEach((im, i) => im.classList.toggle('lit', i === k)); mugs.forEach((m, i) => m.classList.toggle('lit', i === k));
+    plate.textContent = `용의자 No.${k + 1} · ${T.s[k]}`;
+    const r = imgs[k].getBoundingClientRect();
+    spot.style.left = `${r.left + r.width / 2}px`; spot.classList.toggle('on', open.includes(k));
+  };
+  next(); if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(next, 2600);
+}
 loadTexManifest().then(() => {
-  // 첫 화면 뒤에 용의자 8명이 실루엣으로 줄지어 선다(그림이 있을 때만)
-  const lu = $('#lineup');
-  G.THEMES.mansion.s.forEach((_, i) => { const u = asset('mansion', 's' + i); if (u) { const im = new Image(); im.src = u; im.alt = ''; lu.append(im); } });
+  lineupShow();
   boardKey = ''; b3?.rebuild(); if (S?.game) render();
   for (const b of document.querySelectorAll<HTMLElement>('#c_themes .tcard')) { // 맵 카드 배경 = 그 맵의 복도 바닥
     const u = floorTex(b.dataset.k!, 'hall'); if (u) Object.assign(b.style, { backgroundImage: `linear-gradient(90deg,#000c,#0006), url(${u})`, backgroundSize: 'auto, 96px' });

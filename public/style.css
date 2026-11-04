@@ -296,9 +296,6 @@ button.sk *{visibility:hidden}
 #lobby #create.loading::after{border-color:#f3e6cc;border-right-color:transparent}
 #lobby button.sk,#lobby button.sk:disabled{background:linear-gradient(90deg,#d9c9a6 0%,#efe3c8 40%,#d9c9a6 80%) 0 0/200% 100%;text-decoration:none}
 #lineup{position:fixed;inset:0;z-index:-1;pointer-events:none;display:flex;justify-content:center;align-items:flex-end;overflow:hidden;background:radial-gradient(ellipse 70% 40% at 50% 100%,#d9a35b30,#0000 70%),radial-gradient(ellipse at 50% 20%,#2e2124 0%,#150f11 65%,#0b0809 100%)}
-#lineup img{height:min(62vh,90vw);margin:0 calc(min(62vh,90vw) * -.12);filter:brightness(0) drop-shadow(0 0 1.5px #d9a35b99);opacity:.8;transform-origin:bottom}
-#lineup img:nth-child(odd){height:min(58vh,84vw)}
-#lineup img:nth-child(3n){height:min(65vh,94vw)}
 #lobby #code::placeholder{font:16px "Nanum Gothic Coding",monospace;letter-spacing:.05em}
 #lobby .field.blank{display:grid;grid-template-columns:auto 1fr;align-items:end;color:var(--ink3);font:700 14px "Nanum Myeongjo",serif;font-size:17px;column-gap:14px}
 #lobby #name{font:28px/1.2 "Nanum Pen Script",cursive;font-size:38px;line-height:1.1;padding-bottom:2px}
@@ -1029,3 +1026,21 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   #b2vp::after{content:"두 번 눌러·두 손가락으로 확대 · 이동은 아래 방향키";position:absolute;right:6px;bottom:6px;padding:2px 6px;border-radius:3px;background:#000a;color:#cfc4b8;font-size:10.5px;pointer-events:none}
   #b2vp.zoomed::after{content:"두 번 눌러 원래 크기"}
 }
+/* 첫 화면: 용의자 라인업 벽(키 눈금 + 8명) · 조명이 한 명씩, 카드 속 얼굴 줄 */
+body:has(#lobby[hidden]) #lineup{display:none} /* 첫 화면에서만 */
+#lineup{z-index:0;--lh:min(62vh,90vw);background:repeating-linear-gradient(0deg,#0000 0 calc(var(--lh) * 10 / 175 - 1px),#d9a35b1f calc(var(--lh) * 10 / 175 - 1px) calc(var(--lh) * 10 / 175)) 0 100%/100% calc(var(--lh) * 200 / 175) no-repeat,radial-gradient(ellipse 70% 40% at 50% 100%,#d9a35b26,#0000 70%),radial-gradient(ellipse at 50% 20%,#2e2124 0%,#150f11 65%,#0b0809 100%)}
+#lineup .lpeople{position:absolute;inset:auto 0 0 0;display:flex;justify-content:center;align-items:flex-end}
+#lineup .lpeople img{height:var(--lh);margin:0 calc(var(--lh) * -.1);filter:brightness(.12) saturate(0) drop-shadow(0 0 1.5px #d9a35b88);opacity:.9;transition:filter .9s ease}
+#lineup .lpeople img:nth-child(odd){height:calc(var(--lh) * .94)}
+#lineup .lpeople img:nth-child(3n){height:calc(var(--lh) * 1.05)}
+#lineup .lpeople img.lit{filter:brightness(1) saturate(1) drop-shadow(0 0 18px #d9a35b55)}
+#lineup .lmark{position:absolute;left:18px;bottom:calc(var(--lh) * var(--cm) / 175 - 8px);font:700 12px "Nanum Gothic Coding",monospace;color:#d9a35b80;letter-spacing:.08em}
+#lineup .lmark::after{content:"cm";font-size:10px;margin-left:2px}
+#lineup .lspot{position:absolute;bottom:0;width:calc(var(--lh) * .8);height:100%;transform:translateX(-50%);background:radial-gradient(ellipse 50% 70% at 50% 100%,#f1e2b833,#0000 70%),linear-gradient(#0000,#f1e2b80d);clip-path:polygon(38% 0,62% 0,100% 100%,0 100%);opacity:0;transition:left .9s cubic-bezier(.5,0,.3,1),opacity .6s;pointer-events:none}
+#lineup .lspot.on{opacity:1}
+#mugs{display:flex;flex-direction:column;align-items:center;gap:4px;margin:-2px 0 2px}
+#mugs .mrow{display:flex;gap:6px}
+#mugs i{width:34px;height:34px;border-radius:50%;background-size:250%;background-position:50% 5%;background-color:#2a1d17;box-shadow:0 0 0 1.5px #2a1d1766;filter:grayscale(1) brightness(.75);transition:filter .5s,box-shadow .5s,transform .5s}
+#mugs i.lit{filter:none;box-shadow:0 0 0 2.5px #a3272f,0 3px 8px #0005;transform:translateY(-2px)}
+#mugs .mname{margin:0;min-height:1.4em;font:700 12.5px "Nanum Myeongjo",serif;color:var(--ink3)}
+@media (max-width:420px){#mugs i{width:30px;height:30px}#mugs .mrow{gap:4px}}

@@ -709,8 +709,7 @@ function renderBoard(g: G.View) {
     const prev = lastPos2D[j], key = 'p' + j;
     // 자기 이동(복도로 가서 차례가 넘어간 경우 포함): 실제 경로를 따라 한 칸씩 통통 튀며
     if (prev != null && prev !== p.pos && (j === g.turn || j === lastTurn2D)) {
-      const blocked = new Set(g.players.filter((q, k) => k !== j && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-      const route = G.walkRoute(m, g.walk, j, prev, p.pos, blocked);
+      const route = G.walkRoute(m, g.walk, j, prev, p.pos, G.occupied(g, j).wall);
       if (route.length > 1 && walked(g, j, route.length - 1)) {
         const br = b.getBoundingClientRect(), sc = br.width / (b.offsetWidth || br.width) || 1;
         const mid = (r: DOMRect): [number, number] => [(r.left + r.width / 2 - br.left) / sc, (r.top + r.height / 2 - br.top) / sc];
@@ -863,7 +862,8 @@ function syncTrail(g: G.View): boolean {
 /** 지금 칸에서 그 방향에 가장 가까운 이웃으로 한 칸(방은 가장 가까운 가장자리 기준). 지나온 칸이면 거기까지 되감기 */
 function stepTrail(g: G.View, dx: number, dy: number) {
   if (!syncTrail(g)) return;
-  const me = g.players[g.me], cur = mvTrail.at(-1)!, ok = new Set([...myMoves(g), me.pos!]);
+  const me = g.players[g.me], cur = mvTrail.at(-1)!, { occ, wall } = G.occupied(g, g.me);
+  const ok = new Set([...myMoves(g), me.pos!, ...[...occ].filter(p => !wall.has(p))]); // 다른 말이 선 방 문 앞 칸은 지나가기만
   const r0 = $('#board').querySelector(`[data-p="${cur}"]`)?.getBoundingClientRect(); if (!r0) return;
   const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
   let best: G.Pos | null = null, bs = 0.5;
@@ -885,8 +885,7 @@ function extendTrail(g: G.View, p: G.Pos) {
   if (!syncTrail(g) || p === mvTrail.at(-1)) return;
   const k = mvTrail.indexOf(p); if (k >= 0) { mvTrail = mvTrail.slice(0, k + 1); return; } // 그려진 길 위 칸 = 거기까지(가장 짧은 길의 앞부분도 가장 짧음)
   const start = g.players[g.me].pos!;
-  const others = new Set(g.players.filter((q, j) => j !== g.me && !q.out && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-  const dist = G.distances(g.map, start, others), d = dist.get(p);
+  const { occ, wall } = G.occupied(g, g.me), dist = G.distances(g.map, start, wall), d = occ.has(p) ? undefined : dist.get(p);
   if (d == null) return; // 막혀서 못 가는 칸: 길은 그대로 두고 안내만
   // 도착에서 거꾸로 한 칸씩: 거리가 1 작은 이웃 중 그려진 길에서 가장 뒤쪽에 있는 칸 → 없으면 아무거나
   const out = [p];
@@ -919,7 +918,8 @@ function renderMv(g: G.View) {
   pad.replaceChildren();
   const btn = (cls: string, t: string, f: () => void, dis = false) => { const b = el('button', cls, t); b.onclick = f; b.disabled = dis; pad.append(b); };
   btn('up', '▲', () => stepTrail(g, 0, -1)); btn('lf', '◀', () => stepTrail(g, -1, 0));
-  btn('ok', used ? `✓ 이동 ${used}/${roll}` : `${roll}칸까지`, goTrail, !used);
+  const stuck = used > 0 && G.occupied(g, g.me).occ.has(mvTrail.at(-1)!); // 다른 말이 선 문 앞 칸에서는 멈출 수 없음
+  btn('ok', stuck ? '여기선 못 멈춤' : used ? `✓ 이동 ${used}/${roll}` : `${roll}칸까지`, goTrail, !used || stuck);
   btn('rt', '▶', () => stepTrail(g, 1, 0)); btn('dn', '▼', () => stepTrail(g, 0, 1));
   btn('back', '↺ 처음', () => resetTrail(g), !used);
 }
@@ -932,8 +932,7 @@ function previewPath(p: G.Pos | null) {
   const moving = !!g && !!me && g.turn === g.me && g.phase === 'move' && !diceBusy && g.roll != null && me.pos != null;
   if (p != null && moving && !touchLike() && mvTrail.length > 1) { paintTrail(g!.roll!); b3?.preview(mvTrail.slice(1), true); return; } // PC: 그려 둔 발자국 유지
   if (p == null || !moving || p === me!.pos) { b3?.preview([], true); return; }
-  const blocked = new Set(g!.players.filter((q, k) => k !== g!.me && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-  const route = G.path(g!.map, me!.pos!, p, blocked).slice(1);
+  const route = G.path(g!.map, me!.pos!, p, G.occupied(g!, g!.me).wall).slice(1);
   if (!route.length) { b3?.preview([], true); return; }
   const ok = route.length <= g!.roll!;
   route.forEach((pos, k) => {
@@ -957,10 +956,9 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
   if (me.pos == null) line2 = '탈락해서 이동할 수 없어요';
   else if (p === me.pos) line2 = '📍 현재 위치';
   else {
-    const blocked = new Set(g.players.filter((q, k) => k !== g.me && q.pos != null && q.pos >= 0).map(q => q.pos as G.Pos));
-    const d = G.distances(g.map, me.pos, blocked).get(p);
+    const { occ, wall } = G.occupied(g, g.me), d = occ.has(p) ? undefined : G.distances(g.map, me.pos, wall).get(p);
     const moving = g.turn === g.me && g.phase === 'move' && !diceBusy && g.roll != null;
-    if (d == null) line2 = blocked.has(p) ? '❌ 다른 말이 있는 칸' : '❌ 갈 수 없음 (다른 말이 길을 막음)';
+    if (d == null) line2 = occ.has(p) ? '❌ 다른 말이 있는 칸' : '❌ 갈 수 없음 (다른 말이 길을 막음)';
     else if (moving && !touchLike() && mvTrail.length > 1 && mvTrail.at(-1) === p) { // PC: 마우스로 그린 길 기준
       const n = mvTrail.length - 1;
       line2 = n <= g.roll! ? `✅ 이동 가능 · ${n}칸 (최대 ${g.roll}칸)` : `❌ 이동 불가 · ${n}칸 필요 (최대 ${g.roll}칸)`;

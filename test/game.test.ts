@@ -376,3 +376,19 @@ test('직접 고른 길: 규칙에 맞으면 저장해 모두에게 보내고, �
   assert.equal(G.act(g, 0, { t: 'move', to: c, via: [a, b, c] }), null);
   assert.deepEqual(G.view(g, 1).walk, { p: 0, route: [from, a, b, c] });
 });
+
+test('방 문 앞 칸에 다른 말이 있으면 지나갈 수는 있고(한 칸으로 셈) 멈출 수는 없음, 그 밖의 칸은 그대로 막힘', () => {
+  const g = G.newGame('mansion', seats(3), 5), m = g.map;
+  const d = m.doors.find(x => x.room === 0)!.cell, e = G.neighbors(m, d).find(x => x >= 0)!, room = -(0 + 1);
+  g.turn = 0; g.phase = 'move'; g.players[0].pos = e; g.players[1].pos = d;
+  g.roll = 1; assert.ok(!G.moves(g, 0).has(room), '문 앞 칸도 한 칸으로 셈: 1로는 못 들어감');
+  g.roll = 2; const mv = G.moves(g, 0);
+  assert.ok(mv.has(room), '문 앞 칸을 지나 방에 들어감');
+  assert.ok(!mv.has(d), '문 앞 칸에서 멈출 수는 없음');
+  assert.deepEqual(G.chosenRoute(g, 0, room, [d, room]), [e, d, room]);
+  assert.equal(G.chosenRoute(g, 0, d, [d]), null);
+  const f = G.neighbors(m, e).find(x => x >= 0 && x !== d && !m.doors.some(o => o.cell === x))!;
+  g.players[1].pos = f; g.roll = 6;
+  assert.ok(!G.reachable(m, e, 6, G.occupied(g, 0).wall).has(f), '문 앞이 아닌 칸은 그대로 통과 불가');
+  assert.equal(G.act(g, 0, { t: 'move', to: room, via: [d, room] }), null);
+});

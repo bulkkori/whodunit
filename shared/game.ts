@@ -302,21 +302,33 @@ export function canEnd(g: BoardState, i: number): boolean {
   return g.turn === i && (g.phase === 'act' || (g.phase === 'move' && moves(g, i).size === 0));
 }
 
+/**
+ * i가 아닌 말이 선 복도 칸. occ = 거기서 멈출 수 없음, wall = 지나갈 수도 없음.
+ * 방 문 앞 칸은 막히면 방에 못 들어가니 지나갈 수는 있게(한 칸으로 셈) — 멈추는 것만 안 됨
+ */
+export function occupied(g: Pick<BoardState, 'players' | 'map'>, i: number): { occ: Set<Pos>; wall: Set<Pos> } {
+  const occ = new Set(g.players.filter((p, j) => j !== i && !p.out && p.pos != null && p.pos >= 0).map(p => p.pos as Pos));
+  const doors = new Set(g.map.doors.map(d => d.cell));
+  return { occ, wall: new Set([...occ].filter(p => !doors.has(p))) };
+}
+
 export function moves(g: BoardState, i: number): Set<Pos> {
   const pos = g.players[i]?.pos;
   if (g.phase !== 'move' || g.turn !== i || pos == null || g.roll == null) return new Set();
-  const blocked = new Set(g.players.filter((p, j) => j !== i && !p.out && p.pos != null && p.pos >= 0).map(p => p.pos as Pos));
-  return reachable(g.map, pos, g.roll, blocked);
+  const { occ, wall } = occupied(g, i), out = reachable(g.map, pos, g.roll, wall);
+  for (const p of occ) out.delete(p);
+  return out;
 }
 
 /**
  * 플레이어가 고른 길(via = 출발 다음 칸 ~ to)이 이번 이동 규칙에 맞으면 [출발, ...via], 아니면 null.
- * 규칙: 주사위 눈 이하, 상하좌우 이웃으로만, 같은 칸 두 번 안 됨, 다른 말 칸 통과 불가, 방은 도착으로만(출발 방은 예외)
+ * 규칙: 주사위 눈 이하, 상하좌우 이웃으로만, 같은 칸 두 번 안 됨, 다른 말 칸 통과 불가(방 문 앞 칸은 통과만 가능), 방은 도착으로만(출발 방은 예외)
  */
 export function chosenRoute(g: BoardState, i: number, to: Pos, via: unknown): Pos[] | null {
   const from = g.players[i]?.pos;
   if (from == null || g.roll == null || !Array.isArray(via) || !via.length || via.length > g.roll || via.at(-1) !== to) return null;
-  const blocked = new Set(g.players.filter((p, j) => j !== i && !p.out && p.pos != null && p.pos >= 0).map(p => p.pos));
+  const { occ, wall: blocked } = occupied(g, i);
+  if (occ.has(to)) return null;
   const route: Pos[] = [from];
   for (const x of via) {
     const cur = route.at(-1)!;

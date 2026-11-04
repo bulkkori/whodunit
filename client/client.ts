@@ -450,6 +450,9 @@ function watchRoll(g: G.View) {
 }
 const myMoves = (g: G.View) => (diceBusy ? new Set<G.Pos>() : G.moves(g, g.me));
 
+// 폰: 위 판은 보기·확대만(이동은 아래 방향키·✓ 이동), 카드 부채 = 화면 전체에 공개 카드 + 내 카드, 추리 노트 = 판까지 덮게 크게
+const mxOn = () => matchMedia('(max-aspect-ratio:23/20) and (max-width:639px)').matches;
+
 // ---------- 2D / 3D 보기 ----------
 let view = store.get<'2d' | '3d'>('wd_view', '2d'), b3: Board3D | null = null, b3loading: Promise<Board3D | null> | null = null;
 function renderView(g: G.View) {
@@ -458,10 +461,11 @@ function renderView(g: G.View) {
   const mm = $('#maxmove'), moving = g.turn === g.me && g.phase === 'move' && g.roll != null && !diceBusy;
   mm.hidden = !moving; if (moving) mm.textContent = `🎲 최대 ${g.roll}칸 이동`;
   for (const b of document.querySelectorAll<HTMLElement>('#viewtog [data-v]')) b.classList.toggle('on', b.dataset.v === view);
-  const orow = $('#openrow'); orow.hidden = !g.open.length;
+  const orow = $('#openrow'); orow.hidden = !g.open.length; $('#ocstrip').hidden = !g.open.length;
   if (g.open.length && orow.dataset.seed !== `${g.seed}:${g.open.length}`) { // 나간 사람 카드가 더해지면 다시 그림
     orow.dataset.seed = `${g.seed}:${g.open.length}`; const cards = orow.querySelector('.cards')!; cards.innerHTML = '';
     for (const c of g.open) cards.append(cardEl(g.theme, c, 'small'));
+    $('#ocstrip').replaceChildren(el('b', '', '🔓 공개'), ...g.open.map(c => el('span', `k-${c[0]}`, cn(g, c)))); // 폰: 조작 화면 맨 위 이름 띠
   }
   if (!is3) { b3?.stop(); return renderBoard(g); }
   $('#board').querySelector('.dice2d')?.remove();
@@ -522,6 +526,10 @@ const pz = (() => {
   };
   let animT: ReturnType<typeof setTimeout> | undefined;
   vp.addEventListener('pointerdown', () => bd.classList.remove('pzanim'));
+  vp.addEventListener('dblclick', e => { // 폰: 두 번 눌러 확대 ↔ 원래 크기
+    if (!mxOn()) return; rect = vp.getBoundingClientRect();
+    if (s > 1) animTo(1, 0, 0); else animTo(2, -(e.clientX - rect.left), -(e.clientY - rect.top));
+  });
   return {
     reset() { s = 1; tx = ty = 0; apply(); },
     /** 판 기준 좌표(확대 전 px) 상자가 화면에 꽉 차게 부드럽게 확대. 이미 충분히 크게 보이면(1.15배 미만) 그대로 */
@@ -773,6 +781,11 @@ function nearestMove(g: G.View, x: number, y: number): G.Pos | null {
 }
 function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   const g = S?.game; if (!g) return;
+  if (mxOn() && view === '2d') { // 폰: 판을 누르면 그 칸까지 길만 그려 두고, 실제 이동은 아래 ✓ 이동 버튼으로 (3D는 방향키가 없어 그대로)
+    armed = null;
+    if (!myMoves(g).has(p)) return showTip(p, x, y, true);
+    extendTrail(g, p); $('#hovertip').hidden = true; return renderMv(g);
+  }
   const ok = myMoves(g).has(p);
   touch ||= touchLike();
   if (ok && !touch && mvTrail.length - 1 > g.roll! && mvTrail.at(-1) === p) return showTip(p, x, y); // 빨간 길(칸 수 초과)로는 못 감
@@ -788,7 +801,7 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   const bd = $('#board'); let tdrag: { ghost: HTMLElement; p: G.Pos | null; id: number } | null = null, swallow = false;
   const LIFT = 46; // 손가락에 가리지 않게 말을 손가락보다 위에 띄움
   bd.addEventListener('pointerdown', e => {
-    const g = S?.game; if (!g || g.turn !== g.me || g.phase !== 'move' || diceBusy) return;
+    const g = S?.game; if (!g || g.turn !== g.me || g.phase !== 'move' || diceBusy || mxOn()) return; // 폰: 말 끌기 대신 방향키
     const tok = bd.querySelector<HTMLElement>(`.tok[data-k="p${g.me}"]`); if (!tok) return;
     const r = tok.getBoundingClientRect();
     if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > Math.max(26, r.width)) return;
@@ -1049,7 +1062,7 @@ function renderPanel(g: G.View) {
     !my ? `${nm(g, g.turn)}의 차례입니다` :
     me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
     ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추리하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
-    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? (view === '2d' ? `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동 (말 끌기·칸 누르기도 돼요)` : `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'`) : (view === '2d' ? `🎲 ${g.roll} — 칸에 마우스를 올려 길을 보고 누르세요 (굽은 길은 화살표 키로 그리고 Enter)` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`))) :
+    ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? (view === '2d' ? (mxOn() ? `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동` : `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동 (말 끌기·칸 누르기도 돼요)`) : `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'`) : (view === '2d' ? `🎲 ${g.roll} — 칸에 마우스를 올려 길을 보고 누르세요 (굽은 길은 화살표 키로 그리고 Enter)` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`))) :
     inRoom && me.canSuggest ? '추리하거나 턴을 끝내세요' : '턴을 끝내세요';
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',
@@ -1417,6 +1430,7 @@ for (const b of document.querySelectorAll<HTMLElement>('.dtabs [data-tab]')) b.o
 for (const b of document.querySelectorAll<HTMLElement>('#dockside [data-tab]')) b.onclick = () => {
   const same = dr.classList.contains('open') && (dr.dataset.tab ?? 'memo') === b.dataset.tab;
   dr.dataset.tab = b.dataset.tab; dr.classList.toggle('open', !same);
+  if (!same && mxOn()) { dr.classList.add('tall'); $('#cardsbox').classList.remove('open'); } // 폰: 처음부터 판까지 덮게(아래로 밀면 반 → 닫힘), 카드 화면에서 누르면 카드는 닫고 노트로
 };
 $('#tallmemo').onclick = () => { const on = dr.classList.toggle('tall'); store.set('wd_tallmemo', on); };
 dr.classList.toggle('tall', store.get('wd_tallmemo', false));

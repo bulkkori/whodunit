@@ -1006,3 +1006,26 @@ body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Pretendard",
   #actions.moving #mvpad :is(.ok,.back){white-space:normal;line-height:1.15;padding:0 4px;font-size:15px}
 }
 @keyframes padUp{from{opacity:0;transform:translateY(12px)}}
+/* ---------- 폰: 위 = 게임 화면(보기·확대만), 아래 = 조작 화면(이동은 방향키·✓ 이동) ---------- */
+#ocstrip{display:none}
+@media (max-aspect-ratio:23/20) and (max-width:639px){
+  #panel{border-top:3px solid #c9a24a}
+  /* 공개 카드 이름 띠: 조작 화면 맨 위에 글자로 (작은 카드 그림보다 잘 읽힘) */
+  #ocstrip:not([hidden]){display:flex;order:-1;flex-wrap:wrap;gap:4px;align-items:center;padding:5px 6px;border-radius:4px;background:#2a1d17;font-size:13px;color:#efe3c8}
+  #ocstrip b{font-size:11px;color:#cfc4b8;margin-right:2px}
+  #ocstrip span{padding:1px 6px;border-radius:3px;background:#2e2630;border-left:3px solid #b23a3a;text-decoration:line-through;text-decoration-color:#efe3c888}
+  #ocstrip span.k-w{border-left-color:#2f5d9e}
+  #ocstrip span.k-r{border-left-color:#2e7d4f}
+  /* 카드 부채를 누르면: 조작 화면까지 덮고 화면 전체에 공개 카드(위) + 내 카드 (#cardsbox가 #panel 안이라 패널은 두고 위에서 덮음) */
+  #cardsbox.open{bottom:0;z-index:30;justify-content:flex-start;padding-bottom:calc(16px + var(--sb));background:#0b0809f5;animation:mxcards .28s cubic-bezier(.2,.85,.25,1)}
+  @keyframes mxcards{from{clip-path:inset(100% 0 0 0)}}
+  body:has(#cardsbox.open) #hovertip,body:has(#drawer.open.tall) #hovertip{display:none}
+  #cardsbox.open::before{content:"내 카드 · 아무 데나 누르면 돌아가기"}
+  #cardsbox.open #openrow:not([hidden]){display:block;order:-1;margin-bottom:6px;padding-bottom:12px;border-bottom:1px dashed #cfc4b866}
+  body:has(#cardsbox.open) #dockside{z-index:31} /* 카드 화면 위에서도 노트·일지 버튼 */
+  #cardsbox.open #openrow h3::after{content:" — 모두가 아는 카드"}
+  #cardsbox.open #openrow .gcard{width:calc((100vw - 48px - var(--sl) - var(--sr)) / 3);max-width:150px;filter:saturate(.5) brightness(.9)}
+  /* 판은 보기 전용 안내 */
+  #b2vp::after{content:"두 번 눌러·두 손가락으로 확대 · 이동은 아래 방향키";position:absolute;right:6px;bottom:6px;padding:2px 6px;border-radius:3px;background:#000a;color:#cfc4b8;font-size:10.5px;pointer-events:none}
+  #b2vp.zoomed::after{content:"두 번 눌러 원래 크기"}
+}

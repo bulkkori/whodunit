@@ -2,21 +2,25 @@
 // ③ 남은 카드를 모아 섞어 모두에게 같은 장수로 나눠 주기 ④ 남는 카드는 앞면으로 공개 ⑤ 내 특수 능력 공개.
 // (내 카드는 연출에서 따로 보여 주지 않음 — 게임 화면에서 바로 보임) 약 12.5초(서버 INTRO_MS와 맞춤), 건너뛰기 가능. 섞기·나눠 주기·뒤집기·봉인에 효과음.
 import * as G from '../shared/game.ts';
-import { COLORS, cardEl, backEl } from './art.ts';
+import { COLORS, cardEl, backEl, asset, factCard } from './art.ts';
 import { riffle, flick, step as tap } from './sound.ts';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 
-export function playIntro(g: G.View, onDone: () => void) {
+/** 시작 연출. host = 방장이면 건너뛰기 버튼이 '모두 건너뛰기'(onSkipAll로 서버에 알림). 돌려주는 함수 = 연출을 바로 닫기(방장이 건너뛰었을 때) */
+export function playIntro(g: G.View, onDone: () => void, host = false, onSkipAll: () => void = () => {}): () => void {
   const T = G.THEMES[g.theme], ov = document.createElement('div');
   ov.id = 'intro';
-  ov.innerHTML = `<div class="ititle"><small>CASE FILE · ${T.name}</small><b>사건 발생</b><span id="istep">카드를 섞는 중…</span></div>
-    <button class="ghost iskip">건너뛰기 ⏭</button><div class="ienv"><span class="flap"></span><i>CONFIDENTIAL</i></div><div class="iopen"></div><div class="iseats"></div>`;
+  const orig = G.isOriginal(g.opts);
+  ov.innerHTML = `<div class="ititle"><small>CASE FILE · ${T.name}</small><b>사건 발생</b><span id="istep">${orig ? '사건 개요' : '카드를 섞는 중…'}</span></div>
+    <button class="ghost iskip">${host ? '모두 건너뛰기 ⏭' : '건너뛰기 ⏭'}</button><div class="ienv"><span class="flap"></span><i>CONFIDENTIAL</i></div><div class="iopen"></div><div class="iseats"></div>`;
   document.body.append(ov);
   let alive = true;
   const finish = () => { if (!alive) return; alive = false; ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350 }).finished.finally(() => { ov.remove(); onDone(); }); };
-  (ov.querySelector('.iskip') as HTMLElement).onclick = finish;
+  const skip = ov.querySelector('.iskip') as HTMLElement;
+  skip.onclick = () => { if (host) onSkipAll(); finish(); };
+  if (host) skip.title = '방장이 건너뛰면 모두의 화면에서 함께 넘어가요';
   const step = (t: string) => { (ov.querySelector('#istep') as HTMLElement).textContent = t; };
 
   const W = () => ov.clientWidth, H = () => ov.clientHeight;
@@ -38,6 +42,16 @@ export function playIntro(g: G.View, onDone: () => void) {
 
   (async () => {
     await sleep(50);
+    // ①(오리지널) 사건 개요: 카드가 나오기 전, 가운데에 사건 한 줄(판 번호로 골라 모두에게 같은 문장) + 소집. 약 2.7초(서버 대기 시간에 포함)
+    if (orig) {
+      const p = document.createElement('p'); p.className = 'icasecard';
+      p.append(G.caseLine(g.theme, g.seed), document.createElement('br'), document.createElement('br'), '수사가 막히자 본부는 외부 탐정들을 소집했다.');
+      ov.append(p);
+      await p.animate([{ opacity: 0, transform: 'translate(-50%,-40%)' }, { opacity: 1, transform: 'translate(-50%,-50%)' }], { duration: 500, easing: 'ease-out' }).finished;
+      await sleep(1900); if (!alive) return;
+      await p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished; p.remove();
+      step('카드를 섞는 중…');
+    }
     const all = G.allCards(g.map), piles: HTMLElement[][] = [];
     // 카드 크기 = 화면에 맞춰(세 더미가 겹치지 않는 폭, 높이의 13%, 60~120px)
     const CW = Math.round(Math.max(60, Math.min(120, W() * 0.2, H() * 0.13))), CH = CW * 1.4;
@@ -64,8 +78,27 @@ export function playIntro(g: G.View, onDone: () => void) {
     for (const pile of piles) { const c = pile.pop()!; await fly(c, ex, ey, 420, { transform: `translate(${ex - parseFloat(c.style.left)}px, ${ey - parseFloat(c.style.top)}px) scale(.4)` }); c.remove(); if (!alive) return; }
     env.classList.add('sealed'); tap(true); // 봉인 '쿵'
     await sleep(500); if (!alive) return;
+    // ②-1 오리지널: 수사본부 게시판 — 담당 용의자 배정 + 본부장의 세 조건
+    if (G.isOriginal(g.opts)) {
+      step('수사본부 게시판 — 담당 용의자 배정');
+      const D = G.DETECTIVES[g.theme], me = g.players[g.me], art = asset(g.theme, 's' + me.suspect), dArt = asset(g.theme, 'd' + me.suspect); // dArt = 내 탐정 그림(있으면 작은 얼굴)
+      const card = document.createElement('div'); card.className = 'irole assign';
+      card.innerHTML = `<small>수사본부 게시판 · 담당 배정</small>
+        <div class="aface" style="--c:${COLORS[me.suspect]}">${art ? `<img src="${art}" alt="">` : `<span>${T.s[me.suspect].split(' ').pop()![0]}</span>`}</div>
+        <b>${T.s[me.suspect]}</b><p>${dArt ? `<img class="adimg" src="${dArt}" alt="" style="--c:${COLORS[me.suspect]}">` : ''}탐정 <strong>${D[me.suspect].name}</strong>(나)의 담당 용의자<br><span class="asub">담당은 조사를 맡긴다는 뜻일 뿐, 결백의 보증이 아니다</span></p>
+        <ul class="aothers"></ul>
+        <ol class="aterms"><li><b>입회</b>검증에 담당 용의자가 불려 가면 담당 탐정도 입회</li><li><b>반증</b>가설과 어긋나는 사실 하나를 그 탐정에게만</li><li><b>보고</b>결론 보고는 단 한 번 · 틀려도 반증은 계속</li></ol><em>배정</em>`;
+      const ul = card.querySelector('.aothers') as HTMLElement;
+      g.players.forEach((p, j) => { if (j === g.me) return; const li = document.createElement('li'); li.innerHTML = `<i style="background:${COLORS[p.suspect]}"></i><span></span>`; (li.querySelector('span') as HTMLElement).textContent = `${D[p.suspect].name} → ${T.s[p.suspect]}`; ul.append(li); });
+      ov.append(card); flick();
+      await card.animate([{ transform: 'translate(-50%,-50%) rotateY(90deg) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-50%)', opacity: 1 }], { duration: 450, easing: 'cubic-bezier(.3,1.3,.5,1)' }).finished;
+      await sleep(350); if (!alive) return;
+      card.classList.add('stamped'); tap(true);
+      await sleep(4600); if (!alive) return;
+      await card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished; card.remove();
+    }
     // ③ 모아서 섞고 나눠 주기
-    step('남은 카드를 모아 섞어서 나눠 줍니다');
+    step(orig ? '첫날 밤, 탐정들이 각자 확인한 것들' : '남은 카드를 모아 섞어서 나눠 줍니다');
     ov.querySelectorAll('.ilab').forEach(l => l.remove());
     const rest = piles.flat(), cx = W() / 2 - CW / 2, cy = py - CH / 2;
     await Promise.all(rest.map((c, m) => fly(c, cx + (m % 4), cy - (m % 6), 450)));
@@ -84,29 +117,29 @@ export function playIntro(g: G.View, onDone: () => void) {
     await sleep(400); if (!alive) return;
     // ④ 남는 카드는 앞면으로 공개
     if (g.open.length) {
-      step('나누고 남은 카드는 모두에게 공개 — 봉투에 없는 카드입니다');
+      step(orig ? '본부 회의에서 공유된 사실 — 봉투에 없는 카드입니다' : '나누고 남은 카드는 모두에게 공개 — 봉투에 없는 카드입니다');
       const box = ov.querySelector('.iopen') as HTMLElement; box.classList.add('on');
-      for (const c of g.open) { flick(); const e = cardEl(g.theme, c); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); box.append(e); await sleep(300); }
+      for (const c of g.open) { flick(); const e = factCard(g.theme, g.opts, c, '', true); e.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 400 }); box.append(e); await sleep(300); }
       await sleep(700);
     }
-    // ⑤ 내 특수 능력: 수사 임명장이 뒤집히며 도장 '쿵'
-    const me = g.players[g.me];
-    if (g.opts.roles && me.role) {
-      const R = G.ROLES[me.role];
-      step('이번 사건에서 내가 맡은 특수 능력');
-      const open = ov.querySelector('.iopen') as HTMLElement; // 공개 카드는 접고 임명장만
+    // ⑤ 능력 카드 안내: 안내장이 뒤집히며 도장 '쿵' (시작할 때 가진 카드는 없음 — 보너스칸에서 뽑음)
+    if (g.opts.roles) {
+      step('능력 카드');
+      const open = ov.querySelector('.iopen') as HTMLElement; // 공개 카드는 접고 안내장만
       if (open.childElementCount) await open.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished;
       const card = document.createElement('div'); card.className = 'irole';
-      card.innerHTML = '<small></small><i></i><b></b><p></p><span></span><em>임명</em>';
+      card.innerHTML = '<small></small><i></i><b></b><p></p><span></span><em>안내</em>';
       const [sm, ic, nm, ds, us] = ['small', 'i', 'b', 'p', 'span'].map(t => card.querySelector(t) as HTMLElement);
-      sm.textContent = `${R.group} · 특수 능력`; ic.textContent = R.icon; nm.textContent = R.name; ds.textContent = R.desc;
-      us.textContent = `❗ 보너스칸에 멈추면 사용 · ${me.uses ?? 0}회`;
+      sm.textContent = '특수 능력'; ic.textContent = '🎴'; nm.textContent = '능력 카드';
+      ds.textContent = `보너스칸(❗)에 멈추면 능력 카드 ${G.ROLE_IDS.length}종 중 1장을 무작위로 뽑아요. 최대 ${G.MAX_ITEMS}장까지 들고 있다가, 내 차례에 1장씩 낼 수 있어요.`;
+      us.textContent = G.ROLE_IDS.map(k => G.ROLES[k].icon).join(' ');
       ov.append(card); flick();
       await card.animate([{ transform: 'translate(-50%,-50%) rotateY(90deg) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-50%)', opacity: 1 }], { duration: 450, easing: 'cubic-bezier(.3,1.3,.5,1)' }).finished;
       await sleep(350); if (!alive) return;
       card.classList.add('stamped'); tap(true);
-      await sleep(4200); // 임명장은 약 5초 보여 줌
+      await sleep(4200); // 안내장은 약 5초 보여 줌
     }
     finish();
   })();
+  return finish;
 }

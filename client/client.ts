@@ -17,7 +17,7 @@ const store = {
   get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? d; } catch { return d; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경(시크릿 등)은 무시 */ } },
 };
-import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl, floorTex, TEX_CELLS, loadTexManifest, asset } from './art.ts';
+import { COLORS, WEAPON_ICON, ROOM_TINTS, cardEl, factCard, floorTex, TEX_CELLS, loadTexManifest, asset } from './art.ts';
 import { drawMapPreview, mapSummary, onTexReady } from './preview.ts';
 
 let token = store.get<string | null>('wd_token', null);
@@ -230,7 +230,10 @@ for (const [k, t] of Object.entries(G.THEMES) as [G.ThemeKey, G.Theme][]) {
 // 창 크기가 바뀌면 미리보기 다시 그림
 new ResizeObserver(() => { if (!$('#createbox').hidden) refreshCreatePreview(); }).observe($('#c_prev'));
 new ResizeObserver(() => { const c = $('#w_prev'); if (!$('#wait').hidden) { c.dataset.k = ''; if (S) renderWait(S); } }).observe($('#w_prev'));
-const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked, tempo: $<HTMLSelectElement>('#c_tempo').value as G.Tempo });
+const roomOpts = () => ({ roles: true, bluff: $in('#c_bluff').checked, tempo: $<HTMLSelectElement>('#c_tempo').value as G.Tempo, mode: $<HTMLSelectElement>('#c_mode').value as G.Mode });
+/** 플레이어 말의 이름: 클래식 = 맡은 용의자, 오리지널 = 고른 탐정 */
+const pieceName = (o: { mode?: G.Mode } | undefined, theme: G.ThemeKey, v: number) => (G.isOriginal(o) ? G.DETECTIVES[theme][v].name : G.THEMES[theme].s[v]);
+const pieceLetter = (o: { mode?: G.Mode } | undefined, theme: G.ThemeKey, v: number) => pieceName(o, theme, v).split(' ').pop()![0];
 // 방 제목: 방 만들기 창을 열 때마다 다음 추리물 제목이 기본값으로 보이고, 비워 두면 그 제목으로 방을 만든다. 누르면 빈 칸에서 바로 입력.
 const TITLES = ['자정의 마지막 손님', '사라진 유언장', '잠긴 서재의 비밀', '폭풍우 치는 밤', '누가 불을 껐는가', '거짓말쟁이의 만찬',
   '열세 번째 초대장', '멈춰 버린 괘종시계', '깨진 찻잔의 증언', '안개 속 발자국', '독이 든 와인 한 잔', '마지막 기차의 승객'];
@@ -291,6 +294,7 @@ for (const id of ['#copycode', '#hcopy']) $(id).onclick = () => { if (S) copyTex
 $('#theme2').onchange = e => send({ t: 'theme', theme: (e.target as HTMLSelectElement).value as G.ThemeKey });
 $('#optbluff').onchange = e => send({ t: 'opt', bluff: (e.target as HTMLInputElement).checked });
 $('#opttempo').onchange = e => send({ t: 'opt', tempo: (e.target as HTMLSelectElement).value as G.Tempo });
+$('#optmode').onchange = e => send({ t: 'opt', mode: (e.target as HTMLSelectElement).value as G.Mode });
 $('#start').onclick = () => send({ t: 'start' });
 for (const b of document.querySelectorAll<HTMLButtonElement>('#wmax button')) b.onclick = () => { if (S) send({ t: 'maxp', n: S.maxPlayers + +b.dataset.d! }); };
 $('#readybtn').onclick = () => { const me = S?.seats[S.you]; send({ t: 'ready', on: !me?.ready }); };
@@ -377,14 +381,14 @@ function notifyMe(g: G.View) {
     : g.phase === 'refute' && g.sug?.refuter === g.me ? 'refute'
     : g.turn === g.me && g.phase === 'roll' ? 'turn' : null;
   const key = kind ? `${kind}:${g.seed}:${g.turnNo}:${g.sug?.p ?? ''}` : '';
-  document.title = kind === 'refute' ? '🃏 반박할 차례 · 후더닛' : kind === 'turn' || (g.turn === g.me && g.phase !== 'over' && g.phase !== 'refute') ? '▶ 내 차례 · 후더닛' : '후더닛';
+  document.title = kind === 'refute' ? `🃏 ${isOrig(g) ? '반증' : '반박'}할 차례 · 후더닛` : kind === 'turn' || (g.turn === g.me && g.phase !== 'over' && g.phase !== 'refute') ? '▶ 내 차례 · 후더닛' : '후더닛';
   if (introOn) return; // 시작 연출이 끝나고 다시 그릴 때 울림
   const first = alertKey === null; if (key === alertKey) return; alertKey = key;
   if (!kind || first) return;
   Sound.chime(kind);
   navigator.vibrate?.(kind === 'refute' ? [60, 80, 60] : 80);
   const h = $('header'); h.classList.remove('ping', 'ping-ref'); void h.offsetWidth; h.classList.add(kind === 'refute' ? 'ping-ref' : 'ping');
-  toast(kind === 'refute' ? '🃏 반박할 차례예요 — 보여 줄 카드를 고르세요' : '▶ 내 차례예요');
+  toast(kind === 'refute' ? (isOrig(g) ? '🃏 반증할 차례예요 — 확인한 사실 하나를 보여 주세요' : '🃏 반박할 차례예요 — 보여 줄 카드를 고르세요') : '▶ 내 차례예요');
 }
 
 // 나에게 새로 보인 카드(반박·능력)를 화면 가운데에 잠깐 크게 보여 준다. 입장·재접속 때 이미 지난 것은 생략.
@@ -393,7 +397,7 @@ function revealCards(g: G.View) {
   const fresh: { title: string; card: G.Card }[] = [];
   for (const e of g.log) {
     let title = '', card: G.Card | undefined;
-    if (e.t === 'shown' && e.to === g.me) { card = e.card; title = `🃏 ${nm(g, e.p)}의 카드`; }
+    if (e.t === 'shown' && e.to === g.me) { card = e.card; title = `🃏 ${nm(g, e.p)}의 ${isOrig(g) ? '반증' : '카드'}`; }
     else if (e.t === 'intel' && e.to === g.me) {
       card = e.card;
       title = e.kind === 'tap' ? `🎧 도청: ${nm(g, e.a!)} → ${nm(g, e.b!)}`
@@ -415,11 +419,12 @@ function revealCards(g: G.View) {
 
 // 게임 시작 연출: 서버가 연출 시간(intro)을 주는 동안 한 번만. 재접속·새로고침 땐 생략.
 let introDone = new Set<number>();
-let introOn = false;
+let introOn = false, introClose: (() => void) | null = null;
 function maybeIntro(g: G.View) {
-  if (introDone.has(g.seed) || !S || S.intro < 1500) { introDone.add(g.seed); return; }
+  if (introOn && S?.introSkipped) { introClose?.(); return; } // 방장이 건너뜀 → 모두 함께
+  if (introDone.has(g.seed) || !S || S.intro < 1500 || S.introSkipped) { introDone.add(g.seed); return; }
   introDone.add(g.seed); introOn = true;
-  playIntro(g, () => { introOn = false; if (S?.game) render(); });
+  introClose = playIntro(g, () => { introOn = false; introClose = null; if (S?.game) render(); }, !!S.host, () => send({ t: 'skipIntro' }));
 }
 
 // 내 차례에 방에 막 들어가면 추리 창을 한 번 자동으로 열어 준다(취소 가능)
@@ -464,7 +469,7 @@ function renderView(g: G.View) {
   const orow = $('#openrow'); orow.hidden = !g.open.length; $('#ocstrip').hidden = !g.open.length;
   if (g.open.length && orow.dataset.seed !== `${g.seed}:${g.open.length}`) { // 나간 사람 카드가 더해지면 다시 그림
     orow.dataset.seed = `${g.seed}:${g.open.length}`; const cards = orow.querySelector('.cards')!; cards.innerHTML = '';
-    for (const c of g.open) cards.append(cardEl(g.theme, c, 'small'));
+    for (const c of g.open) cards.append(factCard(g.theme, g.opts, c, 'small', true));
     $('#ocstrip').replaceChildren(el('b', '', '🔓 공개'), ...g.open.map(c => el('span', `k-${c[0]}`, cn(g, c)))); // 폰: 조작 화면 맨 위 이름 띠
   }
   if (!is3) { b3?.stop(); return renderBoard(g); }
@@ -582,7 +587,7 @@ function renderWait(s: StateMsg) {
   $('#wtitle').textContent = s.title;
   $('#bigcode').textContent = codeHidden ? '•'.repeat(s.code.length) : s.code;
   const chips = $('#wopts'); chips.innerHTML = '';
-  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', ...(s.opts.tempo && s.opts.tempo !== 'normal' ? [`🤖 봇 ${G.TEMPOS[s.opts.tempo].name}`] : [])])
+  for (const t of [`${G.THEMES[s.theme].icon} ${G.THEMES[s.theme].name}`, `최대 ${s.maxPlayers}명`, s.opts.bluff ? '🎭 블러핑 허용' : '🚫 블러핑 금지', ...(s.opts.tempo && s.opts.tempo !== 'normal' ? [`🤖 봇 ${G.TEMPOS[s.opts.tempo].name}`] : []), ...(G.isOriginal(s.opts) ? ['🕵️ 후던잇 오리지널'] : [])])
     chips.append(el('span', 'chip', t));
   const ul = $('#seats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
@@ -607,6 +612,7 @@ function renderWait(s: StateMsg) {
   $<HTMLSelectElement>('#theme2').value = s.theme;
   const ob = $in('#optbluff'); ob.checked = s.opts.bluff; ob.disabled = !s.host;
   const ot = $<HTMLSelectElement>('#opttempo'); ot.value = s.opts.tempo ?? 'normal'; ot.disabled = !s.host;
+  const om = $<HTMLSelectElement>('#optmode'); om.value = s.opts.mode ?? 'classic'; om.disabled = !s.host;
   const me = s.seats[s.you], waiting = s.seats.filter(x => !x.ready);
   const rb = $btn('#readybtn'); rb.hidden = s.host;
   rb.textContent = me?.ready ? '✅ 준비 완료 (누르면 취소)' : '✋ 준비 완료';
@@ -624,23 +630,36 @@ function renderWait(s: StateMsg) {
 let pickDeadline = 0;
 function renderPick(s: StateMsg) {
   pickDeadline = Date.now() + s.pickLeft;
-  const picks = $('#picks'); picks.innerHTML = '';
-  G.THEMES[s.theme].s.slice(0, Math.max(6, s.seats.length)).forEach((name, v) => {
+  const picks = $('#picks'), orig = G.isOriginal(s.opts); picks.innerHTML = '';
+  $('#picktitle').textContent = orig ? '탐정 고르기' : '인물 고르기';
+  $('#pickdesc').textContent = orig ? '본부에 소집된 탐정 중 당신은 누구? 용의자 8명은 모두 NPC이고, 탐정마다 담당 용의자 한 명이 배정돼 시작할 때 모두에게 공개돼요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.'
+    : `이번 판에 맡을 인물을 고르세요. 용의자 카드는 맡은 인물을 포함해 8명 중 ${G.pieceCount(s.opts, s.seats.length)}명이 무작위로 들어가요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.`;
+  (orig ? G.DETECTIVES[s.theme].map(d => d.name) : G.THEMES[s.theme].s).slice(0, G.PICKS).forEach((name, v) => {
     const owner = s.seats.findIndex(x => x.suspect === v), b = el('button', 'pick' + (owner === s.you ? ' mine' : owner >= 0 ? ' taken' : ''));
     b.style.setProperty('--c', COLORS[v]);
-    const art = el('span', 'pk-art'), u = asset(s.theme, 's' + v);
-    if (u) { const im = new Image(); im.src = u; im.alt = ''; art.append(im); } else art.append(el('i', '', name.split(' ').pop()![0]));
-    b.append(art, el('span', 'pk-name', name), el('small', 'pk-own', owner < 0 ? '' : owner === s.you ? '내 말' : s.seats[owner].name));
+    const art = el('span', 'pk-art'), u = asset(s.theme, (orig ? 'd' : 's') + v); // 탐정 그림(d0~d7)이 없으면 머리글자 배지
+    if (u) { const im = new Image(); im.src = u; im.alt = ''; art.append(im); } else art.append(el('i', orig ? 'det' : '', name.split(' ').pop()![0]));
+    if (orig) b.title = G.DETECTIVES[s.theme][v].spec;
+    b.append(art, el('span', 'pk-name', name), ...(orig ? [el('small', 'pk-spec', G.DETECTIVES[s.theme][v].spec)] : []), el('small', 'pk-own', owner < 0 ? '' : owner === s.you ? '내 말' : s.seats[owner].name));
     b.disabled = owner >= 0 && owner !== s.you;
     b.onclick = () => send({ t: 'pick', suspect: v });
     picks.append(b);
   });
+  // 무작위: 같은 액자 모양의 마지막 칸. 아직 아무도 안 고른 것 중 하나(이미 골랐으면 그것 말고)
+  const n = G.PICKS, mine = s.seats[s.you]?.suspect ?? null;
+  const free = Array.from({ length: n }, (_, v) => v).filter(v => v !== mine && !s.seats.some(x => x.suspect === v));
+  const rb = el('button', 'pick rnd'), ra = el('span', 'pk-art');
+  ra.append(el('i', '', '?')); rb.style.setProperty('--c', '#c9a24a');
+  rb.append(ra, el('span', 'pk-name', '무작위'), el('small', 'pk-spec', orig ? '남은 탐정 중 하나' : '남은 인물 중 하나'));
+  rb.disabled = !free.length;
+  rb.onclick = () => { rb.classList.add('rolling'); setTimeout(() => send({ t: 'pick', suspect: free[Math.floor(Math.random() * free.length)] }), 450); };
+  picks.append(rb);
   const ul = $('#pickseats'); ul.innerHTML = '';
   s.seats.forEach((x, i) => {
     const li = el('li'); if (i === s.you) li.classList.add('me');
     const av = el('i', 'av', x.bot ? '🤖' : [...x.name][0] ?? '?'); av.style.setProperty('--c', x.suspect == null ? '#d6c39c' : COLORS[x.suspect]);
     li.append(av, el('b', '', x.name + (i === s.you ? ' (나)' : '')));
-    li.append(el('span', 'tag' + (x.suspect != null ? ' ok' : ''), x.bot ? '시간이 지나면 무작위' : x.suspect == null ? '고르는 중…' : `✔ ${G.THEMES[s.theme].s[x.suspect]}`));
+    li.append(el('span', 'tag' + (x.suspect != null ? ' ok' : ''), x.bot ? '시간이 지나면 무작위' : x.suspect == null ? '고르는 중…' : `✔ ${pieceName(s.opts, s.theme, x.suspect)}`));
     ul.append(li);
   });
 }
@@ -663,7 +682,7 @@ function renderBoard(g: G.View) {
       const d = el('div', 'cell'); d.dataset.p = String(i); d.style.gridArea = `${Math.floor(i / m.n) + 1}/${(i % m.n) + 1}`;
       if (hallTex) d.style.setProperty('--tp', `${(i % m.n) % TEX_CELLS * 50}% ${Math.floor(i / m.n) % TEX_CELLS * 50}%`);
       if (m.doors.some(x => x.cell === i)) { d.classList.add('door'); d.title = '문'; }
-      if (m.bonus.includes(i)) { d.classList.add('bonus'); d.title = '❗ 보너스칸 — 여기서 멈추면 특수 능력'; }
+      if (m.bonus.includes(i)) { d.classList.add('bonus'); d.title = '❗ 보너스칸 — 여기서 멈추면 능력 카드 1장'; }
       b.append(d);
     });
     // 벽 두께: 방 둘레에 벽을 그리고, 문 자리만 틈(문지방)을 낸다. 문 칸이 방의 어느 변 바깥에 붙었는지로 위치 계산
@@ -683,12 +702,15 @@ function renderBoard(g: G.View) {
       d.style.background = ft ? `linear-gradient(#0003,#0003), url(${ft}) 0 0 / ${100 * TEX_CELLS / w}% ${100 * TEX_CELLS / h}% repeat`
         : `color-mix(in srgb, var(--room) 72%, ${ROOM_TINTS[i % ROOM_TINTS.length]})`;
       d.append(el('span', 'rname', T.r[i]));
-      if (m.passages[i] !== undefined) { const p = el('span', 'pass', '🕳️'); p.title = '비밀 통로 → ' + T.r[m.passages[i]]; d.append(p); }
+      if (m.passages[i] !== undefined) { // 통로 짝을 글자로(A↔A, B↔B) — 오리지널은 판마다 다른 방끼리 이어져서
+        const pairs = Object.keys(m.passages).map(Number).filter(a => a < m.passages[a]).sort((a, b) => a - b), tag = 'AB'[pairs.indexOf(Math.min(i, m.passages[i]))] ?? '';
+        const p = el('span', 'pass', '🕳️' + tag); p.title = '비밀 통로 → ' + T.r[m.passages[i]]; d.append(p);
+      }
       d.append(el('span', 'toks')); doorGaps(i, q, d); b.append(d);
     });
     const q = m.center, d = el('div', 'room center'); d.dataset.p = String(G.centerPos(m));
     d.style.gridArea = `${q.y0 + 1}/${q.x0 + 1}/${q.y1 + 2}/${q.x1 + 2}`;
-    d.title = '사건 파일실 — 출발점, 최종 고발은 여기서만';
+    d.title = isOrig(g) ? '사건 파일실(수사본부) — 출발점, 결론 보고는 여기서만' : '사건 파일실 — 출발점, 최종 고발은 여기서만';
     const ct = floorTex(g.theme, 'center');
     if (ct) d.style.background = `linear-gradient(#0003,#0003), url(${ct}) 0 0 / ${100 * TEX_CELLS / (q.x1 - q.x0 + 1)}% ${100 * TEX_CELLS / (q.y1 - q.y0 + 1)}% repeat`;
     d.append(el('span', 'rname', '🗂️ 사건 파일'), el('span', 'env', '✉️'), el('span', 'toks')); doorGaps(m.roomCount, q, d); b.append(d);
@@ -700,8 +722,9 @@ function renderBoard(g: G.View) {
   b.querySelectorAll('.can').forEach(t => t.classList.remove('can'));
   g.players.forEach((p, j) => {
     if (p.pos == null) return;
-    const t = el('span', 'tok', T.s[p.suspect].split(' ').pop()![0]); t.dataset.k = 'p' + j;
-    t.style.background = COLORS[p.suspect]; t.title = `${p.name} — ${T.s[p.suspect]}`;
+    const orig = G.isOriginal(g.opts), t = el('span', orig ? 'tok det' : 'tok', pieceLetter(g.opts, g.theme, p.suspect)); t.dataset.k = 'p' + j;
+    if (orig) t.style.setProperty('--dc', COLORS[p.suspect]); else t.style.background = COLORS[p.suspect]; // 오리지널: 탐정 말은 어두운 바탕 + 색 테두리(용의자 NPC 말과 구분)
+    t.title = orig ? `탐정 ${pieceName(g.opts, g.theme, p.suspect)} (${p.name}) · 담당: ${T.s[p.suspect]}` : `${p.name} — ${pieceName(g.opts, g.theme, p.suspect)}`;
     if (j === g.turn) t.classList.add('cur');
     if (j === g.me) t.classList.add('me');
     const place = (pos: G.Pos) => { const h = b.querySelector<HTMLElement>(`[data-p="${pos}"]`); if (h) (pos < 0 ? h.querySelector('.toks')! : h).append(t); };
@@ -739,10 +762,13 @@ function renderBoard(g: G.View) {
   g.npc.forEach((pos, v) => { // 아무도 맡지 않은 인물 말
     if (pos == null) return;
     const t = el('span', 'tok npc', T.s[v].split(' ').pop()![0]); t.dataset.k = 'n' + v;
-    t.style.background = COLORS[v]; t.title = `${T.s[v]} (플레이어 없음)`;
+    t.style.background = COLORS[v];
+    const owner = G.isOriginal(g.opts) ? g.players.find(p => p.suspect === v) : undefined;
+    t.title = G.isOriginal(g.opts) ? `용의자 ${T.s[v]} · 담당: ${owner ? pieceName(g.opts, g.theme, owner.suspect) : '없음'}` : `${T.s[v]} (플레이어 없음)`;
     b.querySelector(`[data-p="${pos}"] .toks`)?.append(t);
   });
-  g.weapons.forEach((room, k) => { // 도구 말
+  g.weapons.forEach((room, k) => { // 도구 말(이 판에 없는 도구는 null)
+    if (room == null) return;
     const w = el('span', 'tok wtok', WEAPON_ICON[g.theme][k]); w.title = '도구: ' + T.w[k]; w.dataset.k = 'w' + k;
     const wu = asset(g.theme, 'w' + k); if (wu) { const im = new Image(); im.src = wu; im.alt = T.w[k]; w.replaceChildren(im); w.classList.add('wimg'); } // 도구 그림이 있으면 종이 메달 안에 그림
     b.querySelector(`[data-p="${G.roomPos(room)}"] .toks`)?.append(w);
@@ -800,7 +826,7 @@ function tapCell(p: G.Pos, x: number, y: number, touch: boolean) {
   const bd = $('#board'); let tdrag: { ghost: HTMLElement; p: G.Pos | null; id: number } | null = null, swallow = false;
   const LIFT = 46; // 손가락에 가리지 않게 말을 손가락보다 위에 띄움
   bd.addEventListener('pointerdown', e => {
-    const g = S?.game; if (!g || g.turn !== g.me || g.phase !== 'move' || diceBusy || mxOn()) return; // 폰: 말 끌기 대신 방향키
+    const g = S?.game; if (!g || g.turn !== g.me || g.phase !== 'move' || diceBusy || mxOn()) return;
     const tok = bd.querySelector<HTMLElement>(`.tok[data-k="p${g.me}"]`); if (!tok) return;
     const r = tok.getBoundingClientRect();
     if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > Math.max(26, r.width)) return;
@@ -951,7 +977,7 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
   previewPath(p);
   if (p == null || !g) { tip.hidden = true; return; }
   const me = g.players[g.me], T = G.THEMES[g.theme], C = G.centerPos(g.map);
-  const name = p === C ? '🗂️ 사건 파일실' : p < 0 ? '🚪 ' + T.r[G.roomOf(p)] : g.map.bonus.includes(p) ? '❗ 보너스칸 (멈추면 특수 능력)' : '복도';
+  const name = p === C ? '🗂️ 사건 파일실' : p < 0 ? '🚪 ' + T.r[G.roomOf(p)] : g.map.bonus.includes(p) ? '❗ 보너스칸 (멈추면 능력 카드 1장)' : '복도';
   let line2: string;
   if (me.pos == null) line2 = '탈락해서 이동할 수 없어요';
   else if (p === me.pos) line2 = '📍 현재 위치';
@@ -981,32 +1007,46 @@ function showTip(p: G.Pos | null, x: number, y: number, brief = false) {
 const nm = (g: G.View, j: number) => g.players[j]?.name ?? '?';
 const KIND_KO: Record<G.Kind, string> = { s: '인물', w: '도구', r: '장소' };
 const cn = (g: G.View, id: G.Card) => G.cardName(g.theme, id);
+// ---------- 후던잇 오리지널 문구: 지목 = 가설, 반박 = 반증, 최종 고발 = 결론 보고, 탈락 = 수사에서 빠짐. 클래식은 그대로 ----------
+const isOrig = (g: { opts?: G.GameOpts }) => G.isOriginal(g.opts);
+/** 플레이어 j의 탐정 이름(오리지널) */
+const detName = (g: G.View, j: number) => G.DETECTIVES[g.theme][g.players[j]?.suspect ?? -1]?.name ?? '?';
+/** 인물 카드 sid('s3')를 담당하는 탐정(탈락하지 않은 사람). 없으면 -1 */
+const ownerOf = (g: G.View, sid: G.Card, skip = -1) => g.players.findIndex((p, j) => j !== skip && !p.out && p.suspect === +sid.slice(1));
+const W = (g: G.View) => isOrig(g)
+  ? { sug: '가설', refute: '반증', accuse: '결론 보고', out: '수사에서 빠짐 — 반증은 계속', lose: '오답 — 수사에서 빠짐 · 반증은 계속' }
+  : { sug: '추리', refute: '반박', accuse: '최종 고발', out: '탈락', lose: '오답 — 탈락' };
 function line(g: G.View, e: G.LogEntry): string {
-  const T = G.THEMES[g.theme];
+  const T = G.THEMES[g.theme], o = isOrig(g);
   switch (e.t) {
-    case 'start': return `${T.icon} 사건 발생. 수사를 시작합니다.`;
+    case 'start': return o ? `${T.icon} 사건 발생. 본부가 탐정들을 소집했습니다.` : `${T.icon} 사건 발생. 수사를 시작합니다.`;
     case 'roll': return `${nm(g, e.p)} 🎲 ${e.d[0]} + ${e.d[1]} = ${e.v}`;
-    case 'enter': return e.room === g.map.roomCount ? `🗂️ ${nm(g, e.p)} 사건 파일실 입장` : `${nm(g, e.p)} → ${T.r[e.room]}`;
+    case 'enter': return e.room === g.map.roomCount ? `🗂️ ${nm(g, e.p)} ${o ? '수사본부(사건 파일실)' : '사건 파일실'} 입장` : `${nm(g, e.p)} → ${T.r[e.room]}`;
     case 'passage': return `${nm(g, e.p)} 🕳️ 비밀 통로 → ${T.r[e.room]}`;
-    case 'suggest': return `🔎 ${nm(g, e.p)}: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)}`;
-    case 'shown': return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: 카드 1장 공개`;
-    case 'pass': return `🙅 ${nm(g, e.p)}: 반박할 카드 없음`;
-    case 'norefute': return '❗ 아무도 반박하지 못했습니다';
-    case 'accuse': return `⚖️ ${nm(g, e.p)} 고발: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)} → ${e.ok ? '정답!' : e.saved ? '오답, 🛡️ 보험으로 생존' : '오답, 탈락'}`;
-    case 'ability': return `${G.ROLES[e.role].icon} ${nm(g, e.p)} ‘${G.ROLES[e.role].name}’ 사용` + (e.target != null ? ` → ${nm(g, e.target)}` : '') + (e.room != null ? ` → ${T.r[e.room]}` : '');
-    case 'bonus': return `❗ ${nm(g, e.p)} 보너스칸 도착`;
-    case 'role': return `${G.ROLES[e.role].icon} ${nm(g, e.p)}의 능력 공개: ${G.ROLES[e.role].name}`;
-    case 'silent': return `⚖️ ${nm(g, e.p)} 묵비권 — ${nm(g, e.to)}의 추리에 반박하지 않고 넘김`;
-    case 'silentnone': return '⚖️ 묵비권 이후 반박한 사람 없음 (묵비권을 쓴 사람이 카드를 갖고 있음)';
+    case 'suggest': {
+      if (!o) return `🔎 ${nm(g, e.p)}: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)}`;
+      const w = ownerOf(g, e.s, e.p);
+      return `🔎 ${nm(g, e.p)}의 가설: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)}` + (w >= 0 ? ` (담당 ${detName(g, w)} 입회)` : '');
+    }
+    case 'shown': return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${o ? '사실 1장 반증' : '카드 1장 공개'}`;
+    case 'pass': return `🙅 ${nm(g, e.p)}: ${W(g).refute}할 카드 없음`;
+    case 'norefute': return `❗ 아무도 ${W(g).refute}하지 못했습니다`;
+    case 'accuse': return `⚖️ ${nm(g, e.p)} ${o ? '결론 보고' : '고발'}: ${cn(g, e.s)} · ${cn(g, e.w)} · ${cn(g, e.r)} → ${e.ok ? '정답!' : e.saved ? '오답, 🛡️ 보험으로 생존' : o ? '오답, 수사에서 빠짐(반증은 계속)' : '오답, 탈락'}`;
+    case 'ability': return `${G.ROLES[e.role].icon} ${nm(g, e.p)} ‘${G.ROLES[e.role].name}’ 카드 사용` + (e.target != null ? ` → ${nm(g, e.target)}` : '') + (e.room != null ? ` → ${e.room === g.map.roomCount ? (o ? '수사본부' : '사건 파일실') : T.r[e.room]}` : '');
+    case 'bonus': return `❗ ${nm(g, e.p)} 보너스칸 — 능력 카드 1장`;
+    case 'bonusfull': return `❗ ${nm(g, e.p)} 보너스칸 — 능력 카드가 이미 ${G.MAX_ITEMS}장이라 못 뽑음`;
+    case 'silent': return `⚖️ ${nm(g, e.p)} 묵비권 카드 — ${nm(g, e.to)}의 ${W(g).sug}에 ${W(g).refute}하지 않고 넘김`;
+    case 'silentnone': return `⚖️ 묵비권 이후 ${W(g).refute}한 사람 없음 (묵비권을 쓴 사람이 카드를 갖고 있음)`;
     case 'rest': return `🛡️ ${nm(g, e.p)} 한 턴 쉼`;
     case 'intel':
+      if (e.kind === 'draw') return `🎴 내가 뽑은 능력 카드: ${G.ROLES[e.role!].icon} ${G.ROLES[e.role!].name}`;
       if (e.kind === 'tap') return `🎧 도청: ${nm(g, e.a!)} → ${nm(g, e.b!)}: ${cn(g, e.card!)}`;
       if (e.kind === 'archive') return `🗂️ 기록 열람: ${nm(g, e.a!)} → ${nm(g, e.b!)}: ${cn(g, e.card!)}`;
       if (e.kind === 'interrogate') return e.card ? `🕵️ 심문: ${nm(g, e.from ?? -1)}의 ${KIND_KO[e.cat!]} 카드 — ${cn(g, e.card)}` : `🕵️ 심문: ${nm(g, e.from ?? -1)}에게 ${KIND_KO[e.cat!]} 카드 없음`;
       return e.from == null ? `🔦 수색: ${cn(g, e.card!)} 카드는 아무도 없음 → 봉투 속 카드!` : `🔦 수색: ${cn(g, e.card!)} 카드는 ${nm(g, e.from)}에게`;
     case 'timeout': return `⏰ ${nm(g, e.p)} 시간 초과`;
     case 'afk': return `🤖 ${nm(g, e.p)} 자리 비움 → 봇이 대신 진행`;
-    case 'left': return `🚪 ${nm(g, e.p)} 퇴장 — 탈락, 가진 카드는 모두에게 공개`;
+    case 'left': return `🚪 ${nm(g, e.p)} 퇴장 — ${o ? '수사에서 빠짐' : '탈락'}, 가진 카드는 모두에게 공개`;
   }
 }
 
@@ -1021,8 +1061,8 @@ function sugCard(g: G.View, e: G.LogEntry & G.Triple & { p: number }, label: str
 }
 function subLine(g: G.View, e: G.LogEntry) {
   if (e.t === 'pass') return `🙅 ${nm(g, e.p)} — 없음`;
-  if (e.t === 'shown') return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: 카드 1장 보여 줌`;
-  if (e.t === 'norefute') return '❗ 아무도 반박하지 못했습니다';
+  if (e.t === 'shown') return e.card ? `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${cn(g, e.card)}` : `🃏 ${nm(g, e.p)} → ${nm(g, e.to)}: ${isOrig(g) ? '사실 1장 반증' : '카드 1장 보여 줌'}`;
+  if (e.t === 'norefute') return `❗ 아무도 ${W(g).refute}하지 못했습니다`;
   return line(g, e);
 }
 function renderLog(g: G.View) {
@@ -1030,9 +1070,13 @@ function renderLog(g: G.View) {
   for (const e of g.log) {
     if (e.t === 'roll' || e.t === 'start') continue;
     if (e.t === 'suggest' || e.t === 'accuse') {
-      cur = sugCard(g, e, e.t === 'suggest' ? '추리' : '최종 고발'); items.push(cur);
-      if (e.t === 'accuse') { cur.classList.add('acc'); cur.querySelector('ol')!.append(el('li', '', e.ok ? '✅ 정답!' : e.saved ? '❌ 오답 — 🛡️ 보험으로 생존' : '❌ 오답 — 탈락')); cur = null; }
-      else { lastSug = cur; lastP = e.p; }
+      cur = sugCard(g, e, e.t === 'suggest' ? W(g).sug : W(g).accuse); items.push(cur);
+      if (e.t === 'accuse') { cur.classList.add('acc'); cur.querySelector('ol')!.append(el('li', '', e.ok ? '✅ 정답!' : e.saved ? '❌ 오답 — 🛡️ 보험으로 생존' : '❌ ' + W(g).lose)); cur = null; }
+      else {
+        lastSug = cur; lastP = e.p;
+        const w = isOrig(g) ? ownerOf(g, e.s, e.p) : -1; // 오리지널: 담당 탐정 입회(조건 ①)
+        if (w >= 0) cur.querySelector('ol')!.append(el('li', 'r-attend', `👣 담당 ${detName(g, w)}(${nm(g, w)}) 입회`));
+      }
       continue;
     }
     if (SUBLOG.has(e.t) && cur) { cur.querySelector('ol')!.append(el('li', 'r-' + e.t, subLine(g, e))); continue; }
@@ -1040,9 +1084,9 @@ function renderLog(g: G.View) {
   }
   const now = g.sug != null || (lastP === g.turn && g.phase !== 'roll'); // 이번 차례의 추리
   const cs = $('#cursug'); cs.hidden = !(lastSug && now);
-  if (lastSug && now) { const k = lastSug.cloneNode(true) as HTMLElement; if (g.sug) k.querySelector('ol')!.append(el('li', 'wait', `⏳ ${nm(g, g.sug.refuter ?? g.turn)} 반박 차례…`)); cs.replaceChildren(k); }
+  if (lastSug && now) { const k = lastSug.cloneNode(true) as HTMLElement; if (g.sug) k.querySelector('ol')!.append(el('li', 'wait', `⏳ ${nm(g, g.sug.refuter ?? g.turn)} ${W(g).refute} 차례…`)); cs.replaceChildren(k); }
   items.reverse();
-  $('#log').replaceChildren(...(items.length ? items : [el('p', 'sub', '아직 추리가 없습니다')]));
+  $('#log').replaceChildren(...(items.length ? items : [el('p', 'sub', isOrig(g) ? '아직 가설이 없습니다' : '아직 추리가 없습니다')]));
 }
 
 type ButtonAction = 'roll' | 'passage' | 'suggest' | 'end' | 'accuse';
@@ -1050,18 +1094,28 @@ function renderPanel(g: G.View) {
   const me = g.players[g.me], my = g.turn === g.me && g.phase !== 'over', ph = g.phase;
   const inCenter = me.pos === G.centerPos(g.map), inRoom = G.inRoom(me.pos) && !inCenter;
   const a = G.actor(g), sug = g.sug, env = g.env;
-  $('#turnname').textContent = ph === 'over' ? '게임 종료' : ph === 'refute' ? `🃏 ${nm(g, a)} 반박 중` : `${a === g.me ? '▶ 내' : nm(g, a) + '의'} 차례`;
+  const o = isOrig(g), w = W(g);
+  $('#turnname').textContent = ph === 'over' ? '게임 종료' : ph === 'refute' ? `🃏 ${nm(g, a)} ${w.refute} 중` : `${a === g.me ? '▶ 내' : nm(g, a) + '의'} 차례`;
   $('#status').textContent =
     ph === 'over' ? '게임 종료' :
-    ph === 'refute' && sug ? (sug.refuter === g.me ? '보여 줄 카드를 고르세요' : `${nm(g, sug.refuter)}의 반박을 기다리는 중…`) :
-    me.out && env ? `🕶️ 관전 중 · 봉투: ${cn(g, env.s)} · ${cn(g, env.w)} · ${cn(g, env.r)} — 반박 차례엔 계속 카드를 냅니다` :
-    my && inCenter && me.fresh && ph === 'roll' ? '🗂️ 사건 파일실에서 출발 — 주사위를 굴려 나가세요 (고발은 다시 들어왔을 때)' :
-    my && inCenter && ph !== 'move' ? '🗂️ 사건 파일실 — 최종 고발하거나 다시 나가세요' :
+    ph === 'refute' && sug ? (sug.refuter === g.me ? (o ? '반증할 사실 하나를 고르세요' : '보여 줄 카드를 고르세요') : `${nm(g, sug.refuter)}의 ${w.refute}을 기다리는 중…`) :
+    me.out && env ? (o ? `🕶️ 수사에서 빠짐 · 봉투: ${cn(g, env.s)} · ${cn(g, env.w)} · ${cn(g, env.r)} — 반증은 끝까지 합니다` : `🕶️ 관전 중 · 봉투: ${cn(g, env.s)} · ${cn(g, env.w)} · ${cn(g, env.r)} — 반박 차례엔 계속 카드를 냅니다`) :
+    my && inCenter && me.fresh && ph === 'roll' ? (o ? '🗂️ 수사본부에서 출발 — 주사위를 굴려 나가세요 (보고는 다시 들어왔을 때)' : '🗂️ 사건 파일실에서 출발 — 주사위를 굴려 나가세요 (고발은 다시 들어왔을 때)') :
+    my && inCenter && ph !== 'move' ? (o ? '🗂️ 수사본부 — 결론을 보고하거나 다시 나가세요' : '🗂️ 사건 파일실 — 최종 고발하거나 다시 나가세요') :
     !my ? `${nm(g, g.turn)}의 차례입니다` :
-    me.onBonus && ph === 'act' ? '❗ 보너스칸 — 특수 능력을 쓰거나 턴을 끝내세요' :
-    ph === 'roll' ? (inRoom && me.canSuggest ? '이 방에서 바로 추리하거나 주사위를 굴리세요' : '주사위를 굴리세요') :
+    me.onBonus && ph === 'act' ? '❗ 보너스칸 — 능력 카드를 내거나 턴을 끝내세요' :
+    ph === 'act' && me.pos != null && me.pos >= 0 ? '복도 — 능력 카드를 내거나 턴을 끝내세요' :
+    ph === 'roll' ? (inRoom && me.canSuggest ? (o ? '이 방에서 바로 가설을 세우거나 주사위를 굴리세요' : '이 방에서 바로 추리하거나 주사위를 굴리세요') : '주사위를 굴리세요') :
     ph === 'move' ? (diceBusy ? '🎲 굴러가는 중…' : (touchLike() ? (view === '2d' ? (mxOn() ? `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동` : `🎲 ${g.roll} — 아래 방향키로 옮긴 뒤 ✓ 이동 (말 끌기·칸 누르기도 돼요)`) : `🎲 ${g.roll} — 내 말을 끌어다 놓거나, 칸을 눌러 고른 뒤 '여기로 이동'`) : (view === '2d' ? `🎲 ${g.roll} — 칸에 마우스를 올려 길을 보고 누르세요 (굽은 길은 화살표 키로 그리고 Enter)` : `🎲 ${g.roll} — 가고 싶은 칸에 마우스를 올려 길을 확인하고 누르세요`))) :
-    inRoom && me.canSuggest ? '추리하거나 턴을 끝내세요' : '턴을 끝내세요';
+    inRoom && me.canSuggest ? (o ? '가설을 세우거나 턴을 끝내세요' : '추리하거나 턴을 끝내세요') : '턴을 끝내세요';
+  const ab = document.querySelector<HTMLButtonElement>('#actions > button[data-a="accuse"]');
+  if (ab && ab.dataset.mode !== (o ? 'o' : 'c')) { // 모드가 바뀔 때만 다시 씀(아이콘 치환이 매번 다시 돌지 않게)
+    ab.dataset.mode = o ? 'o' : 'c';
+    ab.textContent = o ? '⚖️ 결론 보고 (조건 ③)' : '⚖️ 최종 고발 (중앙에서)'; ab.title = o ? '수사본부(중앙 사건 파일실)에서만 · 단 한 번' : '중앙 사건 파일실에서만';
+    const sb = document.querySelector<HTMLButtonElement>('#actions > button[data-a="suggest"]');
+    if (sb) { sb.textContent = o ? '🔎 가설 ' : '🔎 추리 '; sb.append(el('kbd', '', 'S')); }
+  }
+  renderAssign(g);
   const en: Record<ButtonAction, boolean> = {
     roll: my && ph === 'roll',
     passage: my && ph === 'roll' && inRoom && g.map.passages[G.roomOf(me.pos!)] !== undefined,
@@ -1071,12 +1125,13 @@ function renderPanel(g: G.View) {
   };
   for (const b of document.querySelectorAll<HTMLButtonElement>('#actions > button')) b.disabled = !en[b.dataset.a as ButtonAction];
   const hand = $('#hand'); hand.innerHTML = '';
-  for (const c of me.hand ?? []) hand.append(cardEl(g.theme, c));
+  for (const c of me.hand ?? []) hand.append(factCard(g.theme, g.opts, c));
   renderLog(g);
   $('#last').textContent = g.log.filter(e => e.t !== 'roll').slice(-2).map(e => line(g, e)).join(' / ');
   // 폰: 보드 위 참가자 줄(누구 차례 · 누가 반박 중 · 탈락) + 마지막 행동 한 줄
   $('#plist').replaceChildren(...g.players.map((p, j) => {
     const li = el('li', '', p.name), d = el('i'); d.style.background = COLORS[p.suspect]; li.prepend(d);
+    if (isOrig(g)) { const a = el('small', 'asg', '→' + G.THEMES[g.theme].s[p.suspect].split(' ').pop()); li.title = `담당: ${G.THEMES[g.theme].s[p.suspect]}`; li.append(a); } // 폰: 담당 용의자 이름
     li.classList.toggle('cur', j === g.turn && ph !== 'over'); li.classList.toggle('ref', ph === 'refute' && sug?.refuter === j);
     li.classList.toggle('out', !!p.out); li.classList.toggle('me', j === g.me);
     if (j === g.me) { li.title = '내 말 찾기'; li.onclick = findMe; li.append(el('span', 'findme', '📍')); }
@@ -1087,42 +1142,79 @@ function renderPanel(g: G.View) {
   renderRole(g, my);
 }
 
-// ---------- 탐정 직업 (보너스칸 전용) ----------
+// ---------- 오리지널: 담당 표 — 내 담당 용의자 + 다른 탐정의 담당(모두 공개 정보). 탐정 번호 = 담당 용의자 번호라 색 점 하나로 판 위 말과 맞춤 ----------
+let assignKey = '';
+function renderAssign(g: G.View) {
+  const box = $('#assignbox');
+  box.hidden = !isOrig(g); if (box.hidden) { assignKey = ''; return; }
+  const key = `${g.seed}:${g.players.map(p => +p.out).join('')}`; if (key === assignKey) return; assignKey = key;
+  const T = G.THEMES[g.theme], dot = (v: number) => { const i = el('i'); i.style.background = COLORS[v]; return i; };
+  const me = g.players[g.me], mine = el('div', 'amine');
+  mine.append(el('small', '', '내 담당'), dot(me.suspect), el('span', '', T.s[me.suspect]));
+  mine.title = '내 담당이 가설에 지목되면 나도 그 방으로 입회해요(다음 차례 바로 가설 가능)';
+  const ul = el('ul');
+  g.players.forEach((p, j) => {
+    if (j === g.me) return;
+    const li = el('li', p.out ? 'out' : ''); li.append(dot(p.suspect), el('span', '', `${detName(g, j)} → ${T.s[p.suspect]}`));
+    li.title = `${p.name} · 이 용의자를 가설에 넣으면 ${detName(g, j)} 탐정이 내 방으로 입회해요`; ul.append(li);
+  });
+  box.replaceChildren(mine, ...(ul.childElementCount ? [ul] : []));
+}
+
+// ---------- 능력 카드 (보너스칸에서 뽑아 최대 3장 보유, 내 차례에 1장) ----------
+const whenKo = (role: G.RoleId, o: boolean) => role === 'field' ? '복도에 멈춘 뒤' : ({ turn: '내 차례', hall: '굴리기 전 · 복도', refute: o ? '반증할 때' : '반박할 때', auto: o ? '결론 보고가 틀리면 자동' : '고발이 틀리면 자동' } as const)[G.ROLES[role].when];
+let openItem: number | null = null;
 function renderRole(g: G.View, my: boolean) {
-  const box = $('#rolebox'), me = g.players[g.me];
-  box.hidden = !g.opts.roles || !me.role;
-  if (box.hidden || !me.role) return;
-  const role = me.role, R = G.ROLES[role], left = me.uses ?? 0, charged = me.charged ?? 0;
+  const box = $('#rolebox'), me = g.players[g.me], items = me.items ?? [];
+  box.hidden = !g.opts.roles || !!me.out && !items.length;
+  if (box.hidden) return;
+  const o = isOrig(g), archive = g.archive ?? [];
   box.innerHTML = '';
   const head = el('div', 'rolehead');
-  head.append(el('b', '', `${R.icon} ${R.name}`), el('span', 'tag', `남은 ${left}회` + (charged ? ' · ✅ 준비됨' : '')));
-  box.append(head, el('p', 'sub', R.desc));
+  head.append(el('b', '', '🎴 능력 카드'), el('span', 'tag', `${items.length} / ${G.MAX_ITEMS}` + ((me.tap ?? 0) > 0 ? ' · 🎧 도청 설치됨' : '')));
+  box.append(head);
+  if (!items.length) box.append(el('p', 'sub', `❗ 보너스칸에 멈추면 무작위로 1장 (최대 ${G.MAX_ITEMS}장)`));
+  if (openItem != null && !G.canUse(g, g.me, items[openItem], archive.length)) openItem = null;
+  const list = el('div', 'items');
+  items.forEach((role, k) => {
+    const R = G.ROLES[role], ok = my && G.canUse(g, g.me, role, archive.length);
+    const it = el('div', 'item' + (ok ? ' usable' : '') + (openItem === k ? ' open' : ''));
+    const top = el('button', 'itop'); top.type = 'button'; top.disabled = !ok;
+    top.append(el('i', '', R.icon), el('b', '', R.name), el('small', '', whenKo(role, o)));
+    top.title = G.roleDesc(role, g.opts);
+    top.onclick = () => { openItem = openItem === k ? null : k; renderRole(g, my); };
+    it.append(top, el('p', 'idesc', G.roleDesc(role, g.opts)));
+    if (ok && openItem === k) it.append(itemControls(g, role, o));
+    list.append(it);
+  });
+  box.append(list);
+  if (my && me.usedItem) box.append(el('p', 'sub', '이번 차례에는 이미 1장을 냈어요'));
+  else if (my && items.some(k => G.canUse(g, g.me, k, archive.length))) box.append(el('p', 'sub', '카드를 눌러 내기 (내 차례에 1장)'));
+  box.classList.toggle('usable', my && items.some(k => G.canUse(g, g.me, k, archive.length)));
+  const others = g.players.map((p, j) => (j !== g.me && !p.out && p.itemCount ? `${p.name} ${p.itemCount}장` : '')).filter(Boolean);
+  if (others.length) box.append(el('p', 'sub known', '다른 사람 능력 카드: ' + others.join(' · ')));
+}
+function itemControls(g: G.View, role: G.RoleId, o: boolean): HTMLElement {
+  const row = el('div', 'abil'), go = (a: G.Action) => { openItem = null; act(a); };
+  const sel = (opts: [string, string][]) => { const s = el('select'); for (const [v, t] of opts) s.append(new Option(t, v)); row.append(s); return s; };
+  const btn = (label: string, fn: () => void) => { const b = el('button', '', label); b.onclick = fn; row.append(b); };
   const others = g.players.map((p, j) => ({ p, j })).filter(x => x.j !== g.me && !x.p.out);
-  const archive = g.archive ?? [];
-  const usable = my && me.onBonus && !me.usedBonus && g.phase === 'act' && left > 0 && !(R.kind === 'charge' && charged) && (role !== 'analyst' || archive.length > 0);
-  if (!usable) {
-    box.append(el('p', 'sub', left <= 0 ? '모두 사용했습니다' : R.kind === 'charge' && charged ? '준비해 둔 능력은 때가 되면 쓸 수 있어요' : '❗ 보너스칸에 멈추면 사용할 수 있어요'));
-  } else {
-    const row = el('div', 'abil'), go = (a: G.Action) => act(a);
-    const sel = (opts: [string, string][]) => { const s = el('select'); for (const [v, t] of opts) s.append(new Option(t, v)); row.append(s); return s; };
-    const btn = (label: string, fn: () => void) => { const b = el('button', '', label); b.onclick = fn; row.append(b); };
-    if (role === 'chief') {
-      const t = sel(others.map(x => [String(x.j), x.p.name])), c = sel([['s', '인물'], ['w', '도구'], ['r', '장소']]);
-      btn('🕵️ 심문', () => go({ t: 'ability', target: +t.value, cat: c.value as G.Kind }));
-    } else if (role === 'analyst') {
-      const e = sel(archive.map(x => [String(x.id), `${nm(g, x.p)} → ${nm(g, x.to)} (반박 카드)`]));
-      btn('🗂️ 열람', () => go({ t: 'ability', entry: +e.value }));
-    } else if (role === 'scout' || role === 'guide') {
-      const rooms = G.THEMES[g.theme].r.slice(0, g.map.roomCount).map((n, k) => [String(k), n] as [string, string]);
-      const r = sel(rooms);
-      btn(role === 'scout' ? '🔦 수색' : '🗝️ 이동', () => go({ t: 'ability', room: +r.value }));
-    } else if (role === 'field') btn('🚓 추격 — 다시 굴려 이어서 이동', () => go({ t: 'ability' }));
-    else btn(`${R.icon} 준비하기`, () => go({ t: 'ability' }));
-    box.append(row, el('p', 'sub', '쓰지 않으려면 ⏭ 턴 종료'));
-  }
-  box.classList.toggle('usable', usable);
-  const known = g.players.map((p, j) => (j !== g.me && p.role ? `${G.ROLES[p.role].icon} ${p.name}(${G.ROLES[p.role].name})` : '')).filter(Boolean);
-  if (known.length) box.append(el('p', 'sub known', '공개된 능력: ' + known.join(' · ')));
+  const rooms = G.THEMES[g.theme].r.slice(0, g.map.roomCount).map((n, k) => [String(k), n] as [string, string]);
+  const me = g.players[g.me];
+  if (role === 'chief') {
+    const t = sel(others.map(x => [String(x.j), x.p.name])), c = sel([['s', '인물'], ['w', '도구'], ['r', '장소']]);
+    btn('🕵️ 심문', () => go({ t: 'ability', card: role, target: +t.value, cat: c.value as G.Kind }));
+  } else if (role === 'analyst') {
+    const e = sel((g.archive ?? []).map(x => [String(x.id), `${nm(g, x.p)} → ${nm(g, x.to)} (${W(g).refute} 카드)`]));
+    btn('🗂️ 열람', () => go({ t: 'ability', card: role, entry: +e.value }));
+  } else if (role === 'scout') {
+    const r = sel(rooms); btn('🔦 수색', () => go({ t: 'ability', card: role, room: +r.value }));
+  } else if (role === 'guide') {
+    const r = sel([...rooms, [String(g.map.roomCount), o ? '🗂️ 수사본부 (결론 보고)' : '🗂️ 사건 파일실 (최종 고발)']].filter(([v]) => G.roomPos(+v) !== me.pos) as [string, string][]);
+    btn('🗝️ 이동', () => go({ t: 'ability', card: role, room: +r.value }));
+  } else if (role === 'field') btn('🚓 추격 — 다시 굴려 이어서 이동', () => go({ t: 'ability', card: role }));
+  else if (role === 'tap') btn('🎧 설치하기', () => go({ t: 'ability', card: role }));
+  return row;
 }
 
 // 폰: 보드 위 내 카드 부채꼴을 누르면 크게 펼쳐 보기(다시 누르면 접기)
@@ -1177,9 +1269,11 @@ function selectOf(g: G.View, kind: G.Kind) {
 function openPick(kind: 'suggest' | 'accuse') {
   const g = S?.game; if (!g) return;
   const me = g.players[g.me];
+  const o = isOrig(g);
   openDlg(kind, f => {
-    f.append(el('h2', '', kind === 'suggest' ? '🔎 추리' : '⚖️ 최종 고발'));
-    f.append(el('p', 'sub', kind === 'suggest' ? `장소: ${G.THEMES[g.theme].r[G.roomOf(me.pos!)]}` : '틀리면 탈락해요. 정답이면 바로 승리!'));
+    f.append(el('h2', '', kind === 'suggest' ? (o ? '🔎 가설 · 현장 검증' : '🔎 추리') : (o ? '⚖️ 결론 보고' : '⚖️ 최종 고발')));
+    f.append(el('p', 'sub', kind === 'suggest' ? `${o ? '현장' : '장소'}: ${G.THEMES[g.theme].r[G.roomOf(me.pos!)]}`
+      : o ? '결론 보고는 단 한 번. 틀리면 수사에서 빠지지만 반증은 끝까지 해요. 맞으면 사건 종결!' : '틀리면 탈락해요. 정답이면 바로 승리!'));
     const s = selectOf(g, 's'), w = selectOf(g, 'w'), r = selectOf(g, 'r');
     f.append(s, w); if (kind === 'accuse') f.append(r);
     if (kind === 'suggest') f.append(el('p', 'sub', '💡 누가 가졌는지 이미 아는 카드(✓)를 섞어 지목하면, 나머지 카드의 정보를 얻기 쉬워요.'));
@@ -1188,7 +1282,8 @@ function openPick(kind: 'suggest' | 'accuse') {
       for (const sel of [s, w]) { const ok = [...sel.options].find(o => !o.disabled); if (ok) sel.value = ok.value; }
       f.append(el('p', 'sub', '🚫 블러핑 금지 방: 내 손의 카드는 지목할 수 없어요'));
     } else if (kind === 'suggest') f.append(el('p', 'sub', '🎭 내 카드를 일부러 섞어 블러핑할 수도 있어요'));
-    const row = el('div', 'row'), ok = el('button', kind === 'accuse' ? 'danger' : '', kind === 'suggest' ? '추리하기' : '고발하기'), no = el('button', 'ghost', '취소');
+    if (kind === 'suggest' && o) f.append(el('p', 'sub', '👣 지목한 용의자에게 담당 탐정이 있으면 그 탐정도 이 방으로 입회해요'));
+    const row = el('div', 'row'), ok = el('button', kind === 'accuse' ? 'danger' : '', kind === 'suggest' ? (o ? '검증하기' : '추리하기') : (o ? '보고하기' : '고발하기')), no = el('button', 'ghost', '취소');
     no.value = 'cancel'; row.append(no, ok); f.append(row);
     ok.onclick = e => {
       e.preventDefault();
@@ -1205,14 +1300,16 @@ function renderDialogs(g: G.View) {
     if (dlgKey !== key || !dlg.open) {
       dlgKey = key;
       openDlg('refute', f => {
-        f.append(el('h2', '', '🃏 반박'));
-        f.append(el('p', 'sub', `${nm(g, sug.p)}의 추리: ${cn(g, sug.s)} · ${cn(g, sug.w)} · ${cn(g, sug.r)}`));
-        f.append(el('p', 'sub', '추리한 사람에게만 보여 줄 카드 1장을 고르세요. 시간이 지나면 자동으로 골라져요.'));
+        const o = isOrig(g);
+        f.append(el('h2', '', o ? '🃏 반증' : '🃏 반박'));
+        f.append(el('p', 'sub', `${nm(g, sug.p)}의 ${o ? '가설' : '추리'}: ${cn(g, sug.s)} · ${cn(g, sug.w)} · ${cn(g, sug.r)}`));
+        f.append(el('p', 'sub', o ? '약속한 대로 — 이 가설과 어긋나는, 당신이 확인한 사실 하나를 보여 주세요. 그 탐정에게만 보여요. 시간이 지나면 자동으로 골라져요.'
+          : '추리한 사람에게만 보여 줄 카드 1장을 고르세요. 시간이 지나면 자동으로 골라져요.'));
         const box = el('div', 'cards row-cards');
-        for (const c of sug.matches ?? []) { const b = el('button', 'cardbtn'); b.append(cardEl(g.theme, c)); b.onclick = e => { e.preventDefault(); act({ t: 'show', card: c }); dlg.close(); }; box.append(b); }
+        for (const c of sug.matches ?? []) { const b = el('button', 'cardbtn'); b.append(factCard(g.theme, g.opts, c)); b.onclick = e => { e.preventDefault(); act({ t: 'show', card: c }); dlg.close(); }; box.append(b); }
         const me = g.players[g.me];
-        if (me.role === 'lawyer' && (me.charged ?? 0) > 0) {
-          const b = el('button', 'ghost', '⚖️ 묵비권 — 넘기기 (사용 사실은 공개)');
+        if (g.opts.roles && me.items?.includes('lawyer')) {
+          const b = el('button', 'ghost', '⚖️ 묵비권 카드 내기 — 넘기기 (사용 사실은 공개)');
           b.onclick = e => { e.preventDefault(); act({ t: 'show', silent: true }); dlg.close(); }; box.append(b);
         }
         f.append(box);
@@ -1229,7 +1326,12 @@ function renderDialogs(g: G.View) {
         const T = G.THEMES[g.theme];
         f.append(el('small', 'ocase', `CASE CLOSED · ${T.name}`), el('span', 'ostamp' + (g.winner === null ? ' cold' : ''), g.winner === null ? '미제' : '해결'));
         f.append(el('h2', '', '사건 종결 보고서'));
-        f.append(el('p', 'owin', g.winner === null ? '아무도 진실에 닿지 못했습니다.' : g.winner === g.me ? '당신이 사건을 해결했습니다!' : `${nm(g, g.winner)} 님이 사건을 해결했습니다.`));
+        if (!isOrig(g)) f.append(el('p', 'owin', g.winner === null ? '아무도 진실에 닿지 못했습니다.' : g.winner === g.me ? '당신이 사건을 해결했습니다!' : `${nm(g, g.winner)} 님이 사건을 해결했습니다.`));
+        else {
+          f.append(el('p', 'owin', g.winner === null ? '아무도 진실에 닿지 못했습니다.'
+            : g.winner === g.me ? `당신(${detName(g, g.me)} 탐정)이 결론 보고로 사건을 종결했습니다!` : `${detName(g, g.winner)} 탐정(${nm(g, g.winner)})이 사건을 종결했습니다.`));
+          const tag = assignLine(g, env); if (tag) f.append(el('p', 'oassign', tag));
+        }
         const scene = endingScene(g.theme, env);
         if (scene) f.append(scene); // 그림이 있는 테마: 방·인물·도구를 겹친 결말 장면
         else { // 그림이 없는 테마: 봉투 속 세 장을 차례로 뒤집어 공개
@@ -1253,6 +1355,14 @@ function renderDialogs(g: G.View) {
 
 // ---------- 사건 결말 장면: 새 그림 없이 방 그림(배경)·인물 전신(투명)·도구 그림을 겹쳐 모든 조합을 만든다 ----------
 const jong = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 ? c % 28 : 0; }; // 마지막 글자 받침(0 = 없음, 8 = ㄹ)
+const josa = (w: string, withB: string, without: string) => w + (jong(w) ? withB : without);
+/** 후던잇 오리지널 결말의 담당 한 줄. 범인의 담당이 누구였는지(탈락했어도 담당은 담당) */
+function assignLine(g: G.View, env: G.Triple): string {
+  const S = G.cardName(g.theme, env.s), j = g.players.findIndex(p => p.suspect === +env.s.slice(1));
+  if (j < 0) return `${josa(S, '은', '는')} 아무도 맡지 않은 용의자였다.`;
+  if (j === g.winner) return `${detName(g, j)} 탐정은 자신이 담당한 ${josa(S, '을', '를')} 고발했다.`;
+  return `${S}의 담당은 ${detName(g, j)} 탐정이었다 — 가장 가까이에서 놓쳤다.`;
+}
 function endingScene(theme: G.ThemeKey, env: G.Triple): HTMLElement | null {
   const [su, wu, ru] = [asset(theme, env.s), asset(theme, env.w), asset(theme, env.r)];
   if (!su || !wu || !ru) return null;
@@ -1315,10 +1425,13 @@ function renderMemo(g: G.View) {
   }
   if (ch) { saveMemo(); paintMemo(); }
 }
+/** 추리 노트 열 순서: 나 먼저, 그다음 내 왼쪽(반박 순서)부터 차례로 — 모드·화면 크기와 상관없이 같음 */
+const memoCols = (g: G.View) => g.players.map((_, k) => (g.me + k) % g.players.length);
 function buildMemo(g: G.View) {
   const t = $('#memo'); t.innerHTML = '';
   const head = el('thead'), hr = el('tr'); hr.append(el('th'));
-  g.players.forEach((p, j) => { const th = el('th', '', j === g.me ? '나' : p.name); th.title = p.name; hr.append(th); });
+  const cols = memoCols(g);
+  for (const j of cols) { const p = g.players[j], th = el('th', j === g.me ? 'mecol' : '', j === g.me ? '나' : p.name); th.title = p.name; hr.append(th); }
   for (const _ of FREE) { const th = el('th', 'free', '·'); th.title = '자유 칸'; hr.append(th); }
   head.append(hr); t.append(head);
   const body = el('tbody'), all = G.allCards(g.map);
@@ -1326,7 +1439,7 @@ function buildMemo(g: G.View) {
     const sec = el('tr', 'sec'), th = el('th', '', label); th.colSpan = g.players.length + 1 + FREE.length; sec.append(th); body.append(sec);
     for (const c of all[k]) {
       const tr = el('tr'); tr.dataset.card = c; tr.append(el('th', 'rowname', cn(g, c)));
-      [...g.players.keys(), ...FREE].forEach(j => { const td = el('td'); td.dataset.k = `${c}|${j}`; tr.append(td); });
+      [...cols, ...FREE].forEach(j => { const td = el('td', j === g.me ? 'mecol' : ''); td.dataset.k = `${c}|${j}`; tr.append(td); });
       body.append(tr);
     }
   }
@@ -1501,7 +1614,7 @@ const redrawPreviews = () => {
   if (!$('#wait').hidden && S) { $('#w_prev').dataset.k = ''; renderWait(S); }
 };
 onTexReady(redrawPreviews);
-// 첫 화면: 용의자 라인업 벽(키 눈금 + 8명) · 조명이 한 명씩 비추고, 카드 속 얼굴 줄도 같이
+// ---------- [시안] 첫 화면: 용의자 라인업 벽(키 눈금 + 8명) · 조명이 한 명씩 비추고, 카드 속 얼굴 줄도 같이 ----------
 function lineupShow() {
   const lu = $('#lineup'), row = $('#mugs .mrow'), plate = $('#mugs .mname'), T = G.THEMES.mansion;
   const urls = T.s.map((_, i) => asset('mansion', 's' + i)); if (urls.some(u => !u)) return;

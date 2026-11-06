@@ -142,7 +142,8 @@ body.flat .lined{min-height:55vh}
     <li><a href="#p-bluff"><small>08</small>블러핑과 수사 요령</a><span>11</span></li>
     <li><a href="#p-keys"><small>09</small>조작법 한눈에</a><span>12</span></li>
     <li><a href="#p-faq"><small>10</small>자주 묻는 것</a><span>13</span></li>
-    <li><a href="#p-memo"><small>··</small>수사 메모</a><span>14</span></li>
+    <li><a href="#p-orig"><small>11</small>후던잇 오리지널</a><span>14</span></li>
+    <li><a href="#p-memo"><small>··</small>수사 메모</a><span>16</span></li>
   </ol>
   <p class="tip"><b>넘기는 법</b> PC는 <kbd>←</kbd> <kbd>→</kbd> 키나 쪽 가장자리를 누르고, 폰은 옆으로 밀어 넘깁니다. 아래 조작 줄로 처음·끝으로 갈 수 있어요.</p>
   <div class="folio">1</div>
@@ -161,7 +162,7 @@ body.flat .lined{min-height:55vh}
   <table>
     <tr><th>인원</th><td>3~8명. 빈자리는 봇이 채우고, 혼자 봇과도 할 수 있습니다.</td></tr>
     <tr><th>시간</th><td>한 판 15~30분</td></tr>
-    <tr><th>카드</th><td>인물·도구는 각각 6~8장(인원에 따라), 장소는 9~11곳</td></tr>
+    <tr><th>카드</th><td>인물·도구는 각각 6~8장(인원에 따라 — 클래식 인물 카드는 용의자 8명 중 무작위), 장소는 9~11곳</td></tr>
     <tr><th>이기는 법</th><td>사건 파일실에서 세 장을 모두 맞게 고발</td></tr>
   </table>
   <div class="folio">2</div>
@@ -172,9 +173,9 @@ body.flat .lined{min-height:55vh}
   <h2><small>01</small>시작하기</h2>
   <div class="step"><i>1</i><div><b>서명(닉네임)을 적습니다</b>같은 방 사람에게만 보입니다. 실명이나 연락처는 쓰지 마세요.</div></div>
   <div class="step"><i>2</i><div><b>방을 만들거나 들어갑니다</b>방을 만들면 <b>참여 코드 5자리</b>가 생깁니다. 코드는 처음에 가려져 있으니 <b>참여 코드 복사</b>로 친구에게 보내세요. 친구는 첫 화면에 코드를 입력해 들어옵니다. 처음이라면 <b>봇 2명과 바로 연습</b>으로 혼자 한 판 돌려 보세요.</div></div>
-  <div class="step"><i>3</i><div><b>인물을 고릅니다</b>이번 판에 내가 움직일 말입니다. 2분 안에 고르지 않으면 남은 인물 중 무작위로 정해집니다. 고른 인물이 범인일 수도 있지만, 말과 정답은 상관없습니다.</div></div>
+  <div class="step"><i>3</i><div><b>인물을 고릅니다</b>이번 판에 내가 움직일 말을 용의자 8명 중에서 고릅니다. 2분 안에 고르지 않으면 남은 인물 중 무작위로 정해집니다. 인물 카드는 8명 중 6명(7·8인이면 인원수만큼)이 무작위로 들어가고, 내가 고른 인물은 반드시 들어갑니다. 고른 인물이 범인일 수도 있지만, 말과 정답은 상관없습니다.</div></div>
   <div class="step"><i>4</i><div><b>사건이 봉인됩니다</b>인물·도구·장소에서 한 장씩 봉투에 봉인하고(이게 정답), 나머지를 섞어 모두에게 같은 장수로 나눕니다. 남는 카드는 <b>모두에게 공개</b>되며 정답이 아닙니다. 내 손의 카드도 정답이 아닙니다.</div></div>
-  <div class="step"><i>5</i><div><b>임명장을 받습니다</b>시작 연출 마지막에 이번 판 내 <b>특수 능력</b>이 적힌 임명장이 나옵니다(07장).</div></div>
+  <div class="step"><i>5</i><div><b>능력 카드 안내를 봅니다</b>시작할 때 가진 능력 카드는 없습니다. 보너스칸 ( ! )에 멈출 때마다 1장씩 뽑습니다(07장).</div></div>
   <div class="folio">3</div>
 </section>
 
@@ -183,7 +184,7 @@ body.flat .lined{min-height:55vh}
   <h2><small>02</small>화면 보기</h2>
   <ul>
     <li><b>보드</b>: 둘레에 방이 9~11개, 한가운데에 <b>사건 파일실</b>이 있습니다. 모두 사건 파일실에서 출발합니다. 방 사이의 어두운 칸은 복도이고, 맵은 판마다 새로 만들어집니다.</li>
-    <li><b>보너스칸 ( ! )</b>: 복도의 느낌표 칸. 정확히 멈추면 특수 능력을 쓸 수 있습니다.</li>
+    <li><b>보너스칸 ( ! )</b>: 복도의 느낌표 칸. 판마다 위치가 바뀌고 보드 네 구역에 고르게 놓입니다(3~4인 8개, 5~6인 10개, 7~8인 12개). 정확히 멈추면 <b>능력 카드</b> 1장을 뽑습니다.</li>
     <li><b>비밀 통로</b>: 네 모서리 방은 서로 이어져 있어, 그 방에서 턴을 시작하면 주사위 대신 건너갈 수 있습니다.</li>
     <li><b>행동 패널</b>: 지금 할 수 있는 버튼과 상황 설명. 폰에서는 이동할 때 방향키로 바뀝니다.</li>
     <li><b>내 카드</b>: PC는 패널 아래, 폰은 보드 왼쪽 아래 부채꼴(누르면 크게).</li>
@@ -198,7 +199,7 @@ body.flat .lined{min-height:55vh}
   <div class="rh"><span>후더닛 설명서</span><span>03 한 턴의 흐름</span></div>
   <h2><small>03</small>한 턴의 흐름 <span class="pill">1/2</span></h2>
   <div class="step"><i>1</i><div><b>주사위를 굴립니다</b>버튼을 <b>꾹 눌렀다 떼면</b> 던집니다. 두 개의 합만큼 이동합니다. 모서리 방에 있다면 대신 <b>비밀 통로</b>를 쓸 수 있습니다.</div></div>
-  <div class="step"><i>2</i><div><b>이동합니다</b>복도를 상하좌우로 움직이고, 방에 들어가면 그 턴의 이동은 끝납니다. 다른 말이 선 복도 칸은 지나갈 수 없고, 눈이 남아도 중간에 멈출 수 있습니다. 보너스칸에 멈추면 능력을 쓸 기회가 생깁니다. 움직이는 방법은 04장을 보세요.</div></div>
+  <div class="step"><i>2</i><div><b>이동합니다</b>복도를 상하좌우로 움직이고, 방에 들어가면 그 턴의 이동은 끝납니다. 다른 말이 선 복도 칸은 지나갈 수 없고, 눈이 남아도 중간에 멈출 수 있습니다. 보너스칸에 멈추면 능력 카드를 1장 뽑습니다. 움직이는 방법은 04장을 보세요.</div></div>
   <div class="step"><i>3</i><div><b>방에 들어갔다면 추리합니다</b>인물 하나와 도구 하나를 지목합니다. 장소는 지금 있는 방입니다. 지목된 인물 말과 도구 말이 이 방으로 끌려옵니다.</div></div>
   <p class="tip"><b>연속 추리</b> 같은 방에 눌러앉아 매 턴 추리할 수는 없습니다. 다른 방에 들렀다 오거나, 남의 추리로 이 방에 끌려왔다면 바로 추리할 수 있습니다.</p>
   <div class="folio">5</div>
@@ -264,18 +265,19 @@ body.flat .lined{min-height:55vh}
 <section class="page" id="p-roles">
   <div class="rh"><span>후더닛 설명서</span><span>07 특수 능력</span></div>
   <h2><small>07</small>특수 능력</h2>
-  <p>판마다 <b>비밀 능력</b>이 하나씩 주어집니다. 보너스칸 ( ! )에 <b>정확히 멈춘 그 턴에만</b> 쓸 수 있고, 쓰는 순간(준비형은 발동하는 순간) 모두에게 공개됩니다.</p>
+  <p>보너스칸 ( ! )에 <b>정확히 멈추면</b> 능력 카드 8종 중 1장을 <b>무작위로</b> 뽑습니다. 무슨 카드인지는 나만 알고, 남들은 내가 몇 장 들고 있는지만 봅니다. 최대 <b>3장</b>까지 들고 있을 수 있고(3장이면 더 뽑지 못함), <b>내 차례에 1장씩</b> 냅니다. 낸 카드는 사라지고, 낸 사실은 모두에게 공개됩니다(결과는 나만).</p>
   <table>
-    <tr><th>능력</th><th>횟수</th><th>하는 일</th></tr>
-    <tr><td><b>지정 심문</b><br><span class="pill">정보</span></td><td>3</td><td>한 명과 종류를 고르면 그 사람의 그 종류 카드 1장을 무작위로 봄</td></tr>
-    <tr><td><b>도청 장치</b><br><span class="pill">정보·준비</span></td><td>2</td><td>이후 남들끼리 주고받는 반박 카드를 두 번 몰래 봄</td></tr>
-    <tr><td><b>기록 열람</b><br><span class="pill">정보</span></td><td>3</td><td>남들끼리 했던 지난 반박 하나의 카드를 확인</td></tr>
-    <tr><td><b>추격</b><br><span class="pill">행동</span></td><td>3</td><td>주사위를 다시 굴려 이어서 이동</td></tr>
-    <tr><td><b>원격 수색</b><br><span class="pill">행동</span></td><td>1</td><td>방 하나의 장소 카드와 그 방 도구 1개를 누가 가졌는지 확인</td></tr>
-    <tr><td><b>지름길</b><br><span class="pill">행동</span></td><td>3</td><td>사건 파일실을 뺀 아무 방으로 바로 이동해 추리</td></tr>
-    <tr><td><b>묵비권</b><br><span class="pill">방어·준비</span></td><td>2</td><td>다음 내 반박 차례에 카드를 보여 주지 않고 넘김(쓴 사실은 공개)</td></tr>
-    <tr><td><b>보험</b><br><span class="pill">방어·준비</span></td><td>1</td><td>다음 최종 고발이 틀려도 탈락하지 않고 한 턴 쉼</td></tr>
+    <tr><th>카드</th><th>언제</th><th>하는 일</th></tr>
+    <tr><td><b>지정 심문</b><br><span class="pill">정보</span></td><td>내 차례</td><td>한 명과 종류를 고르면 그 사람의 그 종류 카드 1장을 무작위로 봄</td></tr>
+    <tr><td><b>도청 장치</b><br><span class="pill">정보</span></td><td>내 차례</td><td>설치하면 이후 남들끼리 주고받는 반박 카드를 한 번 몰래 봄</td></tr>
+    <tr><td><b>기록 열람</b><br><span class="pill">정보</span></td><td>내 차례</td><td>남들끼리 했던 지난 반박 하나의 카드를 확인</td></tr>
+    <tr><td><b>원격 수색</b><br><span class="pill">정보</span></td><td>내 차례</td><td>방 하나의 장소 카드를 누가 가졌는지 확인(아무도 없으면 그 방이 정답)</td></tr>
+    <tr><td><b>추격</b><br><span class="pill">행동</span></td><td>복도에 멈춘 뒤</td><td>주사위를 다시 굴려 이어서 이동</td></tr>
+    <tr><td><b>지름길</b><br><span class="pill">행동</span></td><td>굴리기 전 · 복도에 멈춘 뒤</td><td>아무 방으로 바로 이동해 추리(사건 파일실로 가면 고발 가능)</td></tr>
+    <tr><td><b>묵비권</b><br><span class="pill">방어</span></td><td>내가 반박할 때</td><td>카드를 보여 주지 않고 다음 사람에게 넘김(쓴 사실은 공개)</td></tr>
+    <tr><td><b>보험</b><br><span class="pill">방어</span></td><td>자동</td><td>들고 있는 동안 최종 고발이 틀리면 이 카드가 대신 사라지고, 탈락하지 않고 한 턴 쉼</td></tr>
   </table>
+  <p class="tip"><b>팁</b> '내 차례' 카드는 주사위를 굴리기 전이나 이동을 마친 뒤에 낼 수 있습니다. 복도에 멈췄는데 낼 수 있는 카드가 있으면 턴이 바로 끝나지 않으니, 쓰지 않을 거면 ⏭ 턴 종료를 누르세요.</p>
   <div class="folio">10</div>
 </section>
 
@@ -326,11 +328,45 @@ body.flat .lined{min-height:55vh}
   <div class="folio">13</div>
 </section>
 
+<section class="page" id="p-orig">
+  <div class="rh"><span>후더닛 설명서</span><span>11 후던잇 오리지널</span></div>
+  <h2><small>11</small>후던잇 오리지널 <span class="pill">1/2</span></h2>
+  <p>방 설정의 게임 모드에서 <b>후던잇 오리지널 (시험 중)</b>을 고르면, 당신은 용의자가 아니라 수사본부에 소집된 <b>탐정</b>이 됩니다. 용의자 8명과 도구 8개는 인원과 상관없이 모두 판 위에 NPC 말로 나옵니다.</p>
+  <h3>담당 용의자</h3>
+  <p>탐정마다 용의자 한 명이 <b>담당</b>으로 배정되고, 시작 연출의 본부 게시판에서 모두에게 공개됩니다. 담당은 조사를 맡긴다는 뜻일 뿐 <b>결백의 보증이 아닙니다</b>. 담당이 범인일 수도 있고, 자기 담당을 고발해도 됩니다.</p>
+  <h3>본부장의 세 조건</h3>
+  <table>
+    <tr><th>조건</th><th>규칙</th></tr>
+    <tr><td><b>입회</b></td><td>가설에 지목된 용의자의 담당 탐정은 그 방으로 와서 검증에 입회합니다. 실제로 옮겨 왔다면 다음 차례에 바로 그 방에서 가설을 세울 수 있습니다.</td></tr>
+    <tr><td><b>반증</b></td><td>가설과 어긋나는 사실을 쥔 탐정은 시계 방향 순서대로 그 사실 하나를 가설을 세운 탐정에게만 보여 줍니다.</td></tr>
+    <tr><td><b>보고</b></td><td>결론 보고는 수사본부(사건 파일실)에서 단 한 번. 틀리면 수사에서 빠지지만 반증은 끝까지 합니다.</td></tr>
+  </table>
+  <div class="folio">14</div>
+</section>
+
+<section class="page" id="p-orig2">
+  <div class="rh"><span>후더닛 설명서</span><span>11 후던잇 오리지널</span></div>
+  <h2><small>11</small>후던잇 오리지널 <span class="pill">2/2</span></h2>
+  <h3>카드 = 직접 확인한 사실</h3>
+  <p>내 카드에는 도장이 찍혀 있습니다. 인물은 <b>알리바이 확인</b>, 도구는 <b>실물 확인</b>, 장소는 <b>현장 확인</b>. 모두에게 공개된 카드는 본부 회의에서 공유된 사실이라 <b>본부 공유</b> 도장이 찍힙니다. 아무도 확인하지 못한 세 장이 봉투 속 진상입니다.</p>
+  <h3>달라지는 말</h3>
+  <table>
+    <tr><th>클래식</th><th>오리지널</th></tr>
+    <tr><td>추리</td><td>가설 · 현장 검증</td></tr>
+    <tr><td>반박</td><td>반증</td></tr>
+    <tr><td>최종 고발</td><td>결론 보고</td></tr>
+    <tr><td>탈락</td><td>수사에서 빠짐 (반증은 계속)</td></tr>
+  </table>
+  <p>비밀 통로는 판마다 서로 먼 방 <b>두 쌍</b>이 이어지고, 판 위에 A·B로 짝이 표시됩니다. 결말에는 범인의 담당이 누구였는지 한 줄이 덧붙습니다.</p>
+  <p class="tip"><b>팁</b> 다른 탐정의 담당을 가설에 넣으면 그 탐정을 내 방으로 불러들이는 셈입니다. 그 탐정은 다음 차례에 바로 가설을 세울 수 있으니 타이밍을 보세요.</p>
+  <div class="folio">15</div>
+</section>
+
 <section class="page" id="p-memo">
   <div class="rh"><span>후더닛 설명서</span><span>수사 메모</span></div>
   <h2><small>NOTES</small>수사 메모</h2>
   <div class="lined"><p>범인은 반드시 흔적을 남긴다.<br>반박 못 한 사람부터 지워 나갈 것.<br>— 어느 탐정의 메모</p></div>
-  <div class="folio">14</div>
+  <div class="folio">16</div>
 </section>
 
 <section class="page backc" id="backc">

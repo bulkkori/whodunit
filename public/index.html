@@ -37,11 +37,11 @@
     <button id="create" class="sk">방 만들기</button>
     <button id="practice" class="ghost sk">봇 2명과 바로 연습 →</button>
     <a class="guide" href="guide.html">처음이세요? 설명서 보기</a>
-    <a class="guide feedback" href="#" target="_blank" rel="noopener" hidden>피드백 남기기</a>
     <div class="or">또는 참여 코드로 입장</div>
     <div class="row"><input id="code" placeholder="참여 코드" maxlength="5" autocapitalize="characters" autocomplete="off" aria-describedby="code_err"><button id="join" class="loadbtn sk"><span>입장</span></button></div>
     <small id="code_err" class="ferr" role="alert" hidden></small>
-    <p class="privacy">서명(닉네임)은 같은 방 사람에게만 보여요. 실명·연락처는 쓰지 마세요. 게임 서버는 회원 정보·IP·대화를 저장하지 않고, 방은 모두 나가면 사라집니다. (호스팅 업체의 접속 기록은 별도)</p>
+    <p class="privacy">회원 가입 없이 닉네임만 써요. 닉네임은 같은 방 사람에게만 보이니 실명·연락처는 쓰지 마세요.</p>
+    <nav class="lfoot"><a href="privacy.html"><b>개인정보처리방침</b></a><a href="terms.html">이용약관</a><a class="feedback" href="#" target="_blank" rel="noopener" hidden>피드백</a></nav>
   </section>
 
   <!-- 초대 링크로 들어올 때 서버 응답 전까지 보여 주는 대기실 모양 스켈레톤 -->
@@ -78,6 +78,7 @@
         </div>
         <label class="switch"><span>🎭 블러핑 허용<small>내 손의 카드를 일부러 지목할 수 있어요</small></span><input type="checkbox" id="c_bluff" checked><i></i></label>
         <label class="field">봇 템포 <select id="c_tempo" aria-label="봇 템포"><option value="fast">빠르게</option><option value="normal" selected>보통</option><option value="slow">천천히</option></select><small class="hint">천천히: 봇 차례 사이에 추리 노트를 적을 시간을 넉넉히 둬요</small></label>
+        <label class="field">게임 모드 <select id="c_mode" aria-label="게임 모드"><option value="classic" selected>클래식</option><option value="original">후던잇 오리지널 (시험 중)</option></select></label>
         <div class="row cta"><button id="c_cancel" class="ghost">취소</button><button id="c_make" class="loadbtn"><span>방 만들기</span></button></div>
       </div>
     </div>
@@ -111,6 +112,7 @@
             </div>
             <label class="switch"><span>🎭 블러핑 허용</span><input type="checkbox" id="optbluff"><i></i></label>
             <label class="field">봇 템포 <select id="opttempo" aria-label="봇 템포"><option value="fast">빠르게</option><option value="normal" selected>보통</option><option value="slow">천천히</option></select></label>
+            <label class="field">게임 모드 <select id="optmode" aria-label="게임 모드"><option value="classic" selected>클래식</option><option value="original">후던잇 오리지널 (시험 중)</option></select></label>
           </div>
         </div>
       </div>
@@ -125,8 +127,8 @@
   <dialog id="seatmenu"><p id="seatmenu_name"></p><button type="button" data-a="host">👑 방장 넘기기</button><button type="button" data-a="kick" class="danger">🚪 내보내기</button><button type="button" data-a="" class="ghost">취소</button></dialog>
 
   <section id="pickstage" class="screen card" hidden>
-    <div class="pkhead"><h2>인물 고르기</h2><div class="pickbar"><div id="pbar"><i></i></div><b id="ptime">2:00</b></div></div>
-    <p class="sub">이번 판에 맡을 인물을 고르세요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.</p>
+    <div class="pkhead"><h2 id="picktitle">인물 고르기</h2><div class="pickbar"><div id="pbar"><i></i></div><b id="ptime">2:00</b></div></div>
+    <p class="sub" id="pickdesc">이번 판에 맡을 인물을 고르세요. 시간이 지나면 안 고른 사람은 무작위로 정해져요.</p>
     <div id="picks"></div>
     <ul id="pickseats"></ul>
   </section>
@@ -143,6 +145,7 @@
       <div id="status"></div>
       <div id="cursug" hidden></div>
       <div id="last"></div>
+      <div id="assignbox" hidden></div>
       <div id="actions">
         <button data-a="roll" title="꾹 눌렀다 떼면 던집니다 (키보드 R)">🎲 꾹 눌러 던지기</button>
         <button data-a="passage">🕳️ 비밀 통로</button>

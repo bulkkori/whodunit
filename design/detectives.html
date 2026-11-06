@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>탐정 설정 기획서</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d1b18;--sub:#6b665d;--line:#e3ded3;--accent:#8a2b2b;--chip:#f1e7e2;--info:#2f5d8a;--ref:#7a4f8a;--move:#4f7a4a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--card:#1e1b17;--ink:#ece7dd;--sub:#a59e90;--line:#34302a;--accent:#e08a7a;--chip:#2c2420;--info:#8ab4e0;--ref:#c9a3d9;--move:#9fcf98}}
+:root[data-theme="dark"]{--bg:#15130f;--card:#1e1b17;--ink:#ece7dd;--sub:#a59e90;--line:#34302a;--accent:#e08a7a;--chip:#2c2420;--info:#8ab4e0;--ref:#c9a3d9;--move:#9fcf98}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 system-ui,"Pretendard","Malgun Gothic",sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+.lead{color:var(--sub);margin:0 0 24px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+nav a{background:var(--chip);color:var(--ink);text-decoration:none;padding:4px 10px;border-radius:999px;font-size:13px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px}
+h2{font-size:19px;margin:0 0 12px;color:var(--accent)}
+h3{font-size:15px;margin:18px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:600;white-space:nowrap}
+.scroll{overflow-x:auto}
+ul,ol{padding-left:20px;margin:6px 0}
+.check li{list-style:none;margin-left:-20px}
+.check li::before{content:"☐ ";color:var(--accent)}
+.note{background:var(--chip);border-radius:8px;padding:10px 12px;font-size:14px}
+code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:13px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:0 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.info{color:var(--info)}.ref{color:var(--ref)}.move{color:var(--move)}
+td b{white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+<h1>🕵️ 탐정 설정 기획서</h1>
+<p class="lead">후더닛 v2 세계관 변경안 · 2026-11-03 · 상태: 기획 단계 — 정할 것 4가지 결정됨(2026-11-04) · 기존 기획서 <code>design/plan.html</code>에 더하는 부분만</p>
+
+<nav><a href="#idea">한 줄 요약</a><a href="#why">좋은 점</a><a href="#change">바뀌는 것</a><a href="#story">스토리</a><a href="#cast">탐정 초안</a><a href="#ask">정할 것</a><a href="#todo">작업 목록</a></nav>
+
+<section id="idea">
+<h2>한 줄 요약</h2>
+<p>플레이어가 고르는 말을 <b>그 세계(맵)의 주민 = 용의자</b>가 아니라, <b>사건이 일어난 곳에 해결하러 모인 탐정들</b>로 바꾼다. 용의자는 모두 NPC가 되고, 탐정은 테마(고딕 저택·해저 신전·우주 정거장)를 옮겨 다니며 사건을 맡는 고정 출연진이 된다.</p>
+<p class="note"><b>기존 캐릭터(정원사 오스윈·상속녀 아이린 등 8명)와 그림은 그대로 그 세계의 등장인물 = 용의자로 남는다.</b> 카드·결말 장면·첫 화면 라인업에 지금처럼 쓰이고, 플레이어가 고르는 말만 새 탐정으로 바뀐다.</p>
+</section>
+
+<section id="why">
+<h2>좋은 점</h2>
+<ul>
+<li><b>클루와 가장 크게 달라짐:</b> 클루의 핵심 설정은 "플레이어 = 용의자". 이야기 틀 자체가 달라져 독자 작품이라는 근거가 강해진다(법적 차별화).</li>
+<li><b>특수 능력과 맞물림:</b> 지금 능력 8종(지정 심문·도청 장치·기록 열람·추격·원격 수색·지름길·묵비권·보험)은 원래 수사 기술. 정원사·상속녀에게 붙어 어색하던 것이 탐정의 전문 분야가 된다.</li>
+<li><b>헷갈리는 규칙 제거:</b> "고른 인물이 범인일 수도 있지만 말과 정답은 상관없다"는 설명이 필요 없어진다.</li>
+<li><b>시리즈 정체성:</b> 같은 탐정들이 테마를 옮겨 다님. 테마가 바뀌면 용의자만 바뀜 → 캐릭터 애착, 방송에서 '최애 탐정'.</li>
+<li><b>결말 연출:</b> 범인은 그 세계 주민, 해결한 탐정이 결말 장면에 함께 등장.</li>
+</ul>
+</section>
+
+<section id="change">
+<h2>바뀌는 것</h2>
+<div class="scroll"><table>
+<tr><th>항목</th><th>지금</th><th>바뀌면</th></tr>
+<tr><td>플레이어 말</td><td>용의자 중 하나</td><td>탐정(새 캐릭터)</td></tr>
+<tr><td>용의자</td><td>플레이어가 맡은 용의자 + 아무도 안 맡은 NPC 말</td><td>전부 NPC 말(기존 <code>g.npc</code> 구조 활용)</td></tr>
+<tr><td>용의자 수</td><td>인원에 따라 max(6, 인원)</td><td>인원과 분리해 고정 가능(예: 6~8)</td></tr>
+<tr><td>추리로 지목될 때</td><td>그 용의자를 맡은 플레이어가 방으로 끌려옴(+다음 차례 바로 추리)</td><td>용의자 NPC 말만 옴. 플레이어 끌려옴 규칙은 사라짐(클루 고유 규칙이 하나 더 빠짐)</td></tr>
+<tr><td>특수 능력</td><td>무작위 배정</td><td>탐정마다 고정(안 ①) 또는 지금처럼 무작위(안 ②)</td></tr>
+<tr><td>그림</td><td>용의자 8명</td><td>용의자 그림은 그대로 + <b>탐정 8명 새로 제작</b>(전신 투명 배경, 기존 화풍)</td></tr>
+<tr><td>화면</td><td>인물 고르기, 말 색·글자 = 용의자</td><td>탐정 고르기(능력 함께 표시), 말 = 탐정, 용의자 카드·NPC 말은 별도</td></tr>
+<tr><td>연출</td><td>시작: 임명장(능력), 결말: 범인 장면</td><td>시작: 탐정 소개 + 임명장, 결말: 범인 장면 + 해결한 탐정</td></tr>
+<tr><td>설명서·첫 화면</td><td>용의자 얼굴 줄·라인업</td><td>라인업은 용의자(그대로), 탐정 소개 추가</td></tr>
+</table></div>
+</section>
+
+<section id="story">
+<h2>스토리 틀: 첫날 밤의 탐문</h2>
+<p class="note">규칙은 하나도 바꾸지 않고, 카드·반박·고발을 이야기 속 행동으로 설명한다. (검토한 안: '도착 전에 알리바이를 확인해 옴' → 억지스러움, '경찰이 탐정마다 다른 수사 기록을 나눠 줌' → 이유가 없음 → 둘 다 버리고 이 안으로)</p>
+<h3>배경</h3>
+<ul>
+<li>사건이 터지고 경찰 수사가 막히자, 의뢰인이 이름난 탐정들을 불러 모으고 <b>가장 먼저 진상을 밝힌 탐정에게 현상금</b>을 건다.</li>
+<li>판마다 붙는 사건 제목('사라진 유언장' 등)에 짧은 사건 개요를 붙인다(예: "유언장이 공개되기 전날 밤, 저택의 주인이 서재에서 쓰러진 채 발견됐다"). 사건 종류(살인·도난·실종 등)는 제목에 따라 달라도 됨 — 결말 문장이 "일을 저지른 것은"이라 어떤 사건이든 맞음.</li>
+<li>탐정들은 같은 날 도착해 <b>사건 파일실을 수사 본부</b>로 삼는다(모두 중앙에서 출발하는 규칙과 일치).</li>
+</ul>
+<h3>게임 요소 ↔ 이야기</h3>
+<div class="scroll"><table>
+<tr><th>게임 요소</th><th>이야기</th></tr>
+<tr><td>카드 나눠 주기</td><td><b>첫날 밤의 탐문:</b> 정식 수사 전, 경쟁자보다 앞서려고 각자 흩어져 탐문. 누구는 가정부를, 누구는 창고를, 누구는 정원사를 → 알아낸 사실이 사람마다 다름. 장수가 같은 건 모두 같은 시간 동안 움직였기 때문</td></tr>
+<tr><td>내 인물 카드</td><td>증언으로 확인한 알리바이 ("가정부: 아이린 아가씨는 그 시각 예배당에 계셨어요")</td></tr>
+<tr><td>내 도구 카드</td><td>직접 살펴본 물건 ("석궁에는 먼지가 그대로 쌓여 있었다")</td></tr>
+<tr><td>내 장소 카드</td><td>직접 둘러본 장소 ("시계탑은 밤새 잠겨 있었다")</td></tr>
+<tr><td>공개 카드</td><td>모두가 함께 본 사실 ("그 시각 집사는 우리 모두와 함께 응접실에 있었다")</td></tr>
+<tr><td>봉투</td><td>그 누구의 탐문에도 걸리지 않은 것 = 진상(범인·도구·장소)</td></tr>
+<tr><td>정보를 다 나누지 않음</td><td>현상금이 걸린 경쟁이라 알아낸 사실은 각자 쥐고 있음</td></tr>
+<tr><td>추리</td><td>현장에서 가설을 세우고 용의자·물건을 그 방으로 불러 <b>대질·재현</b> → NPC 용의자 말·도구 말이 방으로 옴</td></tr>
+<tr><td>반박(강제)</td><td><b>탐정의 원칙: "무고한 사람을 범인으로 몰게 둘 수는 없다."</b> 가설이 틀린 걸 알면 반증하는 사실을 <b>하나만, 그 탐정에게만</b> 조용히 알려 줌 — 무고한 사람은 지키되 경쟁의 앞선 자리는 내주지 않음</td></tr>
+<tr><td>블러핑</td><td>자기가 아는 사실을 일부러 가설에 넣어 경쟁자를 떠보기</td></tr>
+<tr><td>특수 능력</td><td>탐정의 전문 분야</td></tr>
+<tr><td>최종 고발</td><td>사건 파일실에서 의뢰인 앞 결론 발표. 틀리면 명성을 잃고 수사에서 빠지지만, 원칙에 따라 반증(반박)은 끝까지 함</td></tr>
+<tr><td>결말</td><td>사건 종결 보고서: 범인 장면 + 해결한 탐정이 현상금을 받는 한 줄</td></tr>
+</table></div>
+<h3>화면 문구 예시</h3>
+<ul>
+<li>시작 연출: 사건 개요 → "탐정들이 흩어져 첫날 밤 탐문을 합니다"(분배) → "모두가 함께 본 사실"(공개 카드) → "탐정 임명"(능력)</li>
+<li>카드 위 띠: 인물 → <b>알리바이</b>, 도구 → <b>감식</b>, 장소 → <b>수색</b> (또는 작은 도장)</li>
+<li>반박 창: "이 가설과 어긋나는 사실을 하나 알려 주세요 (무고한 사람을 지키기 위해)"</li>
+</ul>
+</section>
+
+<section id="cast">
+<h2>탐정 8명 초안 (전문 분야 참고용 — 능력은 무작위로 결정됨, 이름은 가안)</h2>
+<div class="scroll"><table>
+<tr><th>탐정(가안)</th><th>전문 분야</th><th>어울리는 능력(참고)</th></tr>
+<tr><td>수사반장</td><td>심문</td><td>지정 심문</td></tr>
+<tr><td>정보원</td><td>감청·잠입</td><td>도청 장치</td></tr>
+<tr><td>기록 분석관</td><td>문서·기록</td><td>기록 열람</td></tr>
+<tr><td>강력계 형사</td><td>현장 추적</td><td>추격</td></tr>
+<tr><td>감식 요원</td><td>현장 감식</td><td>원격 수색</td></tr>
+<tr><td>사설 탐정(그 지역 토박이)</td><td>지리·인맥</td><td>지름길</td></tr>
+<tr><td>변호사 탐정</td><td>법률</td><td>묵비권</td></tr>
+<tr><td>보험 조사원</td><td>손해 조사</td><td>보험</td></tr>
+</table></div>
+<p class="note">이름·외형·성격은 미정. 테마를 옮겨 다녀도 어색하지 않은 차림(시대·장소 중립)이 필요.</p>
+</section>
+
+<section id="ask">
+<h2>결정 사항 (2026-11-04)</h2>
+<table>
+<tr><th>항목</th><th>결정</th><th>메모</th></tr>
+<tr><td>탐정과 특수 능력</td><td><b>묶지 않음 — 지금처럼 판마다 무작위</b></td><td>탐정은 외형·이름·성격으로 구분. 아래 '탐정 초안'의 능력 짝은 참고(전문 분야 설정)로만 둠</td></tr>
+<tr><td>탐정 수</td><td><b>8명</b></td><td>최대 인원 8과 같음. 그림 8장 새로 필요</td></tr>
+<tr><td>용의자 수</td><td><b>8명 고정</b> (인원과 분리)</td><td>용의자와 탐정은 별개 인물 → 기존 용의자 그림 8명을 매 판 모두 사용. 도구 수도 8로 맞출지는 구현 때 확인(지금은 용의자 수와 같게 늘어남)</td></tr>
+<tr><td>지목된 용의자·도구 말이 방으로 옴</td><td><b>유지</b></td><td>'대질·재현' 연출. 플레이어가 끌려오는 규칙만 사라짐</td></tr>
+</table>
+</section>
+
+<section id="todo">
+<h2>작업 목록 (승인 후)</h2>
+<ul>
+<li>규칙: 플레이어 말과 용의자 분리, 끌려옴 규칙 정리, 능력 배정 방식, 테스트 갱신</li>
+<li>그림: 탐정 8명 전신(투명 배경) + 얼굴 아이콘</li>
+<li>문구: 사건 제목별 사건 개요, 시작 연출 단계 문구, 카드 띠(알리바이·감식·수색), 반박 창, 결말 현상금 한 줄, 설명서</li>
+<li>화면: 탐정 고르기, 판 위 말, 시작·결말 연출, 첫 화면·설명서</li>
+<li>봇: 탐정 고르기·능력 사용(지금 로직 대부분 재사용)</li>
+</ul>
+</section>
+</main>
+</body>
+</html>

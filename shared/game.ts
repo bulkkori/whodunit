@@ -14,41 +14,66 @@ export interface Door { room: number; cell: number }
 export interface GameMap {
   n: number; cells: number[]; rects: Rect[]; center: Rect; doors: Door[];
   passages: Record<number, number>; roomCount: number;
-  /** 이 판의 인물·도구 카드 수 = max(6, 인원) */
+  /** 이 판의 도구 카드 수(클래식 = max(6, 인원), 오리지널 = 8). 인물 카드는 cast */
   people: number;
-  /** 보너스칸(!) — 이동을 이 칸에서 멈추면 특수 능력을 쓸 수 있다 */
+  /** 이 판에 인물 카드로 들어간 용의자 번호(0~7). 클래식 = 8명 중 무작위 max(6, 인원)명(플레이어가 맡은 인물은 반드시 포함), 오리지널 = 8명 전원 */
+  cast?: number[];
+  /** 이 판에 도구 카드로 들어간 도구 번호(0~7). 클래식 = 8개 중 무작위 people개, 오리지널 = 8개 전원 */
+  tools?: number[];
+  /** 보너스칸(!) — 이동을 이 칸에서 멈추면 능력 카드 1장을 뽑는다 */
   bonus: Pos[];
 }
 export interface Triple { s: Card; w: Card; r: Card }
 
-// ---------- 탐정 직업 (보너스칸 전용 능력) ----------
+// ---------- 능력 카드 (보너스칸에서 뽑아 들고 있다가 쓴다) ----------
 export type RoleId = 'chief' | 'tap' | 'analyst' | 'field' | 'scout' | 'guide' | 'lawyer' | 'insure';
+/** 언제 쓰는가: turn = 내 차례(굴리기 전, 또는 이동한 뒤), hall = 굴리기 전이나 복도에 멈춘 뒤, refute = 내가 반박할 차례, auto = 들고 있으면 저절로 */
+export type RoleWhen = 'turn' | 'hall' | 'refute' | 'auto';
 export interface RoleDef {
-  name: string; icon: string; group: '정보' | '행동' | '방어'; desc: string;
-  /** 한 판 동안 보너스칸에서 쓸 수 있는 횟수 — 봇 시뮬레이션(직업당 2,000판)으로 조정: 직업 없는 봇 대비 승률 +2~7%p */
-  uses: number;
-  /** instant = 그 자리에서 효과, charge = 충전해 두고 조건이 오면 발동 */
-  kind: 'instant' | 'charge';
+  name: string; icon: string; group: '정보' | '행동' | '방어'; desc: string; when: RoleWhen;
+  /** 뽑힐 비중(합 18) — 봇 시뮬레이션으로 조정: 한 장을 쥐여 준 자리의 승리 몫이 공정 몫 대비 +2~5%p(4인 3,000판). 센 카드(도청·수색·열람)는 덜 나오게 */
+  weight: number;
 }
+/** 한 사람이 들고 있을 수 있는 능력 카드 수 */
+export const MAX_ITEMS = 3;
+/** 도청 장치 한 장으로 엿보는 반박 수 */
+export const TAP_PEEKS = 1;
 export const ROLES: Record<RoleId, RoleDef> = {
-  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', kind: 'instant', uses: 3, desc: '한 명과 종류(인물·도구·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 사실만 알게 됩니다)' },
-  tap:     { name: '도청 장치', icon: '🎧', group: '정보', kind: 'charge', uses: 2, desc: '설치해 두면 이후 남들끼리 주고받는 반박 카드를 두 번 몰래 봅니다' },
-  analyst: { name: '기록 열람', icon: '🗂️', group: '정보', kind: 'instant', uses: 3, desc: '남들끼리 했던 지난 반박 하나를 골라 그때 보여 준 카드를 확인합니다' },
-  field:   { name: '추격', icon: '🚓', group: '행동', kind: 'instant', uses: 3, desc: '주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
-  scout:   { name: '원격 수색', icon: '🔦', group: '행동', kind: 'instant', uses: 1, desc: '방 하나를 골라 그 장소 카드와, 그 방에 놓인 도구 1개의 카드를 누가 가졌는지 확인합니다' },
-  guide:   { name: '지름길', icon: '🗝️', group: '행동', kind: 'instant', uses: 3, desc: '사건 파일실을 뺀 아무 방으로 바로 이동해 추리할 수 있습니다' },
-  lawyer:  { name: '묵비권', icon: '⚖️', group: '방어', kind: 'charge', uses: 2, desc: '준비해 두면 다음에 내가 반박할 차례에 카드를 보여 주지 않고 넘길 수 있습니다 (사용 사실은 공개)' },
-  insure:  { name: '보험', icon: '🛡️', group: '방어', kind: 'charge', uses: 1, desc: '가입해 두면 다음 최종 고발이 틀려도 탈락하지 않고 한 턴 쉽니다' },
+  chief:   { name: '지정 심문', icon: '🕵️', group: '정보', when: 'turn', weight: 3, desc: '한 명과 종류(인물·도구·장소)를 고르면 그 사람이 가진 그 종류 카드 중 1장을 무작위로 봅니다 (없으면 없다는 사실만 알게 됩니다)' },
+  tap:     { name: '도청 장치', icon: '🎧', group: '정보', when: 'turn', weight: 2, desc: '설치하면 이후 남들끼리 주고받는 반박 카드를 한 번 몰래 봅니다' },
+  analyst: { name: '기록 열람', icon: '🗂️', group: '정보', when: 'turn', weight: 2, desc: '남들끼리 했던 지난 반박 하나를 골라 그때 보여 준 카드를 확인합니다' },
+  field:   { name: '추격', icon: '🚓', group: '행동', when: 'hall', weight: 3, desc: '복도에 멈춘 뒤 주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 추리 가능)' },
+  scout:   { name: '원격 수색', icon: '🔦', group: '정보', when: 'turn', weight: 2, desc: '방 하나를 골라 그 장소 카드를 누가 가졌는지 확인합니다 (아무도 없으면 그 방이 범행 장소)' },
+  guide:   { name: '지름길', icon: '🗝️', group: '행동', when: 'hall', weight: 3, desc: '굴리기 전이나 복도에 멈춘 뒤, 아무 방으로 바로 이동해 추리할 수 있습니다 (사건 파일실로 가면 최종 고발 가능)' },
+  lawyer:  { name: '묵비권', icon: '⚖️', group: '방어', when: 'refute', weight: 2, desc: '내가 반박할 차례에 이 카드를 내면 카드를 보여 주지 않고 다음 사람에게 넘깁니다 (사용 사실은 공개)' },
+  insure:  { name: '보험', icon: '🛡️', group: '방어', when: 'auto', weight: 1, desc: '들고 있는 동안 최종 고발이 틀리면 이 카드가 대신 사라지고, 탈락하지 않고 한 턴 쉽니다' },
 };
-const GROUPS: RoleId[][] = [['chief', 'tap', 'analyst'], ['field', 'scout', 'guide'], ['lawyer', 'insure']];
+/** 후던잇 오리지널의 능력 설명: 효과는 같고 말만 맞춤(추리 → 가설, 반박 → 반증, 최종 고발 → 결론 보고, 탈락 → 수사에서 빠짐) */
+const ORIGINAL_ROLE_DESC: Partial<Record<RoleId, string>> = {
+  tap: '설치하면 이후 남들끼리 주고받는 반증 카드를 한 번 몰래 봅니다',
+  analyst: '남들끼리 했던 지난 반증 하나를 골라 그때 보여 준 카드를 확인합니다',
+  field: '복도에 멈춘 뒤 주사위를 다시 굴려 이어서 이동합니다 (방에 닿으면 가설 가능)',
+  guide: '굴리기 전이나 복도에 멈춘 뒤, 아무 방으로 바로 이동해 가설을 세울 수 있습니다 (수사본부로 가면 결론 보고 가능)',
+  lawyer: '내가 반증할 차례에 이 카드를 내면 사실을 보여 주지 않고 다음 사람에게 넘깁니다 (사용 사실은 공개)',
+  insure: '들고 있는 동안 결론 보고가 틀리면 이 카드가 대신 사라지고, 수사에서 빠지지 않고 한 턴 쉽니다',
+};
+export const roleDesc = (role: RoleId, opts: { mode?: Mode } | undefined) => (isOriginal(opts) && ORIGINAL_ROLE_DESC[role]) || ROLES[role].desc;
+export const ROLE_IDS = Object.keys(ROLES) as RoleId[];
+export const isRole = (x: unknown): x is RoleId => typeof x === 'string' && Object.hasOwn(ROLES, x);
+/** 능력 카드 1장 뽑기(비중대로 무작위, 덱은 무한 — 같은 카드가 여러 번 나올 수 있음) */
+export function drawRole(r: Rng): RoleId {
+  let x = r() * ROLE_IDS.reduce((a, k) => a + ROLES[k].weight, 0);
+  for (const k of ROLE_IDS) { x -= ROLES[k].weight; if (x < 0) return k; }
+  return ROLE_IDS[ROLE_IDS.length - 1];
+}
 
 export interface Player {
   name: string; bot: boolean; afk: boolean; suspect: number; pos: Pos | null; fresh: boolean;
   hand: Card[]; known: Card[]; shown: Card[]; out: boolean; canSuggest: boolean; timeouts: number;
-  /** 직업(옵션). revealed = 능력이 발동해 정체가 공개됨, charged = 충전형 능력 대기 중 */
-  role: RoleId | null; uses: number; revealed: boolean; charged: number; skip: boolean;
-  /** 이번 턴에 보너스칸에서 멈췄는지 / 이미 능력을 썼는지 */
-  onBonus: boolean; usedBonus: boolean;
+  /** 들고 있는 능력 카드(최대 MAX_ITEMS장, 내용 비공개 — 장수만 공개). tap = 설치된 도청 남은 횟수, skip = 보험으로 한 턴 쉼 */
+  items: RoleId[]; tap: number; skip: boolean;
+  /** 이번 턴에 보너스칸에 멈췄는지 / 이번 턴에 능력 카드를 이미 냈는지(내 차례에 1장) */
+  onBonus: boolean; usedItem: boolean;
   /** 게임 중 나가서 탈락(반박 차례에서도 빠짐) */
   left?: boolean;
 }
@@ -68,18 +93,69 @@ export type LogEntry =
   | { t: 'timeout' | 'afk'; p: number }
   /** 게임 중 나감 → 탈락, 가진 카드는 모두에게 공개 */
   | { t: 'left'; p: number }
-  | { t: 'role'; p: number; role: RoleId }
-  /** 공개되는 능력 사용 기록(대상만, 결과는 비공개) */
+  /** 공개되는 능력 카드 사용 기록(대상만, 결과는 비공개) */
   | { t: 'ability'; p: number; role: RoleId; target?: number; room?: number }
-  /** 비공개 정보 — to 본인에게만 보임. from: 카드 주인(null = 없음), a→b: 엿본 반박 */
-  | { t: 'intel'; to: number; kind: 'interrogate' | 'tap' | 'archive' | 'search'; card?: Card; from?: number | null; a?: number; b?: number; cat?: Kind }
+  /** 비공개 정보 — to 본인에게만 보임. from: 카드 주인(null = 없음), a→b: 엿본 반박, draw: 보너스칸에서 뽑은 능력 카드(role) */
+  | { t: 'intel'; to: number; kind: 'interrogate' | 'tap' | 'archive' | 'search' | 'draw'; card?: Card; from?: number | null; a?: number; b?: number; cat?: Kind; role?: RoleId }
   | { t: 'silent'; p: number; to: number }
-  | { t: 'silentnone' | 'rest' | 'bonus'; p: number };
+  /** bonus = 보너스칸에서 능력 카드 1장(무엇인지는 비공개), bonusfull = 이미 MAX_ITEMS장이라 못 뽑음 */
+  | { t: 'silentnone' | 'rest' | 'bonus' | 'bonusfull'; p: number };
 /** tempo = 봇 템포: 사람이 추리 노트를 적을 시간을 두고 봇이 움직이는 속도 */
 export type Tempo = 'fast' | 'normal' | 'slow';
 export const TEMPOS: Record<Tempo, { name: string; mul: number }> = { fast: { name: '빠르게', mul: 0.45 }, normal: { name: '보통', mul: 1 }, slow: { name: '천천히', mul: 1.8 } };
 export const isTempo = (t: unknown): t is Tempo => typeof t === 'string' && Object.hasOwn(TEMPOS, t);
-export interface GameOpts { roles: boolean; bluff: boolean; tempo?: Tempo }
+/** 게임 모드: classic = 지금 규칙(플레이어가 용의자 말을 맡음), original = 후던잇 오리지널(플레이어는 탐정, 용의자 8명·도구 8개는 모두 NPC·고정) */
+export type Mode = 'classic' | 'original';
+export const MODES: Record<Mode, { name: string; desc: string }> = {
+  classic: { name: '클래식', desc: '용의자 중 하나를 맡아 움직여요' },
+  original: { name: '후던잇 오리지널', desc: '사건을 풀러 모인 탐정이 되어요 · 용의자 8명·도구 8개 (시험 중)' },
+};
+export const isMode = (m: unknown): m is Mode => typeof m === 'string' && Object.hasOwn(MODES, m);
+export const isOriginal = (o: { mode?: Mode } | undefined) => o?.mode === 'original';
+/** 후던잇 오리지널의 탐정 8명 — 테마(세계)마다 그 세계의 탐정들. 이름에 직업명은 붙이지 않고, 한국·외국 이름을 섞음. 이름·분야는 가안.
+ *  그림이 있는 테마(고딕 저택)만 정해 두고, 아직 없는 테마는 고딕 저택 탐정을 임시로 씀 */
+const MANSION_DETECTIVES: Detective[] = [
+  { name: '에드먼드 그레이', spec: '은퇴한 경감 · 심문' },
+  { name: '한서진', spec: '강력계 출신 · 현장 추적' },
+  { name: '미라 볼코바', spec: '탐사 기자 · 정보원' },
+  { name: '윤태오', spec: '법의학자 · 감식' },
+  { name: '셀린 마르샹', spec: '변호사 · 변론' },
+  { name: '오민혁', spec: '보험 조사원' },
+  { name: '아서 펨브룩', spec: '기록 보관인 · 문서 분석' },
+  { name: '차은호', spec: '사설 탐정 · 지리와 인맥' },
+];
+export interface Detective { name: string; spec: string }
+export const DETECTIVES: Record<ThemeKey, Detective[]> = { mansion: MANSION_DETECTIVES, atlantis: MANSION_DETECTIVES, station: MANSION_DETECTIVES };
+/** 후던잇 오리지널 시작 연출 ①의 사건 개요 — 테마마다 5개, 판 번호로 하나(모두에게 같은 문장). 방·도구·용의자 이름은 넣지 않음(봉투와 어긋나지 않게) */
+export const CASE_LINES: Record<ThemeKey, string[]> = {
+  mansion: [
+    '폭풍우가 몰아치던 밤, 언덕 위 저택의 주인이 숨진 채 발견됐다.',
+    '유언장 공개를 하루 앞둔 밤, 저택의 주인이 다시는 깨어나지 않았다.',
+    '괘종시계가 자정을 알린 직후, 저택에 비명이 울려 퍼졌다.',
+    '다리가 끊겨 아무도 떠날 수 없던 밤, 저택의 주인이 쓰러진 채 발견됐다.',
+    '촛불이 모두 꺼진 십 분 사이, 저택의 주인이 숨을 거뒀다.',
+  ],
+  atlantis: [
+    '조류가 멎은 밤, 신전의 수호자가 제단 아래에서 숨진 채 발견됐다.',
+    '진주 의식이 열리기 직전, 신전의 수호자가 깊은 물속에서 떠올랐다.',
+    '신전의 문이 봉인된 사이, 수호자의 숨이 끊겼다.',
+    '빛 해파리가 모두 꺼진 밤, 신전 깊은 곳에서 수호자가 쓰러졌다.',
+    '해류가 신전을 고립시킨 밤, 수호자가 다시는 눈을 뜨지 않았다.',
+  ],
+  station: [
+    '정기 보급선이 떠난 직후, 정거장 소장이 숨진 채 발견됐다.',
+    '태양 폭풍으로 통신이 끊긴 밤, 정거장 소장이 쓰러졌다.',
+    '야간 조명이 켜진 사이, 정거장 소장의 생체 신호가 멈췄다.',
+    '도킹 해제를 한 시간 앞두고, 정거장 소장이 다시는 깨어나지 않았다.',
+    '정전이 이어진 십 분 사이, 정거장 소장이 숨을 거뒀다.',
+  ],
+};
+export const caseLine = (theme: ThemeKey, pub: number) => CASE_LINES[theme][Math.abs(pub) % CASE_LINES[theme].length];
+/** 고를 수 있는 말 수: 두 모드 모두 8(클래식 = 용의자 8명, 오리지널 = 탐정 8명) */
+export const PICKS = 8;
+/** 이 판의 인물·도구 카드 수: 오리지널은 8 고정, 클래식은 max(6, 인원) — 클래식 인물 카드는 8명 중 이만큼 무작위 */
+export const pieceCount = (opts: { mode?: Mode } | undefined, players: number) => (isOriginal(opts) ? 8 : Math.max(6, players));
+export interface GameOpts { roles: boolean; bluff: boolean; tempo?: Tempo; mode?: Mode }
 export interface Game {
   theme: ThemeKey; seed: number; map: GameMap; players: Player[]; env: Triple;
   /** 브라우저에 보내는 판 번호(서버가 따로 뽑음). 패 배분 시드(seed)는 절대 밖으로 내보내지 않는다 */
@@ -88,8 +164,8 @@ export interface Game {
   log: LogEntry[]; winner: number | null; turnNo: number; rolls: number; opts: GameOpts;
   /** 마지막 이동에서 플레이어가 직접 고른 길([출발, …, 도착]). 화면이 이 길로 걷게 함. 없으면 최단 경로로 걸음 */
   walk?: Walk | null;
-  /** 도구 말 위치: weapons[k] = 도구 k가 놓인 방 번호. 추리하면 그 방으로 옮겨진다 */
-  weapons: number[];
+  /** 도구 말 위치: weapons[k] = 도구 k(0~7)가 놓인 방 번호, 이 판에 없는 도구는 null. 추리하면 그 방으로 옮겨진다 */
+  weapons: (number | null)[];
   /** 아무도 고르지 않은 인물 말 위치(npc[인물 번호]). 플레이어가 맡은 인물은 null */
   npc: (Pos | null)[];
   /** 똑같이 나누고 남아 모두에게 공개된 카드(진실이 아님) */
@@ -103,20 +179,20 @@ export type Action =
   | { t: 'suggest'; s: Card; w: Card }
   | ({ t: 'accuse' } & Triple)
   | { t: 'show'; card?: Card; silent?: boolean }
-  /** 보너스칸 능력. 직업에 따라 target(플레이어)·cat(종류)·room(방)·entry(로그 번호)를 쓴다 */
-  | { t: 'ability'; target?: number; cat?: Kind; room?: number; entry?: number };
+  /** 능력 카드 내기. 카드에 따라 target(플레이어)·cat(종류)·room(방)·entry(로그 번호)를 쓴다 */
+  | { t: 'ability'; card: RoleId; target?: number; cat?: Kind; room?: number; entry?: number };
 
 export interface PlayerView {
   name: string; suspect: number; pos: Pos | null; out: boolean; bot: boolean; afk: boolean; handCount: number;
   canSuggest?: boolean; fresh: boolean; hand?: Card[]; left?: boolean;
-  /** 직업: 본인 것은 항상, 남의 것은 공개됐거나 게임이 끝났을 때만 */
-  role?: RoleId | null; uses?: number; charged?: number; onBonus?: boolean; usedBonus?: boolean;
+  /** 능력 카드: 장수는 모두에게, 내용은 본인(또는 게임 종료 후)만 */
+  itemCount: number; items?: RoleId[]; tap?: number; onBonus?: boolean; usedItem?: boolean;
 }
 export interface View {
   theme: ThemeKey; seed: number; map: GameMap; turn: number; phase: Phase; roll: number | null;
   turnNo: number; winner: number | null; me: number; players: PlayerView[];
   sug: (Omit<Suggestion, 'matches'> & { matches?: Card[] }) | null;
-  log: LogEntry[]; env?: Triple; opts: GameOpts; weapons: number[]; npc: (Pos | null)[]; open: Card[];
+  log: LogEntry[]; env?: Triple; opts: GameOpts; weapons: (number | null)[]; npc: (Pos | null)[]; open: Card[];
   /** 기록 열람 능력용: 남들끼리 카드를 보여 준 반박 목록(카드는 빼고). 기록이 잘려도 남아 있게 따로 보냄 */
   archive: { id: number; p: number; to: number }[];
   walk?: Walk | null;
@@ -189,9 +265,10 @@ export const roomPos = (i: number): Pos => -i - 1;
 export const roomOf = (p: Pos): number => -p - 1;
 export const inRoom = (p: Pos | null | undefined): p is Pos => p != null && p < 0;
 export const cardName = (theme: ThemeKey, id: Card): string => THEMES[theme][id[0] as Kind][+id.slice(1)];
-export function allCards(m: { roomCount: number; people: number }): Record<Kind, Card[]> {
+export function allCards(m: { roomCount: number; people: number; cast?: number[]; tools?: number[] }): Record<Kind, Card[]> {
   const seq = (k: Kind, len: number) => Array.from({ length: len }, (_, i) => k + i);
-  return { s: seq('s', m.people), w: seq('w', m.people), r: seq('r', m.roomCount) };
+  const ids = (k: Kind, xs: number[] | undefined, len: number) => (xs ? [...xs].sort((a, b) => a - b).map(v => k + v) : seq(k, len));
+  return { s: ids('s', m.cast, m.people), w: ids('w', m.tools, m.people), r: seq('r', m.roomCount) };
 }
 
 // 인원별 평면도로 방을 배치. 문·보너스칸 위치도 인원별로 고정(같은 인원이면 늘 같은 보드). seed는 호환용으로만 받음.
@@ -224,23 +301,36 @@ export function genMap(count: number, seed = 0): GameMap {
     ok.slice(0, r() < 0.5 ? 2 : 1).forEach(s => { const [x, y] = s[Math.floor(s.length / 2)]; doors.push({ room: i, cell: y * n + x }); }); // 변 가운데에 문
   });
   const map: GameMap = { n, cells, rects, center, doors, passages: { 0: 3, 3: 0, 1: 2, 2: 1 }, roomCount: R, people: Math.max(6, count), bonus: [] };
-  map.bonus = placeBonus(map, count <= 4 ? 4 : count <= 6 ? 6 : 8, seed ? rng((seed * 7919 + count * 104729) >>> 0) : r);
+  map.bonus = placeBonus(map, bonusCount(count), seed ? rng((seed * 7919 + count * 104729) >>> 0) : r);
   return map;
 }
+/** 보너스칸 수: 3~4인 8개, 5~6인 10개, 7~8인 12개 — 봇 시뮬레이션으로 조정 */
+export const bonusCount = (players: number) => (players <= 4 ? 8 : players <= 6 ? 10 : 12);
 
-// 보너스칸: 문·문 옆이 아닌 복도 중 중앙에서 4걸음 ~ 보드 한 변의 60% 거리에서, 서로 최대한 멀리 떨어지게(가장 먼 점 고르기)
+// 보너스칸: 문·문 옆이 아닌 복도 중 중앙에서 3걸음 이상. 보드를 네 구역(왼위·오위·왼아래·오아래)으로 나눠 구역마다 같은 수(나머지는 무작위 구역)를
+// 돌아가며 놓고, 구역 안에서는 이미 놓인 칸에서 가장 먼 거리의 85% 이상 떨어진 후보 중 무작위 → 판마다 다르지만 고르게
 function placeBonus(map: GameMap, count: number, r: Rng): Pos[] {
-  const { n } = map, dc = distances(map, roomPos(map.roomCount));
+  const { n } = map, dc = distances(map, roomPos(map.roomCount)), h = (n - 1) / 2;
   const doorish = new Set(map.doors.flatMap(d => [d.cell, ...neighbors(map, d.cell).filter(x => x >= 0)]));
-  const cand = map.cells.flatMap((c, i) => (c === -1 && !doorish.has(i) && (dc.get(i) ?? 0) >= 4 && (dc.get(i) ?? 99) <= Math.ceil(n * 0.6) ? [i] : []));
-  const out: Pos[] = [];
+  const cand = map.cells.flatMap((c, i) => (c === -1 && !doorish.has(i) && (dc.get(i) ?? 0) >= 3 ? [i] : []));
+  const quad = (c: Pos) => (c % n > h ? 1 : 0) + (Math.floor(c / n) > h ? 2 : 0);
   const md = (a: Pos, b: Pos) => Math.abs((a % n) - (b % n)) + Math.abs(Math.floor(a / n) - Math.floor(b / n));
-  if (cand.length) out.push(pick(r, cand));
-  // 고르게 퍼지되 매번 다르게: 이미 고른 칸에서 가장 먼 거리의 70% 이상 떨어진 후보 중 무작위
-  while (out.length < count && out.length < cand.length) {
-    const dist = cand.map(c => (out.includes(c) ? -1 : Math.min(...out.map(o => md(o, c)))));
-    const far = Math.max(...dist);
-    out.push(pick(r, cand.filter((_, k) => dist[k] >= Math.max(1, far * 0.7))));
+  const order = shuffle(r, [0, 1, 2, 3]), want = [0, 0, 0, 0];
+  for (let k = 0; k < count; k++) want[order[k % 4]]++;
+  const out: Pos[] = [];
+  for (let round = 0; out.length < count; round++) {
+    let placed = false;
+    for (const q of order) {
+      if (out.filter(c => quad(c) === q).length >= want[q]) continue;
+      const pool = cand.filter(c => quad(c) === q && !out.includes(c));
+      if (!pool.length) { want[q]--; want[order.find(x => x !== q && cand.some(c => quad(c) === x && !out.includes(c))) ?? q]++; continue; }
+      const dist = pool.map(c => (out.length ? Math.min(...out.map(o => md(o, c))) : n));
+      const far = Math.max(...dist);
+      out.push(pick(r, pool.filter((_, k) => dist[k] >= Math.max(1, far * 0.85))));
+      placed = true;
+      if (out.length >= count) break;
+    }
+    if (!placed || round > count) break;
   }
   return out;
 }
@@ -349,37 +439,47 @@ export interface SeatIn { name: string; bot?: boolean; suspect?: number | null }
  * 준비: ① 인물은 자리마다 고른 것(겹치거나 없으면 남은 것 중 무작위) ② 인물·도구·장소에서 1장씩 봉투로
  * ③ 나머지를 섞어 모두에게 같은 장수로 ④ 남는 카드는 공개(진실이 아님)
  */
+/** 후던잇 오리지널의 비밀 통로: 판마다 서로 먼 방 2쌍(모서리 대각선 고정 배치를 쓰지 않음). 사건 파일실 제외 */
+export function randomPassages(map: GameMap, r: Rng): Record<number, number> {
+  const R = map.roomCount, far = (a: number, b: number) => (distances(map, roomPos(a)).get(roomPos(b)) ?? 0) >= 10;
+  const corner = (a: number, b: number) => (a === 0 && b === 3) || (a === 3 && b === 0) || (a === 1 && b === 2) || (a === 2 && b === 1);
+  for (let tries = 0; tries < 200; tries++) {
+    const [a, b, c, d] = shuffle(r, Array.from({ length: R }, (_, k) => k));
+    if (far(a, b) && far(c, d) && !corner(a, b) && !corner(c, d)) return { [a]: b, [b]: a, [c]: d, [d]: c };
+  }
+  return { 0: 3, 3: 0, 1: 2, 2: 1 }; // (거의 없음) 못 찾으면 기본 배치
+}
+
 export function newGame(theme: ThemeKey, seats: SeatIn[], seed: number, opts: GameOpts = { roles: false, bluff: true }): Game {
-  const count = seats.length, map = genMap(count, seed), R = map.roomCount, S = map.people, r = rng(seed ^ 0x9e3779b9), all = allCards(map);
+  const count = seats.length, map = genMap(count, seed);
+  map.people = pieceCount(opts, count); // 오리지널: 인원과 상관없이 용의자 8·도구 8
+  if (isOriginal(opts)) map.passages = randomPassages(map, rng(seed ^ 0x5eed)); // 오리지널: 모서리 대각선 대신 판마다 다른 방끼리
+  const R = map.roomCount, S = map.people, r = rng(seed ^ 0x9e3779b9);
+  // 말: 자리마다 고른 것(겹치거나 없으면 남은 8명 중 무작위)
+  const taken = new Set<number>(), suspects: number[] = [];
+  const ids = Array.from({ length: PICKS }, (_, v) => v);
+  for (const s of seats) { const v = s.suspect; if (v != null && Number.isInteger(v) && v >= 0 && v < PICKS && !taken.has(v)) { taken.add(v); suspects.push(v); } else suspects.push(-1); }
+  const free = shuffle(r, ids.filter(v => !taken.has(v)));
+  for (let i = 0; i < count; i++) if (suspects[i] < 0) suspects[i] = free.shift()!;
+  // 인물 카드: 오리지널 = 8명 전원, 클래식 = 플레이어가 맡은 인물 + 나머지 중 무작위로 채워 S명
+  map.cast = isOriginal(opts) ? [...ids] : [...suspects, ...shuffle(r, ids.filter(v => !suspects.includes(v)))].slice(0, S).sort((a, b) => a - b);
+  // 도구 카드: 말 고르기와 상관없이 8개 중 무작위 S개(오리지널은 8개 전원)
+  map.tools = isOriginal(opts) ? [...ids] : shuffle(r, ids).slice(0, S).sort((a, b) => a - b);
+  const all = allCards(map);
   const env = { s: pick(r, all.s), w: pick(r, all.w), r: pick(r, all.r) };
   const rest = shuffle(r, [...all.s, ...all.w, ...all.r].filter(c => c !== env.s && c !== env.w && c !== env.r));
   const per = Math.floor(rest.length / count), open = rest.slice(per * count);
-  const taken = new Set<number>(), suspects: number[] = [];
-  const ids = Array.from({ length: S }, (_, v) => v);
-  for (const s of seats) { const v = s.suspect; if (v != null && v >= 0 && v < S && !taken.has(v)) { taken.add(v); suspects.push(v); } else suspects.push(-1); }
-  const free = shuffle(r, ids.filter(v => !taken.has(v)));
-  for (let i = 0; i < count; i++) if (suspects[i] < 0) suspects[i] = free.shift()!;
   const C = roomPos(R);
   const players: Player[] = seats.map((s, i) => ({
     name: s.name, bot: !!s.bot, afk: false, suspect: suspects[i], pos: C, fresh: true, // 모두 중앙 사건 파일실에서 출발
     hand: rest.slice(i * per, (i + 1) * per), known: [...open], shown: [], out: false, canSuggest: false, timeouts: 0,
-    role: null, uses: 0, revealed: false, charged: 0, skip: false, onBonus: false, usedBonus: false,
+    items: [], tap: 0, skip: false, onBonus: false, usedItem: false,
   }));
-  const npc = ids.map(v => (suspects.includes(v) ? null : C));
-  const weapons = shuffle(r, Array.from({ length: R }, (_, k) => k)).slice(0, S); // 도구 말을 서로 다른 방에 하나씩
-  const g: Game = { theme, seed, map, players, env, turn: 0, phase: 'roll', roll: null, sug: null, log: [{ t: 'start' }], winner: null, turnNo: 1, rolls: 0, opts, weapons, npc, open };
-  if (opts.roles) assignRoles(g, r);
-  return g;
-}
-
-/** 정보·행동·방어 그룹을 돌아가며 무작위 배정 → 한 그룹에 몰리지 않음. 직업은 비공개 */
-function assignRoles(g: Game, r: Rng) {
-  const pools = shuffle(r, GROUPS.map(gr => shuffle(r, gr)));
-  g.players.forEach((p, i) => {
-    const pool = pools[i % pools.length].length ? pools[i % pools.length] : pools.find(x => x.length)!;
-    const id = pool.shift()!;
-    p.role = id; p.uses = ROLES[id].uses;
-  });
+  // 인물 NPC 말: 오리지널 = 용의자 8명 전원(suspects[i]는 탐정 번호), 클래식 = 이 판 인물 카드 중 아무도 안 맡은 인물. 카드에 없는 인물은 판에 없음(null)
+  const npc = ids.map(v => (isOriginal(opts) || (map.cast!.includes(v) && !suspects.includes(v)) ? C : null));
+  const rooms = shuffle(r, Array.from({ length: R }, (_, k) => k)); // 도구 말을 서로 다른 방에 하나씩
+  const weapons = ids.map(k => { const t = map.tools!.indexOf(k); return t < 0 ? null : rooms[t]; });
+  return { theme, seed, map, players, env, turn: 0, phase: 'roll', roll: null, sug: null, log: [{ t: 'start' }], winner: null, turnNo: 1, rolls: 0, opts, weapons, npc, open };
 }
 
 export const centerPos = (map: GameMap): Pos => roomPos(map.roomCount);
@@ -387,7 +487,7 @@ export const actor = (g: Pick<Game, 'phase' | 'turn'> & { sug: { refuter: number
   (g.phase === 'refute' && g.sug ? g.sug.refuter : g.turn);
 
 function endTurn(g: Game) {
-  Object.assign(g.players[g.turn], { canSuggest: false, onBonus: false, usedBonus: false });
+  Object.assign(g.players[g.turn], { canSuggest: false, onBonus: false, usedItem: false });
   let j = g.turn;
   for (let guard = 0; guard < g.players.length * 2; guard++) {
     j = (j + 1) % g.players.length;
@@ -399,10 +499,6 @@ function endTurn(g: Game) {
   Object.assign(g, { turn: j, phase: 'roll', roll: null, turnNo: g.turnNo + 1 });
 }
 
-function reveal(g: Game, i: number) {
-  const p = g.players[i];
-  if (!p.revealed && p.role) { p.revealed = true; g.log.push({ t: 'role', p: i, role: p.role }); }
-}
 /** 추리자 sug.p 기준 시계 방향으로, from 다음 사람부터 지목 카드를 가진 첫 사람(추리자 직전까지) */
 function nextRefuter(g: Game, sug: Triple & { p: number }, from: number) {
   for (let k = 1; k < g.players.length; k++) {
@@ -426,14 +522,20 @@ export function archiveEntries(g: Pick<Game, 'log'>, i: number, known: Card[] = 
   return g.log.flatMap(e => (e.t === 'shown' && e.p !== i && e.to !== i && (!e.card || !known.includes(e.card)) ? [e.id] : []));
 }
 
-/** 보너스칸 능력을 지금 쓸 수 있는가(조건만, 대상 선택 전) */
-export function canAbility(g: Game, i: number): boolean {
+type ItemState = Pick<Game, 'phase' | 'turn' | 'opts'> & { players: { pos: Pos | null; out: boolean; items?: RoleId[]; usedItem?: boolean }[] };
+/** 능력 카드를 내 차례에 지금 낼 수 있는가(조건만, 대상 선택 전). archive = 기록 열람으로 고를 수 있는 반박 수.
+ *  turn 카드 = 굴리기 전이나 이동을 마친 뒤, hall 카드 = 지름길은 굴리기 전·복도에 멈춘 뒤, 추격은 복도에 멈춘 뒤만. 묵비권·보험은 여기서 내지 않음. 내 차례에 1장 */
+export function canUse(g: ItemState, i: number, role: RoleId, archive: number): boolean {
   const p = g.players[i];
-  if (!g.opts.roles || !p.role || p.uses <= 0 || !p.onBonus || p.usedBonus || g.phase !== 'act' || g.turn !== i) return false;
-  if (ROLES[p.role].kind === 'charge' && p.charged) return false; // 이미 충전됨
-  if (p.role === 'analyst' && !archiveEntries(g, i).length) return false;
-  return true;
+  if (!g.opts.roles || !p || p.out || g.turn !== i || p.usedItem || !p.items?.includes(role)) return false;
+  const hall = g.phase === 'act' && p.pos != null && p.pos >= 0;
+  switch (ROLES[role].when) {
+    case 'turn': return (g.phase === 'roll' || g.phase === 'act') && (role !== 'analyst' || archive > 0);
+    case 'hall': return role === 'field' ? hall : g.phase === 'roll' || hall;
+    default: return false;
+  }
 }
+const usableNow = (g: Game, i: number) => g.players[i].items.some(k => canUse(g, i, k, archiveEntries(g, i).length));
 
 /** 행동 적용. 성공하면 null, 실패하면 에러 문자열(상태 변경 없음). a는 네트워크에서 온 값일 수 있어 내부에서 전부 검증한다. */
 export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string | null {
@@ -443,9 +545,10 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
   if (a.t === 'show') {
     const sug = g.sug;
     if (g.phase !== 'refute' || !sug || sug.refuter !== i) return '반박 차례가 아니에요';
-    if (a.silent) { // 변호사 묵비권: 다음 사람에게 넘김
-      if (p.role !== 'lawyer' || !p.charged) return '묵비권이 준비되지 않았어요';
-      p.charged--; reveal(g, i); g.log.push({ t: 'silent', p: i, to: sug.p });
+    if (a.silent) { // 묵비권 카드: 다음 사람에게 넘김
+      const k = p.items.indexOf('lawyer');
+      if (!g.opts.roles || k < 0) return '묵비권 카드가 없어요';
+      p.items.splice(k, 1); g.log.push({ t: 'silent', p: i, to: sug.p });
       const nx = nextRefuter(g, sug, i);
       if (nx) { sug.refuter = nx.j; sug.matches = nx.matches; return null; }
       g.log.push({ t: 'silentnone', p: sug.p }); g.sug = null; g.phase = 'act';
@@ -457,9 +560,9 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
     g.log.push({ t: 'shown', p: i, to, card, id: g.log.length });
     g.players[to].known.push(card);
     if (!p.shown.includes(card)) p.shown.push(card);
-    g.players.forEach((q, k) => { // 정보원 도청 장치
-      if (q.role === 'tap' && q.charged && k !== i && k !== to) {
-        q.charged--; reveal(g, k); q.known.push(card);
+    g.players.forEach((q, k) => { // 설치된 도청 장치
+      if (q.tap > 0 && k !== i && k !== to) {
+        q.tap--; q.known.push(card);
         g.log.push({ t: 'intel', to: k, kind: 'tap', card, a: i, b: to });
       }
     });
@@ -478,9 +581,13 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       { const route = chosenRoute(g, i, a.to, a.via); g.walk = route && { p: i, route }; }
       p.pos = a.to; p.fresh = false; g.phase = 'act';
       if (a.to < 0) { p.canSuggest = a.to !== centerPos(g.map); g.log.push({ t: 'enter', p: i, room: roomOf(a.to) }); return null; }
-      // 복도에서 멈춤: 보너스칸이면 능력 기회, 아니면 추리할 수 없으니 턴 종료
-      if (g.map.bonus.includes(a.to) && !p.usedBonus) { p.onBonus = true; g.log.push({ t: 'bonus', p: i }); if (canAbility(g, i)) return null; }
-      endTurn(g);
+      // 복도에서 멈춤: 보너스칸이면 능력 카드 1장(최대 MAX_ITEMS장). 지금 낼 수 있는 카드가 있으면 기다리고, 없으면 추리할 수 없으니 턴 종료
+      if (g.opts.roles && g.map.bonus.includes(a.to)) {
+        p.onBonus = true;
+        if (p.items.length >= MAX_ITEMS) g.log.push({ t: 'bonusfull', p: i });
+        else { const role = drawRole(r); p.items.push(role); g.log.push({ t: 'bonus', p: i }, { t: 'intel', to: i, kind: 'draw', role }); }
+      }
+      if (!usableNow(g, i)) endTurn(g);
       return null;
     case 'passage': {
       const o = inRoom(p.pos) ? g.map.passages[roomOf(p.pos)] : undefined;
@@ -495,9 +602,9 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       if (!g.opts.bluff && (p.hand.includes(a.s) || p.hand.includes(a.w))) return '블러핑 금지 방입니다 — 내 손의 카드는 지목할 수 없어요';
       const s: Triple = { s: a.s, w: a.w, r: 'r' + roomOf(p.pos) };
       p.canSuggest = false; g.phase = 'act';
-      const sv = +s.s.slice(1), q = g.players.find((x, j) => j !== i && !x.out && x.suspect === sv);
+      const sv = +s.s.slice(1), q = g.players.find((x, j) => j !== i && !x.out && x.suspect === sv); // 클래식: 맡은 인물 / 오리지널: 담당 용의자(suspect)의 담당 탐정이 동석
       if (q) { if (q.pos !== p.pos) q.canSuggest = true; q.pos = p.pos; } // 지목된 인물 말을 이 방으로 — 실제로 끌려왔을 때만 다음 차례에 바로 추리 가능(원래 이 방에 있었으면 연속 추리 불가)
-      else if (g.npc[sv] !== null) g.npc[sv] = p.pos;              // 아무도 안 맡은 인물 말도
+      if (g.npc[sv] !== null) g.npc[sv] = p.pos;                  // 인물 NPC 말도(클래식: 아무도 안 맡은 인물, 오리지널: 용의자 전원)
       g.weapons[+s.w.slice(1)] = roomOf(p.pos);                    // 지목한 도구 말도
       g.log.push({ t: 'suggest', p: i, ...s });
       const nx = nextRefuter(g, { ...s, p: i }, i);
@@ -513,8 +620,9 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       const entry: LogEntry = { t: 'accuse', p: i, s: a.s, w: a.w, r: a.r, ok };
       g.log.push(entry);
       if (ok) { g.phase = 'over'; g.winner = i; return null; }
-      if (p.role === 'insure' && p.charged) { // 보험 수사관: 탈락 대신 한 턴 쉼
-        entry.saved = true; p.charged--; reveal(g, i);
+      const ins = g.opts.roles ? p.items.indexOf('insure') : -1;
+      if (ins >= 0) { // 보험 카드: 탈락 대신 한 턴 쉼(카드는 사라짐)
+        entry.saved = true; p.items.splice(ins, 1);
         p.skip = true; endTurn(g); return null;
       }
       p.out = true; p.pos = null;
@@ -522,15 +630,16 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
       return null;
     }
     case 'ability': {
-      if (!canAbility(g, i)) return '보너스칸(!)에 멈춘 턴에만, 남은 횟수가 있을 때 쓸 수 있어요';
-      const role = p.role!;
+      const role = a.card;
+      if (!isRole(role) || !canUse(g, i, role, archiveEntries(g, i).length)) return '지금은 그 능력 카드를 낼 수 없어요';
       const other = (t: unknown) => typeof t === 'number' && t !== i && g.players[t] && !g.players[t].out;
+      const spend = () => { p.items.splice(p.items.indexOf(role), 1); p.usedItem = true; };
       switch (role) {
         case 'chief': {
           if (!other(a.target) || !a.cat || !KINDS.includes(a.cat)) return '심문할 사람과 종류를 고르세요';
           const t = a.target!, cards = g.players[t].hand.filter(c => c[0] === a.cat);
           const fresh = cards.filter(c => !p.known.includes(c)), card = cards.length ? pick(r, fresh.length ? fresh : cards) : undefined; // 1장만(모르는 카드 우선)
-          g.log.push({ t: 'ability', p: i, role, target: t });
+          spend(); g.log.push({ t: 'ability', p: i, role, target: t });
           if (card) p.known.push(card);
           g.log.push({ t: 'intel', to: i, kind: 'interrogate', card, from: t, cat: a.cat });
           break;
@@ -538,15 +647,15 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
         case 'analyst': {
           const e = g.log.find(x => x.t === 'shown' && x.id === a.entry);
           if (!e || e.t !== 'shown' || e.p === i || e.to === i) return '열람할 반박 기록을 고르세요';
-          p.known.push(e.card!);
+          spend(); p.known.push(e.card!);
           g.log.push({ t: 'ability', p: i, role }, { t: 'intel', to: i, kind: 'archive', card: e.card, a: e.p, b: e.to });
           break;
         }
         case 'scout': {
           const room = a.room;
-          if (typeof room !== 'number' || room < 0 || room >= g.map.roomCount) return '수색할 방을 고르세요';
-          g.log.push({ t: 'ability', p: i, role, room });
-          const found = ['r' + room, ...g.weapons.flatMap((wr, k) => (wr === room ? ['w' + k] : [])).slice(0, 1)]; // 방 카드 + 그 방 도구 1개까지
+          if (typeof room !== 'number' || !Number.isInteger(room) || room < 0 || room >= g.map.roomCount) return '수색할 방을 고르세요';
+          spend(); g.log.push({ t: 'ability', p: i, role, room });
+          const found = ['r' + room]; // 그 방의 장소 카드
           for (const card of found) {
             if (p.hand.includes(card) || g.open.includes(card)) continue; // 이미 아는 카드
             const owner = g.players.findIndex(q => q.hand.includes(card));
@@ -556,26 +665,26 @@ export function act(g: Game, i: number, a: Action, r: Rng = Math.random): string
           }
           break;
         }
+        case 'tap':
+          spend(); p.tap += TAP_PEEKS; // 설치했다는 사실만 공개
+          g.log.push({ t: 'ability', p: i, role });
+          break;
         case 'guide': {
           const room = a.room;
-          if (typeof room !== 'number' || room < 0 || room >= g.map.roomCount) return '이동할 방을 고르세요';
-          p.uses--; p.usedBonus = true; p.onBonus = false; reveal(g, i);
-          p.pos = roomPos(room); p.canSuggest = true;
+          if (typeof room !== 'number' || !Number.isInteger(room) || room < 0 || room > g.map.roomCount || roomPos(room) === p.pos) return '이동할 방을 고르세요';
+          spend(); g.walk = null; // room === roomCount = 사건 파일실(추리는 못 하고 최종 고발 가능)
+          p.pos = roomPos(room); p.canSuggest = room < g.map.roomCount; p.fresh = false; g.phase = 'act'; g.roll = null;
           g.log.push({ t: 'ability', p: i, role, room }, { t: 'enter', p: i, room });
           return null; // 이어서 추리 가능
         }
         case 'field':
-          p.uses--; p.usedBonus = true; p.onBonus = false; reveal(g, i);
-          g.log.push({ t: 'ability', p: i, role });
+          spend(); g.log.push({ t: 'ability', p: i, role });
           rollDice(g, i, r); g.phase = 'move';
           return null; // 이어서 이동
-        case 'tap': case 'lawyer': case 'insure':
-          p.charged = role === 'tap' ? 2 : 1; // 비밀 — 실제로 발동할 때 공개
-          break;
+        default: return '이 카드는 지금 낼 수 없어요';
       }
-      p.uses--; p.usedBonus = true;
-      if (ROLES[role].kind === 'instant') reveal(g, i);
-      endTurn(g); // 복도에서는 추리할 수 없으니 능력을 쓰면 턴 끝
+      // 복도에 멈춘 뒤 정보 카드를 냈으면 추리할 수 없으니 턴 끝
+      if (g.phase === 'act' && p.pos != null && p.pos >= 0) endTurn(g);
       return null;
     }
     case 'end':
@@ -622,37 +731,44 @@ export function candidates(g: Game, i: number): Record<Kind, Card[]> {
 
 function distFrom(map: GameMap, src: Pos): Map<Pos, number> { return distances(map, src); }
 
+/** 봇이 지금 낼 능력 카드(없으면 null). 정보 카드는 아직 모르는 게 남았을 때만, 지름길은 갈 후보 방이 있고 지금 방에서 추리할 수 없을 때, 추격은 복도에 멈췄을 때 */
+function botItem(g: Game, i: number, c: Record<Kind, Card[]>, solved: boolean, r: Rng): Action | null {
+  const p = g.players[i], arch = archiveEntries(g, i, p.known);
+  const can = (k: RoleId) => canUse(g, i, k, archiveEntries(g, i).length);
+  if (solved) return can('guide') && p.pos !== centerPos(g.map) ? { t: 'ability', card: 'guide', room: g.map.roomCount } : null;
+  const here = inRoom(p.pos) && p.canSuggest && p.pos !== centerPos(g.map);
+  if (can('guide') && !here) {
+    const rooms = c.r.map(x => +x.slice(1)).filter(x => roomPos(x) !== p.pos);
+    if (rooms.length) return { t: 'ability', card: 'guide', room: pick(r, rooms) };
+  }
+  if (can('field')) return { t: 'ability', card: 'field' };
+  if (can('analyst') && arch.length) return { t: 'ability', card: 'analyst', entry: pick(r, arch) };
+  if (can('scout')) {
+    const rooms = c.r.map(x => +x.slice(1)).filter(x => !p.hand.includes('r' + x));
+    const score = (x: number) => g.weapons.filter((wr, k) => wr === x && c.w.includes('w' + k)).length;
+    rooms.sort((x, y) => score(y) - score(x));
+    if (rooms.length && c.r.length > 1) return { t: 'ability', card: 'scout', room: rooms[0] };
+  }
+  if (can('chief')) {
+    const t = pick(r, g.players.map((_, j) => j).filter(j => j !== i && !g.players[j].out));
+    const cat = [...KINDS].sort((x, y) => c[y].length - c[x].length)[0];
+    if (t !== undefined && c[cat].length > 1) return { t: 'ability', card: 'chief', target: t, cat };
+  }
+  if (can('tap') && g.players.filter(q => !q.out).length > 2) return { t: 'ability', card: 'tap' };
+  return null;
+}
+
 // 봇: 모르는 카드만 후보로 두고 후보 방으로 이동해 추리, 후보가 하나씩 남으면 중앙으로 가서 최종 고발.
-// 직업이 있으면: 후보 방에 못 닿는 턴에 보너스칸이 닿으면 거기 멈춰 능력 사용.
+// 능력 카드: 후보 방에 못 닿는 턴에 보너스칸이 닿으면(카드가 3장 미만일 때) 거기 멈춰 1장 뽑고, 낼 수 있는 카드는 바로 낸다.
 export function botAction(g: Game, r: Rng = Math.random): Action {
   const i = actor(g), p = g.players[i];
   if (g.phase === 'refute' && g.sug) {
-    if (p.role === 'lawyer' && p.charged && r() < 0.5) return { t: 'show', silent: true };
+    if (g.opts.roles && p.items.includes('lawyer') && r() < 0.5) return { t: 'show', silent: true };
     return { t: 'show', card: g.sug.matches.find(c => p.shown.includes(c)) ?? pick(r, g.sug.matches) };
   }
   const c = candidates(g, i);
-  if (p.onBonus && g.phase === 'act') {
-    if (!canAbility(g, i)) return { t: 'end' };
-    switch (p.role) {
-      case 'chief': {
-        const t = pick(r, g.players.map((_, j) => j).filter(j => j !== i && !g.players[j].out));
-        const cat = [...KINDS].sort((x, y) => c[y].length - c[x].length)[0];
-        return { t: 'ability', target: t, cat };
-      }
-      case 'analyst': return { t: 'ability', entry: pick(r, archiveEntries(g, i, p.known)) ?? archiveEntries(g, i)[0] };
-      case 'scout': {
-        const rooms = c.r.map(x => +x.slice(1)).filter(x => !p.hand.includes('r' + x));
-        const score = (x: number) => g.weapons.filter((wr, k) => wr === x && c.w.includes('w' + k)).length;
-        rooms.sort((x, y) => score(y) - score(x));
-        return { t: 'ability', room: rooms.length ? rooms[0] : 0 };
-      }
-      case 'guide': {
-        const rooms = c.r.map(x => +x.slice(1));
-        return { t: 'ability', room: rooms.length ? pick(r, rooms) : 0 };
-      }
-      default: return { t: 'ability' };
-    }
-  }
+  const solved0 = c.s.length === 1 && c.w.length === 1 && c.r.length === 1;
+  if (g.phase === 'roll' || g.phase === 'act') { const it = botItem(g, i, c, solved0, r); if (it) return it; }
   const solved = c.s.length === 1 && c.w.length === 1 && c.r.length === 1, C = centerPos(g.map);
   if (solved && p.pos === C && !p.fresh && g.phase !== 'move') return { t: 'accuse', s: c.s[0], w: c.w[0], r: c.r[0] };
   if (!solved && inRoom(p.pos) && p.canSuggest && g.phase !== 'move') {
@@ -670,8 +786,7 @@ export function botAction(g: Game, r: Rng = Math.random): Action {
     const opts = [...moves(g, i)];
     const hit = opts.find(o => goals.includes(o));
     if (hit !== undefined) return { t: 'move', to: hit };
-    if (!solved && g.opts.roles && p.role && p.uses > 0 && !(ROLES[p.role].kind === 'charge' && p.charged)
-      && (p.role !== 'analyst' || archiveEntries(g, i, p.known).length)) {
+    if (!solved && g.opts.roles && p.items.length < MAX_ITEMS) {
       const b = opts.find(o => g.map.bonus.includes(o));
       if (b !== undefined) return { t: 'move', to: b };
     }
@@ -696,12 +811,12 @@ export function view(g: Game, i: number): View {
     players: g.players.map((p, j) => ({
       name: p.name, suspect: p.suspect, pos: p.pos, out: p.out, bot: p.bot, afk: p.afk, handCount: p.hand.length, left: p.left,
       canSuggest: j === i ? p.canSuggest : undefined, fresh: p.fresh, hand: j === i || over ? p.hand : undefined,
-      ...(j === i ? { role: p.role, uses: p.uses, charged: p.charged, onBonus: p.onBonus, usedBonus: p.usedBonus }
-        : { role: p.revealed || over ? p.role : undefined }),
+      itemCount: p.items.length,
+      ...(j === i ? { items: p.items, tap: p.tap, onBonus: p.onBonus, usedItem: p.usedItem } : over ? { items: p.items } : {}),
     })),
     sug: g.sug && { p: g.sug.p, s: g.sug.s, w: g.sug.w, r: g.sug.r, refuter: g.sug.refuter, matches: g.sug.refuter === i ? g.sug.matches : undefined },
     // 비공개 정보(intel)는 받는 사람(또는 게임 종료 후)만 보고, 오래돼도 잘리지 않게 40개 제한과 별개로 유지.
-    log: g.log.filter((e, k) => (e.t === 'intel' ? e.to === i || over : k >= g.log.length - 40))
+    log: g.log.filter((e, k) => (e.t === 'intel' ? (e.to === i || over) && (e.kind !== 'draw' || k >= g.log.length - 40) : k >= g.log.length - 40))
       .map(e => (e.t === 'shown' && !(over || spect || e.p === i || e.to === i) ? { t: 'shown', p: e.p, to: e.to, id: e.id } : e)),
     env: over || spect ? g.env : undefined, opts: g.opts, weapons: g.weapons, npc: g.npc, open: g.open,
     archive: g.log.flatMap(e => (e.t === 'shown' && e.p !== i && e.to !== i ? [{ id: e.id, p: e.p, to: e.to }] : [])),

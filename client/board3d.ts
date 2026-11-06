@@ -208,10 +208,12 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
       const lb = label(isC ? '사건 파일' : T.r[i], P.label, Math.min(w - 0.15, 3.2));
       lb.position.set(cx, 0.1, isC ? cz + h / 2 - 0.7 : cz); B.add(lb);
       if (M.passages[i] !== undefined) {
+        const pairs = Object.keys(M.passages).map(Number).filter(a => a < M.passages[a]).sort((a, b) => a - b), pi = pairs.indexOf(Math.min(i, M.passages[i]));
+        const ring = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), new THREE.MeshBasicMaterial({ color: pi === 1 ? 0x5ec8e5 : 0xd9a35b })); // 통로 짝 색(A 금색, B 하늘색)
         const hole = new THREE.Mesh(new THREE.CircleGeometry(0.32, 24), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-        hole.rotation.x = -Math.PI / 2; noPick(hole);
-        hole.position.set(i % 2 ? wx(q.x0) + 0.1 : wx(q.x1) - 0.1, 0.09, i < 2 ? wx(q.y1) - 0.1 : wx(q.y0) + 0.1);
-        B.add(hole);
+        const corner = i < 4 && (M.passages[i] === 3 - i); // 기본 배치(모서리 대각선)는 예전 자리, 그 밖엔 방 오른쪽 아래
+        const x = corner ? (i % 2 ? wx(q.x0) + 0.1 : wx(q.x1) - 0.1) : wx(q.x1) - 0.1, z = corner ? (i < 2 ? wx(q.y1) - 0.1 : wx(q.y0) + 0.1) : wx(q.y1) - 0.1;
+        for (const [m, y] of [[ring, 0.085], [hole, 0.09]] as const) { m.rotation.x = -Math.PI / 2; noPick(m); m.position.set(x, y, z); B.add(m); }
       }
     });
 
@@ -249,16 +251,17 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
     seal.position.y = 0.025; E.add(paper, seal); E.position.set(c.cx, 0.55, c.cz - 0.3);
     E.traverse(noPick); B.add(E);
 
-    const geo = { body: new THREE.CylinderGeometry(0.12, 0.2, 0.42, 20), head: new THREE.SphereGeometry(0.12, 20, 14) };
-    const makePawn = (suspect: number, ghost = false) => {
+    const geo = { body: new THREE.CylinderGeometry(0.12, 0.2, 0.42, 20), head: new THREE.SphereGeometry(0.12, 20, 14), hex: new THREE.CylinderGeometry(0.14, 0.21, 0.42, 6) }; // hex = 오리지널 탐정 말(육각 기둥)
+    const makePawn = (suspect: number, ghost = false, det = false) => { // det = 오리지널의 탐정 말: 어두운 몸통 + 색 머리
       const grp = new THREE.Group(), m = mat(new THREE.Color(colors[suspect]).getHex(), { roughness: 0.35, metalness: 0.1, transparent: ghost, opacity: ghost ? 0.45 : 1 });
-      const body = new THREE.Mesh(geo.body, m), head = new THREE.Mesh(geo.head, m);
+      const bm = det ? mat(0x2a1d17, { roughness: 0.5, metalness: 0.2 }) : m;
+      const body = new THREE.Mesh(det ? geo.hex : geo.body, bm), head = new THREE.Mesh(geo.head, m);
       body.position.y = 0.21; head.position.y = 0.5; body.castShadow = head.castShadow = true;
       grp.add(body, head); grp.traverse(noPick); B.add(grp);
       grp.userData.target = null;
       return grp;
     };
-    pawns = g.players.map(p => makePawn(p.suspect));
+    pawns = g.players.map(p => makePawn(p.suspect, false, G.isOriginal(g.opts)));
     npcPawns = g.npc.map((pos, v) => (pos == null ? null : makePawn(v, true)));
     // 보너스칸 "!": 바닥에 새긴 모양(음각 + 금 상감) — 칸 위에 붙인 얇은 판. 새긴 것이므로 카메라를 따라 돌지 않음
     const engr = engraveTex();
@@ -348,8 +351,10 @@ export function createBoard3D(container: HTMLElement, colors: string[], onPick: 
   }
   function placeWeapons(g: G.View) {
     const byRoom = new Map<number, number[]>();
-    g.weapons.forEach((room, k) => byRoom.set(room, [...(byRoom.get(room) ?? []), k]));
+    g.weapons.forEach((room, k) => { if (room != null) byRoom.set(room, [...(byRoom.get(room) ?? []), k]); });
     g.weapons.forEach((room, k) => {
+      const sp0 = weaponSprites[k]; if (sp0) sp0.visible = room != null; // 이 판에 없는 도구 말은 숨김
+      if (room == null) return;
       const u = roomMeshes[room].userData, list = byRoom.get(room)!, slot = list.indexOf(k);
       const t = new THREE.Vector3(u.cx + (slot - (list.length - 1) / 2) * 0.7, 0.55, u.cz - Math.min(0.6, u.h / 2 - 0.4));
       const sp = weaponSprites[k]; if (!sp.userData.target) sp.position.copy(t);

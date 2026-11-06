@@ -70,7 +70,7 @@ export function mapSummary(theme: G.ThemeKey, count: number, note = ''): HTMLEle
   const n = Math.min(G.MAX_PLAYERS, Math.max(3, count)), m = G.genMap(n), T = G.THEMES[theme];
   const total = 2 * m.people + m.roomCount - 3, per = Math.floor(total / n), open = total - per * n;
   const items = [`${T.icon} ${T.name}`, `${n}명 기준${note ? ' · ' + note : ''}`, `방 ${m.roomCount}개 + 사건 파일실`, `보드 ${m.n}×${m.n}`,
-    `1인당 카드 ${per}장` + (open ? ` · 공개 ${open}장` : ''), `보너스칸 ${m.bonus.length}개 (매판 무작위)`];
+    `1인당 카드 ${per}장` + (open ? ` · 공개 ${open}장` : ''), `보너스칸 ${m.bonus.length}개 (매판 무작위 · 능력 카드)`];
   return items.map(t => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = t; return s; });
 }
 

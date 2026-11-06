@@ -34,6 +34,14 @@ const el = (tag: string, cls: string, text = '') => { const e = document.createE
  * 카드 앞면: 양피지 바탕 + 종류 색 이중 테두리 + 위 종류 띠 + 그림 창 + 이름 리본.
  * 크기는 CSS 너비만 정하면 안쪽은 카드 너비 비율(cqw)로 맞춰진다.
  */
+/** 후던잇 오리지널: 내 카드 = 탐정이 직접 확인한 사실, 공개 카드 = 본부 회의에서 공유된 사실 → 띠는 그대로(인물·도구·장소), 도장만 더함.
+ *  클래식은 cardEl 그대로 */
+const STAMP: Record<G.Kind, string> = { s: '알리바이 확인', w: '실물 확인', r: '현장 확인' };
+export function factCard(theme: G.ThemeKey, opts: G.GameOpts | undefined, id: G.Card, cls = '', shared = false): HTMLElement {
+  const c = cardEl(theme, id, cls); if (!G.isOriginal(opts)) return c;
+  c.classList.add('fact'); c.append(el('b', 'gc-stamp', shared ? '본부 공유' : STAMP[id[0] as G.Kind]));
+  return c;
+}
 export function cardEl(theme: G.ThemeKey, id: G.Card, cls = ''): HTMLElement {
   const k = id[0] as G.Kind, n = +id.slice(1);
   const c = el('div', `gcard k-${k} ${cls}`);

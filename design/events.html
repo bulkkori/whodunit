@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사건 이벤트 기획서</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d1b18;--sub:#6b665d;--line:#e3ded3;--accent:#8a2b2b;--chip:#f1e7e2;--info:#2f5d8a;--ref:#7a4f8a;--move:#4f7a4a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--card:#1e1b17;--ink:#ece7dd;--sub:#a59e90;--line:#34302a;--accent:#e08a7a;--chip:#2c2420;--info:#8ab4e0;--ref:#c9a3d9;--move:#9fcf98}}
+:root[data-theme="dark"]{--bg:#15130f;--card:#1e1b17;--ink:#ece7dd;--sub:#a59e90;--line:#34302a;--accent:#e08a7a;--chip:#2c2420;--info:#8ab4e0;--ref:#c9a3d9;--move:#9fcf98}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 system-ui,"Pretendard","Malgun Gothic",sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+.lead{color:var(--sub);margin:0 0 24px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+nav a{background:var(--chip);color:var(--ink);text-decoration:none;padding:4px 10px;border-radius:999px;font-size:13px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px}
+h2{font-size:19px;margin:0 0 12px;color:var(--accent)}
+h3{font-size:15px;margin:18px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:600;white-space:nowrap}
+.scroll{overflow-x:auto}
+ul,ol{padding-left:20px;margin:6px 0}
+.check li{list-style:none;margin-left:-20px}
+.check li::before{content:"☐ ";color:var(--accent)}
+.note{background:var(--chip);border-radius:8px;padding:10px 12px;font-size:14px}
+code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:13px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:0 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.info{color:var(--info)}.ref{color:var(--ref)}.move{color:var(--move)}
+td b{white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+<h1>📰 사건 이벤트 기획서</h1>
+<p class="lead">후더닛 v2 추가 기능 · 2026-11-03 · 상태: 승인 대기 · 기존 기획서 <code>design/plan.html</code>에 더하는 부분만</p>
+
+<nav><a href="#over">개요·원칙</a><a href="#list">① 이벤트 목록</a><a href="#rule">② 진행 규칙</a><a href="#mix">겹침 규칙</a><a href="#server">③ 서버·봇</a><a href="#input">④ 조작</a><a href="#ui">⑤ 화면</a><a href="#done">⑥ 완료 기준</a><a href="#perf">성능 상한</a><a href="#ask">정할 것</a><a href="#later">보류</a></nav>
+
+<section id="over">
+<h2>개요 · 원칙</h2>
+<ul>
+<li><b>무엇:</b> 라운드마다 저택에 '사건'이 일어나 그 라운드의 정보 흐름·반박 방식·이동이 바뀐다. 방장이 방 설정에서 <b>끔 / 가끔 / 자주</b>로 고른다.</li>
+<li><b>클루 계열에서 벗어나지 않는 선:</b> 승리 조건·최종 고발 규칙·카드 분배·봉투는 <b>절대 바꾸지 않는다</b>. 이벤트는 ① 단서가 풀리거나 ② 반박 방식이 바뀌거나 ③ 이동이 바뀌는 것만.</li>
+<li><b>운이 아니라 대비:</b> 모든 이벤트는 <b>한 라운드 전에 예보</b>한다("다음 라운드: 정전"). 플레이어는 이동·추리 순서를 미리 계획할 수 있다.</li>
+<li><b>모두에게 공평:</b> 한 사람만 이득 보는 이벤트는 없다. 효과는 그 라운드의 모든 플레이어(봇 포함)에게 같은 규칙으로 적용된다.</li>
+<li><b>판이 늘어지지 않게:</b> 판이 길어지면 단서를 푸는 이벤트가 더 자주 나온다(동적 더미, ②).</li>
+</ul>
+</section>
+
+<section id="list">
+<h2>① 이벤트 목록 (12종)</h2>
+<p><span class="tag info">단서</span> 정보가 풀림 · <span class="tag ref">심문</span> 반박 방식이 바뀜 · <span class="tag move">현장</span> 이동이 바뀜. 지속은 모두 <b>그 라운드 동안</b>(즉시형은 라운드 시작 때 한 번).</p>
+<div class="scroll"><table>
+<tr><th>분류</th><th>이름</th><th>효과</th><th>공개 범위</th><th>발생 조건 · 예외</th></tr>
+<tr><td><span class="tag info">단서</span></td><td><b>목격자 증언</b></td><td>즉시: 살아 있는 플레이어 한 명의 손패 1장을 <b>주인과 함께</b> 공개</td><td>모두</td><td>아직 공개된 적 없는 카드가 있는 사람 중 무작위</td></tr>
+<tr><td><span class="tag info">단서</span></td><td><b>감식 보고서</b></td><td>즉시: 봉투가 아닌 카드 1장을 공개. <b>누가 가졌는지는 숨김</b></td><td>모두</td><td>아직 공개 안 된 손패 카드 중 무작위</td></tr>
+<tr><td><span class="tag info">단서</span></td><td><b>익명 제보</b></td><td>즉시: 모든 플레이어가 각자 다른 한 명의 손패 1장을 <b>몰래</b> 받음(내가 모르는 카드 우선)</td><td>받는 사람만</td><td>모를 카드가 하나도 없는 사람은 받지 않음</td></tr>
+<tr><td><span class="tag info">단서</span></td><td><b>공개 심문</b></td><td>이번 라운드 반박에서 보여 준 카드가 <b>모두에게</b> 공개</td><td>모두</td><td>묵비권으로 넘긴 반박은 그대로 비공개</td></tr>
+<tr><td><span class="tag ref">심문</span></td><td><b>정전</b></td><td>이번 라운드 반박은 <b>누가 반박했는지</b>도 추리한 사람만 앎. 다른 사람에겐 "어둠 속에서 누군가 반박"</td><td>추리자만</td><td>'카드 없어 넘김(pass)' 기록도 숨김</td></tr>
+<tr><td><span class="tag ref">심문</span></td><td><b>침묵의 밤</b></td><td>이번 라운드 반박은 카드를 보여 주지 않고 <b>"가지고 있다"만</b> 알림(누가 가졌는지는 공개)</td><td>모두</td><td>반박자가 고를 것이 없으니 자동 진행(대기 없음)</td></tr>
+<tr><td><span class="tag ref">심문</span></td><td><b>이중 반박</b></td><td>이번 라운드 추리는 반박할 수 있는 <b>처음 두 사람</b>이 각자 1장씩 보여 줌</td><td>추리자만(평소와 같음)</td><td>반박 가능자가 1명이면 평소대로</td></tr>
+<tr><td><span class="tag ref">심문</span></td><td><b>원격 추리</b></td><td>이번 라운드 추리는 방 안에만 있으면 <b>장소를 아무 방이나</b> 지목 가능</td><td>—</td><td>지목된 인물·도구 말은 평소처럼 지금 내 방으로 옴</td></tr>
+<tr><td><span class="tag move">현장</span></td><td><b>현장 봉쇄</b></td><td>방 1곳에 폴리스 라인: 이번 라운드 <b>들어갈 수 없고</b>, 안에 있던 사람은 그 방에서 추리할 수 없음(나가기만)</td><td>모두</td><td>사건 파일실 제외. 비밀 통로로도 못 들어감</td></tr>
+<tr><td><span class="tag move">현장</span></td><td><b>폭풍우</b></td><td>이번 라운드 주사위는 <b>1개만</b> 굴림(1~6)</td><td>모두</td><td>비밀 통로는 평소대로</td></tr>
+<tr><td><span class="tag move">현장</span></td><td><b>마차 대기</b></td><td>이번 라운드 주사위 눈 <b>+3</b></td><td>모두</td><td>추격(재굴림) 능력에도 적용</td></tr>
+<tr><td><span class="tag move">현장</span></td><td><b>숨겨진 통로</b></td><td>통로가 없는 두 방이 이번 라운드 동안 <b>임시 통로</b>로 이어짐(그 방에서 턴을 시작하면 주사위 대신 건너감)</td><td>모두</td><td>통로 없는 방이 2곳 미만이면 더미에서 뺌</td></tr>
+</table></div>
+<p class="note">단서 4 · 심문 4 · 현장 4로 균형. 정보를 <b>푸는</b> 이벤트(목격자·감식·제보·공개 심문·이중 반박)와 <b>가리는</b> 이벤트(정전·침묵의 밤)를 섞어, 판 속도가 한쪽으로 쏠리지 않게 한다.</p>
+</section>
+
+<section id="rule">
+<h2>② 진행 규칙</h2>
+<h3>라운드</h3>
+<ul>
+<li>라운드 = 살아 있는 모든 플레이어가 한 턴씩 마친 단위. 차례가 한 바퀴 돌아 첫 자리 쪽으로 넘어갈 때 라운드 +1.</li>
+<li>한 턴 쉼(보험)으로 건너뛴 사람도 그 라운드에 참여한 것으로 본다.</li>
+</ul>
+<h3>빈도 (방장 설정)</h3>
+<table>
+<tr><th>설정</th><th>발생 라운드</th><th>15~30분 판 기준 예상 횟수</th></tr>
+<tr><td>끔</td><td>없음</td><td>0</td></tr>
+<tr><td>가끔</td><td>3 · 6 · 9 · 12 …</td><td>3~5회</td></tr>
+<tr><td>자주</td><td>2 · 4 · 6 · 8 …</td><td>5~8회</td></tr>
+</table>
+<h3>예보 → 발생 → 종료</h3>
+<ol>
+<li><b>예보:</b> 발생 라운드 바로 전 라운드가 시작될 때 "다음 라운드: ○○"를 모두에게 알림.</li>
+<li><b>발생:</b> 그 라운드 첫 턴이 시작될 때 발동. 즉시형(목격자·감식·제보)은 이때 한 번 처리.</li>
+<li><b>종료:</b> 라운드가 끝나면 효과 해제(봉쇄 해제·임시 통로 닫힘). 진행 중인 반박은 끝까지 그 라운드 규칙으로 처리.</li>
+</ol>
+<h3>이벤트 더미</h3>
+<ul>
+<li>게임 시작 때 12종을 섞어 더미를 만들고(판 시드 기반 → 재현 가능), 위에서 하나씩 뽑는다. 다 쓰면 다시 섞는다. <b>같은 이벤트가 연속으로 나오지 않음.</b></li>
+<li>뽑은 이벤트가 조건에 안 맞으면(예: 통로 없는 방 부족) 다음 장을 뽑는다.</li>
+<li><b>동적 더미:</b> 8라운드가 지나도록 아무도 고발에 성공하지 못했으면, 그 뒤로는 <span class="tag info">단서</span> 이벤트만 뽑는다(판이 늘어지는 것 방지).</li>
+</ul>
+</section>
+
+<section id="mix">
+<h2>겹침 규칙 (기존 규칙·특수 능력과)</h2>
+<div class="scroll"><table>
+<tr><th>상황</th><th>처리</th></tr>
+<tr><td>정전 + 도청 장치</td><td>도청은 카드를 그대로 엿봄(반박자도 앎). 도청이 정전보다 강함</td></tr>
+<tr><td>공개 심문 / 침묵의 밤 + 묵비권</td><td>묵비권은 평소대로 '넘김'. 공개되는 카드 없음</td></tr>
+<tr><td>이중 반박 + 묵비권</td><td>묵비권을 쓴 사람은 건너뛰고 다음 반박 가능자가 두 번째 반박</td></tr>
+<tr><td>침묵의 밤 + 기록 열람</td><td>그 라운드 반박은 카드가 없으므로 기록 열람 대상에서 제외</td></tr>
+<tr><td>현장 봉쇄 + 지름길 / 지목으로 끌려옴</td><td>지름길로 봉쇄된 방 선택 불가. 추리로 지목돼 봉쇄된 방에 끌려오는 일은 없음(봉쇄된 방에선 추리 자체가 불가)</td></tr>
+<tr><td>폭풍우 / 마차 대기 + 추격</td><td>재굴림에도 같은 규칙(주사위 1개 / +3)</td></tr>
+<tr><td>블러핑 금지 방</td><td>원격 추리에서도 내 손의 카드는 지목 불가(장소 포함)</td></tr>
+<tr><td>최종 고발</td><td>어떤 이벤트도 영향 없음</td></tr>
+</table></div>
+</section>
+
+<section id="server">
+<h2>③ 서버 · 봇</h2>
+<ul>
+<li><b>판정:</b> 모든 이벤트는 서버(<code>shared/game.ts</code>)가 결정·적용. 화면은 받은 상태를 보여 주기만. 무작위는 판 시드 기반.</li>
+<li><b>상태 추가:</b> <code>GameOpts.events: 'off' | 'some' | 'often'</code>, <code>Game.round</code>, <code>Game.event: { id; round } | null</code>(진행 중), <code>Game.next: { id; round } | null</code>(예보), <code>Game.deck</code>(서버 전용, 화면에 안 보냄), 봉쇄 방·임시 통로.</li>
+<li><b>기록:</b> 수사 일지에 <code>{ t: 'event', id, phase: 'forecast' | 'start' | 'end' }</code>. 공개 카드는 <code>{ t: 'reveal', card, from? }</code>, 익명 제보는 기존 비공개 <code>intel</code>(kind: <code>tip</code>).</li>
+<li><b>공개 범위:</b> 정전 중 반박·넘김 기록은 추리자 외에게는 사람 이름을 지워서 보냄(<code>view()</code>에서 거름). 공개 심문 중 반박 카드는 모두에게 보냄.</li>
+<li><b>봇:</b>
+  <ul>
+  <li>공개된 카드(목격자·감식·공개 심문)와 제보 카드는 봇의 '아는 카드'에 더함 → 후보에서 빠짐.</li>
+  <li>현장 봉쇄: 목표 방에서 봉쇄된 방 제외. 원격 추리: 남은 후보 장소 중 하나를 지목. 숨겨진 통로: 통로 끝이 목표 방이면 사용.</li>
+  <li>침묵의 밤의 "가지고 있다"는 봇이 추론에 쓰지 않음(지금 봇 수준 유지).</li>
+  </ul></li>
+<li><b>방 설정:</b> 서버가 <code>opt</code> 메시지의 <code>events</code> 값을 검사(세 값 외엔 무시). 게임 중에는 바꿀 수 없음.</li>
+</ul>
+</section>
+
+<section id="input">
+<h2>④ 조작</h2>
+<ul>
+<li>새 조작 없음. 원격 추리 때만 추리 창에 <b>장소 고르기</b>가 추가됨(평소엔 지금 방으로 고정).</li>
+<li>숨겨진 통로는 기존 '비밀 통로' 버튼을 그대로 씀.</li>
+<li>진행 중 이벤트 칩을 누르면(PC는 마우스 올림) 설명이 뜸.</li>
+</ul>
+</section>
+
+<section id="ui">
+<h2>⑤ 화면</h2>
+<table>
+<tr><th>위치</th><th>보이는 것</th></tr>
+<tr><td>방 만들기 · 대기실 방 설정</td><td>"사건 이벤트: 끔 / 가끔(3라운드마다) / 자주(2라운드마다)" 선택. 대기실 칩 줄에 <code>📰 사건 가끔</code> 표시</td></tr>
+<tr><td>예보</td><td>상태 줄 아래 작은 띠: "📰 다음 라운드: 정전 — 누가 반박했는지 감춰집니다". 내 차례 알림처럼 한 번 반짝</td></tr>
+<tr><td>발생 연출</td><td>신문 호외 카드가 1.5초 동안 화면 가운데에 펼쳐짐(제목·한 줄 설명, 종이 넘기는 소리). 건너뛰기 없이 자동으로 접힘, 게임 진행은 멈추지 않음</td></tr>
+<tr><td>진행 중 표시</td><td>판 위 도구줄(2D/3D 버튼 옆)에 <code>⚡ 정전 · 이번 라운드</code> 칩</td></tr>
+<tr><td>판 위 효과</td><td>봉쇄된 방: 노랑·검정 사선 테두리 + '출입 금지' 띠. 임시 통로: 두 방에 점선 고리 표시. (2D·3D 둘 다)</td></tr>
+<tr><td>공개 카드</td><td>목격자·감식: 카드가 뒤집히며 1초 보여 주고 '공개 카드' 줄에 추가</td></tr>
+<tr><td>수사 일지</td><td>"📰 3라운드: 정전", "👁 목격자 증언: 봇 1 — 독 찻잔", "🌑 어둠 속에서 누군가 반박" 등</td></tr>
+<tr><td>추리 노트</td><td>공개된 카드·제보 카드는 자동 표시 모드에서 바로 ✗ 처리</td></tr>
+<tr><td>설명서(guide.html)</td><td>'사건 이벤트' 절 추가: 12종 표 + 예보 방식</td></tr>
+</table>
+<p>지원 화면: 폰 세로(390px~), PC(1366px~). 호외 카드는 폰에서 화면 폭 86%, PC에서 최대 420px.</p>
+</section>
+
+<section id="done">
+<h2>⑥ 완료 기준</h2>
+<ul class="check">
+<li>방장이 '끔'으로 두면 한 판 내내 이벤트 기록이 0건이다</li>
+<li>'가끔'이면 3·6·9라운드에, '자주'면 2·4·6라운드에 이벤트가 발생한다(규칙 테스트)</li>
+<li>모든 이벤트는 발생 한 라운드 전에 예보 기록이 먼저 남는다</li>
+<li>같은 이벤트가 두 라운드 연속으로 나오지 않는다(시드 1000개 테스트)</li>
+<li>8라운드가 지나면 단서 이벤트만 나온다</li>
+<li>목격자 증언: 공개된 카드가 그 주인의 손패에 실제로 있고, 모든 플레이어 화면의 공개 카드에 보인다</li>
+<li>감식 보고서: 공개된 카드는 봉투에 없고, 주인 정보는 어느 플레이어의 view에도 없다</li>
+<li>익명 제보: 각 플레이어는 자기 제보 카드만 view에서 볼 수 있다</li>
+<li>정전: 추리자 외 플레이어의 view에서 반박자·넘김 사람 정보가 비어 있다</li>
+<li>침묵의 밤: 반박 차례가 대기 없이 자동으로 끝나고, 어떤 view에도 반박 카드가 없다</li>
+<li>이중 반박: 반박 가능자가 2명 이상이면 추리자가 카드 2장을 받는다</li>
+<li>원격 추리: 지금 방과 다른 장소로 추리가 되고, 그 라운드가 끝나면 다시 지금 방으로만 된다</li>
+<li>현장 봉쇄: 봉쇄된 방은 이동 가능 칸·비밀 통로·지름길 목록에서 빠지고, 안에 있던 사람은 추리할 수 없다</li>
+<li>폭풍우는 주사위 값이 1~6, 마차 대기는 평소 값+3이다(추격 재굴림 포함)</li>
+<li>숨겨진 통로: 라운드 동안만 두 방 사이 통로 이동이 되고, 끝나면 '비밀 통로가 없어요'</li>
+<li>봇만 있는 판(봇 6명 · '자주')을 시드 200개 돌려 모두 끝까지 진행되고(멈춤 0건) 평균 라운드가 이벤트 끔 대비 +20% 이내다</li>
+<li>공개된 카드는 추리 노트 자동 표시에서 ✗로 바뀐다</li>
+<li>폰 세로·PC에서 예보 띠·호외 카드·진행 칩·봉쇄 표시가 판을 가리지 않고 보인다(스크린숏 확인)</li>
+<li>기존 테스트 28개 + 새 규칙 테스트 모두 통과, 브라우저 콘솔 에러 0건</li>
+</ul>
+</section>
+
+<section id="perf">
+<h2>성능 상한</h2>
+<p>최악 장면: 6명 판, 폰에서 '자주' 설정 · 호외 연출 + 말 걷기 + 주사위가 겹치는 순간.</p>
+<table>
+<tr><th>항목</th><th>상한</th></tr>
+<tr><td>추가 그림</td><td>0장(호외 카드·폴리스 라인은 CSS로)</td></tr>
+<tr><td>상태 메시지 크기</td><td>이벤트 때문에 늘어나는 양 0.5KB 이하(더미는 서버에만 둠)</td></tr>
+<tr><td>서버</td><td>새 타이머 없음 — 라운드가 넘어갈 때(endTurn) 한 번만 처리</td></tr>
+<tr><td>동시 애니메이션</td><td>호외 연출 중 추가 애니메이션 요소 3개 이하, 폰에서 끊김 없이(55fps 이상)</td></tr>
+<tr><td>연출 시간</td><td>호외 1.5초, 게임 진행·타이머를 멈추지 않음</td></tr>
+</table>
+</section>
+
+<section id="ask">
+<h2>정할 것 (승인 때 답 주세요)</h2>
+<ol>
+<li><b>새 방의 기본값:</b> 끔 / 가끔 중 무엇? (제안: <b>가끔</b> — 처음 하는 사람도 한 판에 3~5번 경험)</li>
+<li><b>봇 연습 판(첫 화면 '봇 2명과 바로 연습'):</b> 이벤트 켤지? (제안: 끔 — 기본 규칙부터 익히게)</li>
+<li><b>12종 전부로 시작할지:</b> 아니면 단서·현장 위주 8종으로 먼저 내고 심문 4종은 나중에? (제안: 12종 전부 — 균형이 단서/가림 쌍으로 맞춰져 있음)</li>
+</ol>
+</section>
+
+<section id="later">
+<h2>보류 (이번엔 안 함)</h2>
+<ul>
+<li>방장이 이벤트 종류를 하나하나 켜고 끄기 — 빈도 설정만으로 시작하고 요청이 있으면 추가</li>
+<li>시청자 투표로 다음 이벤트 고르기 — 관전석 기능이 먼저 필요</li>
+<li>테마별 이벤트 이름·문구(아틀란티스·우주정거장) — 고딕 저택 문구로 시작, 테마 공개 때 맞춤</li>
+<li>침묵의 밤 정보를 쓰는 똑똑한 봇 — 봇 추론 고도화는 별도 작업</li>
+</ul>
+</section>
+</main>
+</body>
+</html>

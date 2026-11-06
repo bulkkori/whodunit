@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>후던잇 오리지널 기획서</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d1b18;--sub:#6b665d;--line:#e3ded3;--accent:#8a2b2b;--chip:#f1e7e2;--info:#2f5d8a;--ref:#7a4f8a;--move:#4f7a4a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--card:#1e1b17;--ink:#ece7dd;--sub:#a59e90;--line:#34302a;--accent:#e08a7a;--chip:#2c2420;--info:#8ab4e0;--ref:#c9a3d9;--move:#9fcf98}}
+:root[data-theme="dark"]{--bg:#15130f;--card:#1e1b17;--ink:#ece7dd;--sub:#a59e90;--line:#34302a;--accent:#e08a7a;--chip:#2c2420;--info:#8ab4e0;--ref:#c9a3d9;--move:#9fcf98}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 system-ui,"Pretendard","Malgun Gothic",sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+.lead{color:var(--sub);margin:0 0 24px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+nav a{background:var(--chip);color:var(--ink);text-decoration:none;padding:4px 10px;border-radius:999px;font-size:13px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px}
+h2{font-size:19px;margin:0 0 12px;color:var(--accent)}
+h3{font-size:15px;margin:18px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:600;white-space:nowrap}
+.scroll{overflow-x:auto}
+ul,ol{padding-left:20px;margin:6px 0}
+.check li{list-style:none;margin-left:-20px}
+.check li::before{content:"☐ ";color:var(--accent)}
+.note{background:var(--chip);border-radius:8px;padding:10px 12px;font-size:14px}
+code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:13px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:0 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.info{color:var(--info)}.ref{color:var(--ref)}.move{color:var(--move)}
+td b{white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+<h1>🕵️ 후던잇 오리지널 모드 기획서</h1>
+<p class="lead">클래식(지금 규칙)과 별도로 방 설정에서 고르는 모드 · 2026-11-04 · 상태: 1단계 구현(로컬, 미배포) · 다음 2단계(스토리) · 4단계 보류<br>세계관·스토리 원안: <code>design/detectives.html</code></p>
+
+<nav><a href="#goal">목표·원칙</a><a href="#diff">클루 대비 차별점</a><a href="#s1">1 기반(완료)</a><a href="#s2">2 스토리 표현</a><a href="#s3">3 탐정 그림</a><a href="#s4">4 심문 상대 지목</a><a href="#done">완료 기준</a><a href="#ask">정할 것</a><a href="#ship">배포</a></nav>
+
+<section id="goal">
+<h2>목표 · 원칙</h2>
+<ul>
+<li><b>목표:</b> 같은 추리 장르 안에서, 클루의 고유 표현과 고유 진행 방식에서 최대한 멀어진 독자 모드를 만든다(IP·저작권 위험을 낮추는 근거).</li>
+<li><b>원칙 1 — 모드로 분리:</b> 클래식은 한 줄도 바뀌지 않는다. 방장이 방 설정에서 '후던잇 오리지널'을 고를 때만 적용. 안정화될 때까지 '(시험 중)' 표시.</li>
+<li><b>원칙 2 — 장르 공통은 유지:</b> 봉투 속 인물·도구·장소 세 장, 방에서 추리, 반박, 최종 고발은 장르의 기본 틀이라 그대로 둔다.</li>
+<li><b>원칙 3 — 표현은 전부 독자:</b> 이름·인물·그림·문구·보드 배치는 모두 새로 만든다(이미 대부분 독자).</li>
+</ul>
+</section>
+
+<section id="diff">
+<h2>클루 대비 차별점 (단계별)</h2>
+<div class="scroll"><table>
+<tr><th>요소</th><th>클루</th><th>후던잇 오리지널</th><th>단계</th></tr>
+<tr><td>플레이어</td><td>용의자 중 하나를 맡음</td><td>사건을 풀러 모인 <b>탐정</b>(용의자와 별개 인물, 테마마다 그 세계의 탐정 8명)</td><td>1 ✅</td></tr>
+<tr><td>용의자·도구·장소</td><td>6·6·9 고정</td><td>8·8·9~11(인원별), 전부 독자 창작</td><td>1 ✅</td></tr>
+<tr><td>추리로 지목되면</td><td>그 용의자를 맡은 플레이어가 방으로 끌려옴</td><td>NPC 용의자·도구 말만 옴(대질·재현), 탐정은 안 끌려옴</td><td>1 ✅</td></tr>
+<tr><td>비밀 통로</td><td>네 모서리 방 대각선 고정</td><td>판마다 서로 먼 방 2쌍(A·B 표시)</td><td>1 ✅</td></tr>
+<tr><td>보드</td><td>고정 배치</td><td>판마다 생성되는 맵</td><td>(공통)</td></tr>
+<tr><td>출발·고발</td><td>인물별 출발 칸, 고발은 어디서나</td><td>모두 사건 파일실에서 출발, 다시 들어와야 고발</td><td>(공통)</td></tr>
+<tr><td>특수 능력·보너스칸</td><td>없음</td><td>8종 무작위, 보너스칸에서 사용</td><td>(공통)</td></tr>
+<tr><td>이야기</td><td>"플레이어가 곧 용의자"</td><td>현상금이 걸린 탐정들의 경쟁, '첫날 밤의 탐문'</td><td>2</td></tr>
+<tr><td>카드의 의미</td><td>손에 든 카드</td><td>탐문으로 알아낸 사실(알리바이·감식·수색)</td><td>2</td></tr>
+<tr><td>캐릭터 그림</td><td>클루 인물</td><td>탐정 8명 새 그림</td><td>3</td></tr>
+<tr><td>반박 순서</td><td>시계 방향, 가진 첫 사람</td><td><b>추리한 탐정이 심문할 상대를 지목</b></td><td>4 (시안)</td></tr>
+</table></div>
+</section>
+
+<section id="s1">
+<h2>1단계 · 기반 (구현 완료, 로컬)</h2>
+<ul>
+<li>방 설정 '게임 모드: 클래식 / 후던잇 오리지널 (시험 중)' — 방 만들기·대기실 모두. 대기실 칩 <code>🕵️ 후던잇 오리지널</code></li>
+<li>탐정 고르기 화면(8명 + 같은 액자 모양 '무작위' 카드). 탐정은 테마별 목록(고딕 저택: 에드먼드 그레이, 한서진, 미라 볼코바, 윤태오, 셀린 마르샹, 오민혁, 아서 펨브룩, 차은호 — 가안, 직업명 없이 한국·외국 이름 섞음). 다른 테마는 아직 고딕 저택 탐정을 임시로 씀</li>
+<li>용의자 8·도구 8 고정, 용의자 8명 모두 NPC 말, 탐정은 추리로 끌려오지 않음</li>
+<li>판 위 탐정 말 = 어두운 바탕 + 색 테두리(2D), 어두운 몸통 + 색 머리(3D) → 용의자 말과 구분</li>
+<li>비밀 통로 무작위 2쌍(10칸 이상 떨어진 방끼리, 사건 파일실 제외, 모서리 대각선 배치 금지)</li>
+<li>규칙 테스트 2개 추가(총 30개 통과)</li>
+</ul>
+</section>
+
+<section id="s2">
+<h2>2단계 · 스토리 표현 입히기 (규칙 변화 없음)</h2>
+<div class="scroll"><table>
+<tr><th>위치</th><th>지금</th><th>오리지널 모드에서</th></tr>
+<tr><td>시작 연출 맨 앞</td><td>CASE FILE · 사건 발생</td><td>사건 개요 한 줄(<b>결정 11-05: 테마별 여러 문장 중 무작위</b>) + "의뢰인이 탐정들을 불러 모았다. 가장 먼저 진상을 밝힌 탐정에게 현상금을"</td></tr>
+<tr><td>시작 연출 단계 문구</td><td>카드 섞기 · 봉인 · 나눠 줌 · 공개</td><td>"진상은 아무도 모른다"(봉인) → "탐정들이 흩어져 첫날 밤 탐문을 합니다"(분배) → "모두가 함께 본 사실"(공개) → 임명장</td></tr>
+<tr><td>카드 위 띠</td><td>인물 · 도구 · 장소</td><td>내 카드·공개 카드에 작은 도장: <b>알리바이</b> · <b>감식</b> · <b>수색</b> (봉투·추리 고르기 화면은 그대로 인물·도구·장소)</td></tr>
+<tr><td>반박 창</td><td>보여 줄 카드를 고르세요</td><td>"이 가설과 어긋나는 사실을 하나 알려 주세요 — 무고한 사람을 지키기 위해"</td></tr>
+<tr><td>추리 문구·수사 일지</td><td>추리 · 반박</td><td>가설 · 반증 ("한도현의 가설: 음악실, 독을 탄 홍차, 마르타" / "서지우가 반증을 건넸다")</td></tr>
+<tr><td>최종 고발</td><td>최종 고발</td><td>결론 발표 (틀리면 "명성을 잃고 수사에서 빠짐, 반증은 계속")</td></tr>
+<tr><td>사건 종결 보고서</td><td>결말 장면</td><td>결말 장면 + 해결한 탐정 배지. <b>현상금 표시는 보류(11-05) — 로그인이 없어 상금이 쌓이지 않으니 의미가 약함</b></td></tr>
+<tr><td>설명서</td><td>클래식 기준</td><td>'후던잇 오리지널' 장 추가(한 쪽 펼침)</td></tr>
+</table></div>
+<p class="note">게임 규칙·서버는 그대로, 화면 문구만 모드에 따라 바뀜. 작업 작음.</p>
+</section>
+
+<section id="s3">
+<h2>3단계 · 탐정 그림 8장</h2>
+<ul>
+<li><b>필요한 것:</b> 탐정 8명 전신(배경 투명, 기존 용의자와 같은 화풍·크기 633×1280 기준) + 고르기 화면·판 위 말에 쓸 얼굴 자리 잡기.</li>
+<li><b>테마별:</b> 탐정은 테마마다 다르다(2026-11-04 결정). 고딕 저택 탐정 8명부터. 차림은 그 테마의 시대·분위기에 맞추고, 8명의 실루엣·색이 서로 확실히 달라야 함(말 색과 맞춤: 빨강·노랑·초록·하늘·보라·흰색·분홍·회색).</li>
+<li><b>이름·성격 확정 필요:</b> 지금 이름은 가안(반장 한도현 등). 그림 전에 확정.</li>
+<li><b>쓰이는 곳:</b> 탐정 고르기 액자, 시작 연출(탐정 소개), 결말 현상금 줄, 첫 화면(선택).</li>
+</ul>
+</section>
+
+<section id="s4">
+<h2>4단계 · 심문 상대 지목 (규칙 변경 — 시안으로 먼저)</h2>
+<h3>규칙안</h3>
+<ol>
+<li>추리(가설)를 세우면, 추리한 탐정이 <b>심문할 상대 한 명</b>을 고른다(나 말고 아무나, 탈락자 포함 — 탈락자도 반증은 계속).</li>
+<li>그 사람이 가설의 세 장 중 하나라도 가지고 있으면 <b>한 장을 추리한 탐정에게만</b> 보여 준다(여러 장이면 고름).</li>
+<li>하나도 없으면 "없음"을 <b>모두에게</b> 알린다 → 그 사람은 세 장이 모두 없다는 공개 정보.</li>
+<li>다른 사람에게는 "누구를 심문했고, 보여 줬는지/없음"만 공개.</li>
+</ol>
+<h3>왜</h3>
+<ul>
+<li>"시계 방향으로 돌며 가진 첫 사람이 반박"은 클루의 핵심 고유 진행. 이것이 바뀌면 진행 방식에서도 확실히 달라짐.</li>
+<li>누구를 심문할지 고르는 전략이 생김(정보가 적은 사람, 의심 가는 사람).</li>
+</ul>
+<h3>걱정과 대책</h3>
+<div class="scroll"><table>
+<tr><th>걱정</th><th>대책안</th></tr>
+<tr><td>"없음"이 잦아 판이 길어짐(시계 방향은 누군가 가지면 반드시 반박됨)</td><td>안 ⓐ 1명만(기본) · 안 ⓑ "없음"이면 추리자가 한 명 더 지목(최대 2명) · 봇 시드 200판으로 평균 라운드 비교 후 결정, 목표: 클래식 대비 +20% 이내</td></tr>
+<tr><td>특수 능력과 겹침</td><td>묵비권 = 심문받은 사람이 답하지 않음(공개) · 도청 = 남들끼리의 심문 결과 카드를 봄(그대로) · 기록 열람 = 지난 심문 기록에서 고름(그대로)</td></tr>
+<tr><td>봇</td><td>아직 모르는 카드가 가장 많이 남은 사람을 우선 심문, 같으면 무작위</td></tr>
+<tr><td>추리 노트 자동 표시</td><td>"없음" → 그 사람 줄 세 칸 ✗, 보여 줌(남끼리) → 흐린 ? (지금과 같은 방식)</td></tr>
+</table></div>
+<p class="note">게임 느낌이 꽤 달라지므로, 오리지널 모드 안에서 시안으로 만들어 직접 써 본 뒤 유지 여부를 정한다.</p>
+</section>
+
+<section id="done">
+<h2>완료 기준</h2>
+<ul class="check">
+<li>클래식 방은 1~4단계 어떤 것도 적용되지 않는다(기존 테스트 + 클래식 회귀 테스트)</li>
+<li>2단계: 오리지널 방의 시작 연출·카드 도장·반박 창·수사 일지·결말이 새 문구로 나오고, 클래식은 그대로(스크린숏 PC·폰)</li>
+<li>3단계: 탐정 8명 그림이 고르기·판·결말에 나오고, 폰 고르기 화면 3×3에 맞음</li>
+<li>4단계: 심문 상대만 반박하고, "없음"은 모두에게 공개, 탈락자도 심문 가능(규칙 테스트)</li>
+<li>4단계: 봇 6명·시드 200판 모두 끝까지 진행(멈춤 0), 평균 라운드가 클래식 대비 +20% 이내</li>
+<li>테스트 전부 통과, 브라우저 콘솔 에러 0</li>
+</ul>
+</section>
+
+<section id="ask">
+<h2>역질문</h2>
+<h3>결정됨 (2026-11-04)</h3>
+<ul>
+<li><b>탐정 이름:</b> 직업명을 붙이지 않음, 한국·외국 이름을 섞음 → 고딕 저택 가안 8명 반영(바꿀 수 있음)</li>
+<li><b>탐정 시대·분위기:</b> 테마마다 그 세계의 탐정이 다름</li>
+<li><b>심문 상대 지목:</b> 지금은 보류</li>
+<li><b>우선순위:</b> 2 스토리 → 3 그림 → 4 심문</li>
+</ul>
+<h3>남은 것</h3>
+<ol>
+<li><b>카드 도장(알리바이·감식·수색):</b> 내 카드에만 / 공개 카드까지?</li>
+</ol>
+</section>
+
+<section id="ship">
+<h2>배포</h2>
+<ul>
+<li>사용자가 직접 테스트한 뒤 배포. 배포해도 오리지널은 방 설정에서 고르는 '(시험 중)' 모드로만 — 클래식이 기본.</li>
+<li>단계별로 나눠 배포 가능(1단계만 먼저도 가능). 서버 규칙이 바뀐 단계(1·4)는 서버·화면을 함께 배포.</li>
+</ul>
+</section>
+</main>
+</body>
+</html>
